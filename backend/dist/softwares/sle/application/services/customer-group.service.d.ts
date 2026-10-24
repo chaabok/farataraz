@@ -12,7 +12,7 @@ export declare class CustomerGroupService {
     constructor(repository: ICustomerGroupRepository, idGenerationService: IdGenerationService, requestContextService: RequestContextService, usageCheckService: UsageCheckService);
     private getScope;
     private enrichGroupsWithAncestors;
-    findAll(): Promise<CustomerGroup[]>;
+    findAll(leavesOnly?: boolean): Promise<any[]>;
     getTree(): Promise<any>;
     getNextCode(parentRef?: number): Promise<string>;
     checkDuplicate(field: string, value: string, excludeId?: number, parentRef?: number | null): Promise<boolean>;

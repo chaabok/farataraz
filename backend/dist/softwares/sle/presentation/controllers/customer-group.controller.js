@@ -22,8 +22,8 @@ let CustomerGroupController = class CustomerGroupController {
     constructor(service) {
         this.service = service;
     }
-    async findAll() {
-        const data = await this.service.findAll();
+    async findAll(leavesOnly) {
+        const data = await this.service.findAll(leavesOnly === 'true' || leavesOnly === '1');
         return { data, success: true };
     }
     async checkDuplicate(field, value, excludeId, parentRef) {
@@ -62,8 +62,9 @@ let CustomerGroupController = class CustomerGroupController {
 exports.CustomerGroupController = CustomerGroupController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('leavesOnly')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], CustomerGroupController.prototype, "findAll", null);
 __decorate([

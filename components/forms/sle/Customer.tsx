@@ -361,42 +361,48 @@ export function CustomerComponent({
   const handleSaveNew = () => saveToApi(true, false);
   const handleSaveClose = () => saveToApi(false, true);
 
-  // --- ستون‌های سلسله‌مراتب گروه مشتری (Task 48) ---
-  // حداکثر عمق زنجیره سرشاخه‌ها در داده‌ها؛ سطح ۱ = سرشاخه مستقیم، سطح ۲ = سرشاخه بالاتر و ...
-  const groupMaxAncestorDepth = useMemo(() => {
+  // --- ستون‌های سلسله‌مراتب گروه مشتری (Task 49) ---
+  // ردیف‌ها = فقط گروه‌های برگ (پایین‌ترین سطح)؛ ریشه «گروه بندی مشتریان» (سطح 0) فقط وقتی نمایش داده می‌شود
+  // که هیچ گروه دیگری تعریف نشده باشد. ستون‌ها: اول پایین‌ترین سطح، سپس یک سطح بالاتر، تا سطح ۱ — بدون سطح 0.
+  const { leafGroups, groupMaxLevel } = useMemo(() => {
     const map = new Map<string, any>();
     customerGroups.forEach((g) => map.set(String(g.CustomerGroupID ?? g.id), g));
-    let max = 0;
+    const childIds = new Set<string>();
     customerGroups.forEach((g) => {
-      const seen = new Set<string>([String(g.CustomerGroupID ?? g.id)]);
-      let cur = g.ParentRef ?? null;
-      let depth = 0;
-      while (cur !== null && cur !== undefined) {
-        const key = String(cur);
-        if (!map.has(key) || seen.has(key)) break;
-        depth++;
-        seen.add(key);
-        cur = map.get(key)?.ParentRef ?? null;
-      }
-      if (depth > max) max = depth;
+      if (g.ParentRef !== null && g.ParentRef !== undefined) childIds.add(String(g.ParentRef));
     });
-    return max;
+    const levelOf = (g: any): number => {
+      if (g.ParentRef === null || g.ParentRef === undefined) return 0; // ریشه = سطح 0
+      let d = 1; // خود گروه
+      const seen = new Set<string>([String(g.CustomerGroupID ?? g.id)]);
+      let cur = map.get(String(g.ParentRef));
+      while (cur && cur.ParentRef !== null && cur.ParentRef !== undefined && !seen.has(String(cur.CustomerGroupID ?? cur.id))) {
+        d++;
+        seen.add(String(cur.CustomerGroupID ?? cur.id));
+        cur = map.get(String(cur.ParentRef));
+      }
+      return d;
+    };
+    const leaves = customerGroups.filter((g) => !childIds.has(String(g.CustomerGroupID ?? g.id)));
+    const maxLevel = leaves.reduce((mx, g) => Math.max(mx, levelOf(g)), 0);
+    return { leafGroups: leaves, groupMaxLevel: maxLevel };
   }, [customerGroups]);
 
-  const toFaDigits = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
-
   const groupColumns = useMemo(() => {
-    const cols: { key: string; label: string; width: number }[] = [
-      { key: 'Code', label: 'کد', width: 80 },
-      { key: 'Title', label: 'عنوان', width: 150 },
-    ];
-    for (let level = 1; level <= groupMaxAncestorDepth; level++) {
-      const suffix = level === 1 ? '' : ` ${toFaDigits(level)}`;
-      cols.push({ key: `ParentCode${level}`, label: `کد سرشاخه${suffix}`, width: 90 });
-      cols.push({ key: `ParentTitle${level}`, label: `عنوان سرشاخه${suffix}`, width: 160 });
+    const faNum = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
+    const cols: { key: string; label: string; width: number }[] = [];
+    if (groupMaxLevel === 0) {
+      // هیچ گروه‌بندی تعریف نشده — فقط سطح 0 (گروه بندی مشتریان) نمایش داده می‌شود
+      cols.push({ key: 'Level0Code', label: 'کد سطح ۰', width: 80 });
+      cols.push({ key: 'Level0Title', label: 'عنوان سطح ۰', width: 180 });
+      return cols;
+    }
+    for (let k = groupMaxLevel; k >= 1; k--) {
+      cols.push({ key: `Level${k}Code`, label: `کد سطح ${faNum(k)}`, width: 90 });
+      cols.push({ key: `Level${k}Title`, label: `عنوان سطح ${faNum(k)}`, width: 160 });
     }
     return cols;
-  }, [groupMaxAncestorDepth]);
+  }, [groupMaxLevel]);
 
   const fields: FieldConfig[] = [
     {
@@ -466,8 +472,8 @@ export function CustomerComponent({
       colSpan: 1,
       customComponent: (
         <SingleSelectDropDown
-          data={customerGroups}
-          listApiUrl="/api/sle/customer-groups"
+          data={leafGroups}
+          listApiUrl="/api/sle/customer-groups?leavesOnly=true"
           columns={groupColumns}
           displayKey="Title"
           value={customerGroups.find((g) => String(g.CustomerGroupID || g.id) === String(values.CustomerGroupRef)) || null}

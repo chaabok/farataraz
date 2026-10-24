@@ -3,8 +3,8 @@ import { CreateCustomerGroupDto, UpdateCustomerGroupDto } from '../../applicatio
 export declare class CustomerGroupController {
     private readonly service;
     constructor(service: CustomerGroupService);
-    findAll(): Promise<{
-        data: import("../../domain/entities/customer-group.entity").CustomerGroup[];
+    findAll(leavesOnly?: string): Promise<{
+        data: any[];
         success: boolean;
     }>;
     checkDuplicate(field: string, value: string, excludeId?: string, parentRef?: string): Promise<{

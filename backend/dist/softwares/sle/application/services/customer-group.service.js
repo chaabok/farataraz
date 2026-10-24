@@ -55,9 +55,14 @@ let CustomerGroupService = class CustomerGroupService {
         }
         return { bsId, compId, isShared };
     }
-    enrichGroupsWithAncestors(items) {
+    enrichGroupsWithAncestors(items, leavesOnly = false) {
         const map = new Map();
         items.forEach(i => map.set(String(i.CustomerGroupID), i));
+        const childIds = new Set();
+        items.forEach(i => {
+            if (i.ParentRef !== null && i.ParentRef !== undefined)
+                childIds.add(String(i.ParentRef));
+        });
         const chainOf = (item) => {
             const chain = [];
             const visited = new Set([String(item.CustomerGroupID)]);
@@ -71,6 +76,26 @@ let CustomerGroupService = class CustomerGroupService {
             }
             return chain;
         };
+        const levelChainOf = (item) => {
+            if (item.ParentRef === null || item.ParentRef === undefined) {
+                return { level: 0, chain: [{ code: item.Code || '', title: item.Title || '' }] };
+            }
+            const up = [];
+            const visited = new Set([String(item.CustomerGroupID)]);
+            let cur = String(item.ParentRef);
+            while (cur && map.has(cur) && !visited.has(cur)) {
+                const p = map.get(cur);
+                visited.add(cur);
+                const pIsRoot = p.ParentRef === null || p.ParentRef === undefined;
+                if (pIsRoot)
+                    break;
+                up.push({ code: p.Code || '', title: p.Title || '' });
+                cur = String(p.ParentRef);
+            }
+            up.reverse();
+            const chain = [...up, { code: item.Code || '', title: item.Title || '' }];
+            return { level: chain.length, chain };
+        };
         let maxDepth = 0;
         const chains = new Map();
         items.forEach(item => {
@@ -79,22 +104,36 @@ let CustomerGroupService = class CustomerGroupService {
             if (chain.length > maxDepth)
                 maxDepth = chain.length;
         });
-        return items.map(item => {
+        const enrichedItems = items.map(item => {
             const chain = chains.get(String(item.CustomerGroupID)) || [];
+            const { level, chain: levelChain } = levelChainOf(item);
             const enriched = { ...item };
-            for (let level = 1; level <= maxDepth; level++) {
-                const anc = chain[level - 1];
-                enriched[`ParentCode${level}`] = anc ? anc.code : '';
-                enriched[`ParentTitle${level}`] = anc ? anc.title : '';
+            for (let l = 1; l <= maxDepth; l++) {
+                const anc = chain[l - 1];
+                enriched[`ParentCode${l}`] = anc ? anc.code : '';
+                enriched[`ParentTitle${l}`] = anc ? anc.title : '';
+            }
+            if (level === 0) {
+                enriched['Level0Code'] = levelChain[0].code;
+                enriched['Level0Title'] = levelChain[0].title;
+            }
+            else {
+                levelChain.forEach((node, idx) => {
+                    enriched[`Level${idx + 1}Code`] = node.code;
+                    enriched[`Level${idx + 1}Title`] = node.title;
+                });
             }
             return enriched;
         });
+        if (!leavesOnly)
+            return enrichedItems;
+        return enrichedItems.filter(r => !childIds.has(String(r.CustomerGroupID)));
     }
-    async findAll() {
+    async findAll(leavesOnly) {
         const { bsId, compId, isShared } = await this.getScope();
         const where = isShared ? { businessStructureRef: bsId } : { companyRef: compId };
         const items = await this.repository.findAll({ where });
-        return this.enrichGroupsWithAncestors(items);
+        return this.enrichGroupsWithAncestors(items, !!leavesOnly);
     }
     async getTree() {
         const { bsId, compId, isShared } = await this.getScope();

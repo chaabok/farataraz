@@ -10,8 +10,8 @@ export class CustomerGroupController {
   constructor(private readonly service: CustomerGroupService) {}
 
   @Get()
-  async findAll() {
-    const data = await this.service.findAll();
+  async findAll(@Query('leavesOnly') leavesOnly?: string) {
+    const data = await this.service.findAll(leavesOnly === 'true' || leavesOnly === '1');
     return { data, success: true };
   }
 
