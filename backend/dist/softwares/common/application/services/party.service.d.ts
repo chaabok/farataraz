@@ -20,6 +20,7 @@ export declare class PartyService {
     private readonly detailedTypeService;
     private readonly idGenerationService;
     constructor(partyRepository: IPartyRepository, partyRelatedRepository: Repository<PartyRelated>, partyAddressRepository: Repository<PartyAddress>, partyPhoneRepository: Repository<PartyPhone>, detailedAccountService: DetailedAccountService, detailedAccountsNumberingService: DetailedAccountsNumberingService, detailedTypeService: DetailedTypeService, idGenerationService: IdGenerationService);
+    private withDetailedCode;
     private validateDuplicates;
     create(createDto: CreatePartyDto): Promise<Party>;
     update(id: number, updateDto: UpdatePartyDto): Promise<Party>;

@@ -47,35 +47,37 @@ export function applyDataGridParams<T>(
       if (Array.isArray(filters)) {
         filters.forEach((f) => {
           const val = f.value;
+          // Dotted ids (e.g. "da.code") already carry their own join alias
+          const field = String(f.id).includes('.') ? f.id : `${alias}.${f.id}`;
+          const safeId = String(f.id).replace(/\./g, '_');
           if (typeof val === 'object' && val !== null && 'op' in val) {
             const op = val.op;
             const filterValue = val.value;
-            const field = `${alias}.${f.id}`;
 
             switch (op) {
               case 'contains':
-                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${f.id}`, { [`val_${f.id}`]: `%${filterValue}%` });
+                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${filterValue}%` });
                 break;
               case 'notContains':
-                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) NOT ILIKE :val_${f.id}`, { [`val_${f.id}`]: `%${filterValue}%` });
+                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) NOT ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${filterValue}%` });
                 break;
               case 'startsWith':
-                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${f.id}`, { [`val_${f.id}`]: `${filterValue}%` });
+                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `${filterValue}%` });
                 break;
               case 'endsWith':
-                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${f.id}`, { [`val_${f.id}`]: `%${filterValue}` });
+                queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${filterValue}` });
                 break;
               case 'equals':
-                queryBuilder.andWhere(`${field} = :val_${f.id}`, { [`val_${f.id}`]: filterValue });
+                queryBuilder.andWhere(`${field} = :val_${safeId}`, { [`val_${safeId}`]: filterValue });
                 break;
               case 'notEquals':
-                queryBuilder.andWhere(`${field} != :val_${f.id}`, { [`val_${f.id}`]: filterValue });
+                queryBuilder.andWhere(`${field} != :val_${safeId}`, { [`val_${safeId}`]: filterValue });
                 break;
               case 'in':
-                queryBuilder.andWhere(`${field} IN (:...val_${f.id})`, { [`val_${f.id}`]: Array.isArray(filterValue) ? (filterValue.length > 0 ? filterValue : [-1]) : [filterValue] });
+                queryBuilder.andWhere(`${field} IN (:...val_${safeId})`, { [`val_${safeId}`]: Array.isArray(filterValue) ? (filterValue.length > 0 ? filterValue : [-1]) : [filterValue] });
                 break;
               case 'notIn':
-                queryBuilder.andWhere(`${field} NOT IN (:...val_${f.id})`, { [`val_${f.id}`]: Array.isArray(filterValue) ? (filterValue.length > 0 ? filterValue : [-1]) : [filterValue] });
+                queryBuilder.andWhere(`${field} NOT IN (:...val_${safeId})`, { [`val_${safeId}`]: Array.isArray(filterValue) ? (filterValue.length > 0 ? filterValue : [-1]) : [filterValue] });
                 break;
               case 'empty':
                 queryBuilder.andWhere(`(${field} IS NULL OR CAST(${field} AS VARCHAR) = '')`);
@@ -85,7 +87,7 @@ export function applyDataGridParams<T>(
                 break;
             }
           } else if (typeof val === 'string' && val.trim() !== '') {
-            queryBuilder.andWhere(`CAST(${alias}.${f.id} AS VARCHAR) ILIKE :val_${f.id}`, { [`val_${f.id}`]: `%${val}%` });
+            queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${val}%` });
           }
         });
       }
@@ -101,10 +103,11 @@ export function applyDataGridParams<T>(
       if (Array.isArray(filters) && filters.length > 0) {
         queryBuilder.andWhere(new Brackets((qb) => {
           filters.forEach((f, index) => {
-            const field = `${alias}.${f.columnId}`;
+            // Dotted ids (e.g. "da.code") already carry their own join alias
+            const field = String(f.columnId).includes('.') ? f.columnId : `${alias}.${f.columnId}`;
             const op = f.operator;
             const filterValue = f.value;
-            const paramName = `adv_${f.id}`;
+            const paramName = `adv_${String(f.id).replace(/\./g, '_')}`;
             let conditionString = "";
             let sqlParams: Record<string, any> = {};
 

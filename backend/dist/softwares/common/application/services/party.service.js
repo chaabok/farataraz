@@ -39,6 +39,18 @@ let PartyService = class PartyService {
         this.detailedTypeService = detailedTypeService;
         this.idGenerationService = idGenerationService;
     }
+    withDetailedCode(party) {
+        if (!party)
+            return party;
+        const da = party.detailedAccount ?? null;
+        const code = da?.code ?? null;
+        const title = da?.title ?? null;
+        party.code = code;
+        party.detailedCode = code;
+        party.title = title;
+        party.companyTitle = title;
+        return party;
+    }
     async validateDuplicates(dto, existing, excludeId) {
         const newFirstName = dto.firstName !== undefined ? dto.firstName : existing?.firstName;
         const newLastName = dto.lastName !== undefined ? dto.lastName : existing?.lastName;
@@ -266,7 +278,7 @@ let PartyService = class PartyService {
         const addresses = await this.partyAddressRepository.find({ where: { partyRef: id } });
         const phones = await this.partyPhoneRepository.find({ where: { partyRef: id } });
         return {
-            ...item,
+            ...this.withDetailedCode(item),
             PartyRelatedPersons: related,
             partyRelatedPersons: related,
             PartyAddresses: addresses,
@@ -276,11 +288,12 @@ let PartyService = class PartyService {
         };
     }
     async findAll(options) {
-        return this.partyRepository.findAll(options);
+        const items = await this.partyRepository.findAll(options);
+        return items.map((p) => this.withDetailedCode(p));
     }
     async findWithPagination(params) {
         const [items, total] = await this.partyRepository.findAdvanced(params);
-        return { items, total };
+        return { items: items.map((p) => this.withDetailedCode(p)), total };
     }
     async remove(id) {
         const existing = await this.findOne(id);

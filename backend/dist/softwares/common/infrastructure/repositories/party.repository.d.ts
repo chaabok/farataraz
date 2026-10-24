@@ -17,6 +17,7 @@ export declare class PartyRepository implements IPartyRepository {
     findById(id: number): Promise<Party | null>;
     findAll(options?: any): Promise<Party[]>;
     findAdvanced(params: any): Promise<[Party[], number]>;
+    private mapDetailedAccountKeys;
     checkDuplicate(field: string, value: any, excludeId?: number): Promise<boolean>;
     findDuplicatesByFullName(firstName: string, lastName: string, excludeId?: number): Promise<boolean>;
 }

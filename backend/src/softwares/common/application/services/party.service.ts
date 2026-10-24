@@ -31,6 +31,25 @@ export class PartyService {
     private readonly idGenerationService: IdGenerationService,
   ) {}
 
+  /**
+   * Expose the eager-loaded DetailedAccount code/title at top level of the
+   * party JSON. The Party entity itself has no `code` column — the تفصیلی
+   * code lives in detailedAccount.code. Frontend dropdowns (e.g. the Customer
+   * form «کدتفصیل مشتری») read top-level `code`/`title` keys, so without this
+   * injection the «کد تفصیلی» column and the selected value render empty.
+   */
+  private withDetailedCode<T extends Party | null | undefined>(party: T): T {
+    if (!party) return party;
+    const da: any = (party as any).detailedAccount ?? null;
+    const code = da?.code ?? null;
+    const title = da?.title ?? null;
+    (party as any).code = code;
+    (party as any).detailedCode = code;
+    (party as any).title = title;
+    (party as any).companyTitle = title;
+    return party;
+  }
+
   private async validateDuplicates(dto: Partial<CreatePartyDto | UpdatePartyDto>, existing?: Party, excludeId?: number) {
     // Determine new values or fallback to existing
     const newFirstName = dto.firstName !== undefined ? dto.firstName : existing?.firstName;
@@ -310,7 +329,7 @@ export class PartyService {
     const addresses = await this.partyAddressRepository.find({ where: { partyRef: id } });
     const phones = await this.partyPhoneRepository.find({ where: { partyRef: id } });
     return {
-      ...item,
+      ...this.withDetailedCode(item),
       PartyRelatedPersons: related,
       partyRelatedPersons: related,
       PartyAddresses: addresses,
@@ -321,12 +340,13 @@ export class PartyService {
   }
 
   async findAll(options?: any): Promise<Party[]> {
-    return this.partyRepository.findAll(options);
+    const items = await this.partyRepository.findAll(options);
+    return items.map((p) => this.withDetailedCode(p));
   }
 
   async findWithPagination(params: any): Promise<{ items: Party[], total: number }> {
     const [items, total] = await this.partyRepository.findAdvanced(params);
-    return { items, total };
+    return { items: items.map((p) => this.withDetailedCode(p)), total };
   }
 
   async remove(id: number): Promise<void> {

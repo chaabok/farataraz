@@ -220,9 +220,55 @@ export class PartyRepository implements IPartyRepository {
       qb.andWhere(`party.partyId NOT IN (${subQuery.getQuery()})`);
     }
     
-    applyDataGridParams(qb, params, 'party');
+    applyDataGridParams(qb, this.mapDetailedAccountKeys(params), 'party');
     
     return qb.getManyAndCount();
+  }
+
+  /**
+   * Map frontend column keys that point to the joined DetailedAccount
+   * («کد تفصیلی» / «عنوان شرکت») to the `da` query alias, so sorting and
+   * column/advanced filters run against real columns instead of the
+   * non-existent party.code / party.title columns (Task 45).
+   */
+  private mapDetailedAccountKeys(params: any): any {
+    const KEY_MAP: Record<string, string> = {
+      'code': 'da.code',
+      'detailedCode': 'da.code',
+      'detailedAccount.code': 'da.code',
+      'title': 'da.title',
+      'companyTitle': 'da.title',
+      'detailedAccount.title': 'da.title',
+    };
+    if (!params || typeof params !== 'object') return params;
+    const remap = (state: any): any => {
+      if (typeof state === 'string') {
+        if (state.trim() === '' || state === 'undefined' || state === 'null') return state;
+        try { state = JSON.parse(state); } catch (e) { return state; }
+      }
+      if (!Array.isArray(state)) return state;
+      return state.map((item: any) => {
+        const id = item?.id ?? item?.columnId;
+        if (id && KEY_MAP[id]) {
+          return item.id !== undefined ? { ...item, id: KEY_MAP[id] } : { ...item, columnId: KEY_MAP[id] };
+        }
+        return item;
+      });
+    };
+    const mapped: any = { ...params };
+    if (mapped.sorting !== undefined) {
+      const v = remap(mapped.sorting);
+      mapped.sorting = typeof v === 'string' ? v : JSON.stringify(v);
+    }
+    if (mapped.columnFilters !== undefined) {
+      const v = remap(mapped.columnFilters);
+      mapped.columnFilters = typeof v === 'string' ? v : JSON.stringify(v);
+    }
+    if (mapped.advancedFilters !== undefined) {
+      const v = remap(mapped.advancedFilters);
+      mapped.advancedFilters = typeof v === 'string' ? v : JSON.stringify(v);
+    }
+    return mapped;
   }
 
   async checkDuplicate(field: string, value: any, excludeId?: number): Promise<boolean> {
