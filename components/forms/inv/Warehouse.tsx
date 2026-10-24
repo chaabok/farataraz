@@ -738,20 +738,31 @@ export default function Warehouse() {
           width: '180px',
           render: (row, rowIndex, onChange) => (
             <MultiColumnDropdown
-              data={[
-                { id: 'P001', ProductCode: 'P001', ProductTitle: 'ورق روغنی ۱.۵ میل', MeasurementUnit: 'کیلوگرم' },
-                { id: 'P002', ProductCode: 'P002', ProductTitle: 'پروفیل ۲۰*۲۰', MeasurementUnit: 'شاخه' },
-                { id: 'P003', ProductCode: 'P003', ProductTitle: 'گرانول پی وی سی', MeasurementUnit: 'کیلوگرم' },
-                { id: 'P004', ProductCode: 'P004', ProductTitle: 'ورق گالوانیزه', MeasurementUnit: 'کیلوگرم' },
-                { id: 'P005', ProductCode: 'P005', ProductTitle: 'لوله صنعتی 2 اینچ', MeasurementUnit: 'متر' }
-              ]}
+              listApiUrl="/api/inv/items"
               columns={[
-                { key: 'ProductCode', label: 'کد کالا', width: 90 },
-                { key: 'ProductTitle', label: 'عنوان کالا', width: 180 },
-                { key: 'MeasurementUnit', label: 'واحد سنجش', width: 100 }
+                { key: 'ItemCode', label: 'کد کالا', width: 90 },
+                { key: 'ItemName', label: 'عنوان کالا', width: 180 },
+                { key: 'MeasurementUnitName', label: 'واحد سنجش', width: 100 }
               ]}
+              filterItem={(item: any) => {
+                // فقط کالاهای فعال تعریف‌شده در فرم کالا خدمت
+                if (item.IsActive === false) return false;
+                const code = String(item?.ItemCode ?? '');
+                if (!code) return false;
+                // کالاهایی که قبلاً به این انبار (شاخه) متصل شده‌اند در لیست نمایش داده نمی‌شوند
+                // (به‌جز ردیف جاری تا ویرایش همان ردیف ممکن باشد)
+                const rows = Array.isArray(formValues.WarehouseProducts) ? formValues.WarehouseProducts : [];
+                return !rows.some((r: any, idx: number) => idx !== rowIndex && r && String(r?.ProductCode ?? '') === code);
+              }}
               value={row?.ProductCode ? { id: row.ProductCode, ProductCode: row.ProductCode, ProductTitle: row.ProductTitle, MeasurementUnit: row.MeasurementUnit || row.MeasurementUnitTitle || '' } : null}
               onChange={(selected) => {
+                const mapItem = (item: any) => ({
+                  ProductCode: String(item?.ItemCode ?? item?.ProductCode ?? item?.id ?? ''),
+                  ProductTitle: item?.ItemName ?? item?.ItemName2 ?? item?.ProductTitle ?? item?.name ?? '',
+                  MeasurementUnit: item?.MeasurementUnitName ?? item?.MeasurementUnit ?? item?.unit ?? '',
+                  MeasurementUnitTitle: item?.MeasurementUnitName ?? item?.MeasurementUnit ?? item?.unit ?? '',
+                  MeasurementUnitRef: item?.MeasurementUnitRef ?? undefined
+                });
                 if (Array.isArray(selected)) {
                   if (selected.length === 0) {
                     row.ProductTitle = '';
@@ -759,22 +770,18 @@ export default function Warehouse() {
                     row.MeasurementUnitTitle = '';
                     onChange('');
                   } else {
-                    const mappedRows = selected.map(item => ({
-                      ProductCode: item.ProductCode || item.id || '',
-                      ProductTitle: item.ProductTitle || item.name || '',
-                      MeasurementUnit: item.MeasurementUnit || item.unit || item.MeasurementUnitTitle || '',
-                      MeasurementUnitTitle: item.MeasurementUnit || item.unit || item.MeasurementUnitTitle || ''
-                    }));
+                    const mappedRows = selected.map(mapItem);
                     row.ProductTitle = mappedRows[0].ProductTitle;
                     row.MeasurementUnit = mappedRows[0].MeasurementUnit;
                     row.MeasurementUnitTitle = mappedRows[0].MeasurementUnitTitle;
                     onChange(mappedRows);
                   }
                 } else if (selected) {
-                  row.ProductTitle = selected.ProductTitle || selected.name || '';
-                  row.MeasurementUnit = selected.MeasurementUnit || selected.unit || '';
-                  row.MeasurementUnitTitle = selected.MeasurementUnit || selected.unit || '';
-                  onChange(selected.ProductCode || selected.id || '');
+                  const m = mapItem(selected);
+                  row.ProductTitle = m.ProductTitle;
+                  row.MeasurementUnit = m.MeasurementUnit;
+                  row.MeasurementUnitTitle = m.MeasurementUnitTitle;
+                  onChange(m.ProductCode);
                 } else {
                   row.ProductTitle = '';
                   row.MeasurementUnit = '';
@@ -787,7 +794,7 @@ export default function Warehouse() {
               displayKey="ProductCode"
               enableMultiSelection={true}
               portal={true}
-              onAdd={() => addTab('کالا و خدمات جدید', 'inv', <Package className="w-4 h-4" />, 'ItemServiceGroupForm')}
+              onAdd={() => addTab('کالا و خدمات جدید', 'inv', <Package className="w-4 h-4" />, 'ProductServiceForm')}
             />
           )
         },
@@ -805,14 +812,22 @@ export default function Warehouse() {
             />
           )
         },
-        { 
-          key: 'MeasurementUnitRef', 
-          header: 'واحد سنجش', 
-          type: 'custom', 
+        {
+          key: 'MeasurementUnitRef',
+          header: 'واحد سنجش',
+          type: 'custom',
           width: '180px',
           render: (row) => (
             <TextInput
-              value={row?.MeasurementUnit || row?.MeasurementUnitTitle || row?.MeasurementUnitName || ''}
+              value={
+                // Task 60: MeasurementUnit ممکن است شیء join‌شده از سرور باشد یا رشته از دراپ‌داون
+                (typeof row?.MeasurementUnit === 'object' && row?.MeasurementUnit !== null
+                  ? (row.MeasurementUnit.MeasurementUnitName || row.MeasurementUnit.name || '')
+                  : (row?.MeasurementUnit || '')) ||
+                row?.MeasurementUnitTitle ||
+                row?.MeasurementUnitName ||
+                ''
+              }
               disabled={true}
               placeholder="واحد سنجش"
               className="w-full px-2 h-[25px] text-[11px] bg-gray-100/70 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded outline-none text-slate-800 dark:text-slate-100 cursor-not-allowed"

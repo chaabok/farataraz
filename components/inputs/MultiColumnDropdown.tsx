@@ -345,7 +345,10 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
         selectionAtOpenRef.current = value;
       } else if (isMultiSelectionEnabled) {
         setSelectedRows([]);
-        selectionAtOpenRef.current = null;
+        // Task 60: اسنپ‌شات باید آرایه خالی باشد (نه null) تا بسته شدن پنل
+        // هنگام باز کردن با مقدار اولیه خالی (مثلا ردیف تازه «ایجاد ردیف»)
+        // هم انتخاب‌های در انتظار را commit کند.
+        selectionAtOpenRef.current = [];
       }
     }
   }, [isOpen, isMultiSelectionEnabled, value]);
