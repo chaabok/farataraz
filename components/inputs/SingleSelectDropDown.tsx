@@ -480,6 +480,11 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
           });
         }
         setHasMore(items.length === pageSize);
+        // Mark as fetched ONLY on success: if the request failed (e.g. the
+        // backend was restarting), `hasFetched` stays false so the next
+        // open/focus retries the fetch instead of leaving the dropdown
+        // permanently empty until a full page reload.
+        setHasFetched(true);
       } else {
         if (reset) {
           setInternalData([]);
@@ -494,7 +499,6 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
       setHasMore(false);
     } finally {
       setIsLoadingApi(false);
-      setHasFetched(true);
     }
   };
 

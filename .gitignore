@@ -72,3 +72,6 @@ backups/*
 !backups/parsa-db-latest.sql
 pg-local/pgsql/extracted/
 pg-local/pgsql/pg.jar
+
+# runtime single-instance lock of unified server (contains machine-local pid)
+.zscripts/server.lock

@@ -64,10 +64,57 @@ const ENV_OVERRIDE_KEYS = [
   'LICENSE_PUBLIC_KEY', 'LICENSE_ENFORCEMENT'
 ];
 
+/**
+ * Single-instance guard: the platform occasionally runs start.sh twice during
+ * boot, which used to leave TWO unified servers fighting over port 3005 —
+ * each instance's killPort(3005)/restart loop killed the other's backend
+ * every few seconds (endless crash-loop) so ALL frontend API calls
+ * (e.g. the customer-group dropdown) failed intermittently with empty lists.
+ * A lockfile makes any duplicate instance exit immediately.
+ */
+function isAliveServerProcess(pid) {
+  try {
+    process.kill(pid, 0); // throws if the process does not exist
+    const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf-8');
+    return cmd.includes('server.js'); // guards against pid reuse after reboot
+  } catch (e) {
+    return false;
+  }
+}
+
+function acquireServerLock(dir) {
+  const lockPath = path.join(dir, '.zscripts', 'server.lock');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx'); // exclusive create — atomic
+      fs.writeSync(fd, String(process.pid));
+      fs.closeSync(fd);
+      return { owned: true, lockPath };
+    } catch (e) {
+      if (e && e.code === 'EEXIST') {
+        let lockPid = 0;
+        try { lockPid = parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10) || 0; } catch (_) {}
+        if (lockPid && lockPid !== process.pid && isAliveServerProcess(lockPid)) {
+          console.log(`[SERVER] Another unified server (pid ${lockPid}) is already running — exiting this duplicate instance.`);
+          return { owned: false, lockPath };
+        }
+        // Stale lock from a dead/previous-boot instance — take over.
+        console.log(`[SERVER] Removing stale server lock (pid ${lockPid || 'unknown'} is gone).`);
+        try { fs.unlinkSync(lockPath); } catch (_) {}
+        continue;
+      }
+      return { owned: true, lockPath }; // lock trouble must never block startup
+    }
+  }
+  return { owned: true, lockPath };
+}
+
 async function main() {
   console.log('Starting Parsa ERP Unified Server...');
 
   const currentDir = process.cwd();
+  const lock = acquireServerLock(currentDir);
+  if (!lock.owned) process.exit(0);
   const envFile = loadEnvFile(currentDir);
   const envOverrides = {};
   for (const key of ENV_OVERRIDE_KEYS) {
@@ -185,6 +232,11 @@ async function main() {
     console.log('Shutting down servers...');
     try { if (backend) backend.kill(); } catch (e) {}
     try { if (frontend) frontend.kill(); } catch (e) {}
+    // Release the single-instance lock so the next boot starts instantly.
+    try {
+      const lockPid = parseInt(fs.readFileSync(lock.lockPath, 'utf-8').trim(), 10);
+      if (lockPid === process.pid) fs.unlinkSync(lock.lockPath);
+    } catch (e) {}
     process.exit();
   };
 
