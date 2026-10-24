@@ -219,6 +219,14 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
   const [showGlobalSearch, setShowGlobalSearch] = useState(defaultShowGlobalSearch);
   const [isMultiSelectionEnabled, setIsMultiSelectionEnabled] = useState(Boolean(enableMultiSelection));
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
+  // Task 46: track the pending multi-selection so closing the panel (Escape /
+  // outside click / trigger toggle) COMMITS the toggles instead of silently
+  // discarding them (reported: sales channel picked in customer form but never
+  // displayed in the input).
+  const selectionAtOpenRef = useRef<any[] | null>(null);
+  const suppressCloseCommitRef = useRef(false);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   
@@ -334,11 +342,37 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
     if (isOpen) {
       if (isMultiSelectionEnabled && Array.isArray(value)) {
         setSelectedRows(value);
-      } else {
+        selectionAtOpenRef.current = value;
+      } else if (isMultiSelectionEnabled) {
         setSelectedRows([]);
+        selectionAtOpenRef.current = null;
       }
     }
   }, [isOpen, isMultiSelectionEnabled, value]);
+
+  // Task 46: when the panel closes WITHOUT an explicit confirm (✓ / double-click
+  // / Enter all set suppressCloseCommitRef), commit the pending checkbox
+  // selection — including an explicit clear (all boxes unchecked).
+  useEffect(() => {
+    if (isOpen) return;
+    if (!isMultiSelectionEnabled) return;
+    if (suppressCloseCommitRef.current) {
+      suppressCloseCommitRef.current = false;
+      return;
+    }
+    const openSnapshot = selectionAtOpenRef.current;
+    if (!openSnapshot) return;
+    const cur = Array.isArray(selectedRows) ? selectedRows : [];
+    const changed =
+      cur.length !== openSnapshot.length ||
+      cur.some(s => !openSnapshot.some(v => isSameItem(v, s))) ||
+      openSnapshot.some(v => !cur.some(s => isSameItem(v, s)));
+    if (changed) {
+      onChangeRef.current(cur);
+      // re-baseline so re-runs of this effect don't duplicate the commit
+      selectionAtOpenRef.current = cur;
+    }
+  }, [isOpen, isMultiSelectionEnabled]);
 
   const isRowSelected = (item: any): boolean => {
     if (!Array.isArray(selectedRows)) return false;
@@ -837,11 +871,13 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
               selectedArr.push(s);
             }
           });
+          suppressCloseCommitRef.current = true;
           setSelectedRows([]);
           onChange(selectedArr);
           setIsOpen(false);
         } else if (activeIndex >= 0 && activeIndex < sortedData.length) {
           const activeItem = sortedData[activeIndex];
+          suppressCloseCommitRef.current = true;
           if (isMultiSelectionEnabled) {
             onChange([activeItem]);
           } else {
@@ -1593,6 +1629,7 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
                           if (isMultiSelectionEnabled) {
                             const curSel = Array.isArray(selectedRows) ? selectedRows : [];
                             const selectedArr = curSel.length > 0 ? curSel : [item];
+                            suppressCloseCommitRef.current = true;
                             onChange(selectedArr);
                             setSelectedRows([]);
                             setIsOpen(false);
@@ -1647,15 +1684,24 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
               <ActionButton 
                 onClick={() => {
                   const curSel = Array.isArray(selectedRows) ? selectedRows : [];
-                  const selectedArr = curSel.length > 0 
-                    ? curSel 
-                    : (activeIndex >= 0 && sortedData[activeIndex] ? [sortedData[activeIndex]] : []);
-                  if (selectedArr.length > 0) {
-                    if (isMultiSelectionEnabled) {
-                      onChange(selectedArr);
-                    } else {
-                      onChange(selectedArr[0]);
-                    }
+                  const openSnapshot = selectionAtOpenRef.current;
+                  let selectedArr: any[];
+                  if (curSel.length > 0) {
+                    selectedArr = curSel;
+                  } else if (isMultiSelectionEnabled && openSnapshot && openSnapshot.length > 0) {
+                    // Task 46: user explicitly unchecked every previously-selected row
+                    // → confirm means CLEAR, not "re-pick the highlighted row"
+                    selectedArr = [];
+                  } else if (activeIndex >= 0 && sortedData[activeIndex]) {
+                    selectedArr = [sortedData[activeIndex]];
+                  } else {
+                    selectedArr = [];
+                  }
+                  if (isMultiSelectionEnabled) {
+                    suppressCloseCommitRef.current = true;
+                    onChange(selectedArr);
+                  } else if (selectedArr.length > 0) {
+                    onChange(selectedArr[0]);
                   }
                   setSelectedRows([]);
                   setIsOpen(false);
