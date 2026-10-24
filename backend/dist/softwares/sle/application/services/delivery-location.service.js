@@ -51,9 +51,14 @@ let DeliveryLocationService = class DeliveryLocationService {
         }
         return { bsId, compId, isShared };
     }
-    async findAll() {
+    async findAll(activeOnly) {
         const { bsId, compId, isShared } = await this.getScope();
-        const where = isShared ? { businessStructureRef: bsId } : { companyRef: compId };
+        const where = isShared
+            ? { businessStructureRef: bsId }
+            : { companyRef: compId };
+        if (activeOnly) {
+            where.IsActive = true;
+        }
         return this.repository.findAll({ where });
     }
     async findById(id) {

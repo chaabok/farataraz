@@ -43,9 +43,15 @@ export class DeliveryLocationService {
     return { bsId, compId, isShared };
   }
 
-  async findAll(): Promise<DeliveryLocation[]> {
+  async findAll(activeOnly?: boolean): Promise<DeliveryLocation[]> {
     const { bsId, compId, isShared } = await this.getScope();
-    const where = isShared ? { businessStructureRef: bsId } : { companyRef: compId };
+    const where: Record<string, any> = isShared
+      ? { businessStructureRef: bsId }
+      : { companyRef: compId };
+    // Only active delivery locations (for dropdowns like sales order)
+    if (activeOnly) {
+      where.IsActive = true;
+    }
     return this.repository.findAll({ where });
   }
 

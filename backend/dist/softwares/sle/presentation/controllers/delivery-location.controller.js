@@ -22,8 +22,8 @@ let DeliveryLocationController = class DeliveryLocationController {
     constructor(service) {
         this.service = service;
     }
-    async findAll() {
-        const data = await this.service.findAll();
+    async findAll(activeOnly) {
+        const data = await this.service.findAll(activeOnly === 'true' || activeOnly === '1');
         return { data, success: true };
     }
     async getNextNumber() {
@@ -54,8 +54,9 @@ let DeliveryLocationController = class DeliveryLocationController {
 exports.DeliveryLocationController = DeliveryLocationController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('activeOnly')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], DeliveryLocationController.prototype, "findAll", null);
 __decorate([

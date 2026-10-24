@@ -10,8 +10,8 @@ export class DeliveryLocationController {
   constructor(private readonly service: DeliveryLocationService) {}
 
   @Get()
-  async findAll() {
-    const data = await this.service.findAll();
+  async findAll(@Query('activeOnly') activeOnly?: string) {
+    const data = await this.service.findAll(activeOnly === 'true' || activeOnly === '1');
     return { data, success: true };
   }
 

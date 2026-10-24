@@ -9,7 +9,7 @@ export declare class DeliveryLocationService {
     private readonly requestContextService;
     constructor(repository: IDeliveryLocationRepository, idGenerationService: IdGenerationService, requestContextService: RequestContextService);
     private getScope;
-    findAll(): Promise<DeliveryLocation[]>;
+    findAll(activeOnly?: boolean): Promise<DeliveryLocation[]>;
     findById(id: number): Promise<DeliveryLocation>;
     getNextNumber(): Promise<{
         documentNumber: number;

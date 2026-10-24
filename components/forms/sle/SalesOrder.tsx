@@ -67,7 +67,6 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [salesTypeOptions, setSalesTypeOptions] = useState<any[]>([]);
-  const [deliveryLocationOptions, setDeliveryLocationOptions] = useState<any[]>([]);
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -76,9 +75,22 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     { key: "title", label: "عنوان مشتری", width: 260 },
   ];
 
+  // renderItem با fallback به فیلدهای PascalCase (ردیف‌های خام listApiUrl مثل مکان تحویل)
   const refColumns: SingleSelectColumn[] = [
-    { key: "code", label: "کد", width: 70 },
-    { key: "title", label: "عنوان", width: 220 },
+    {
+      key: "code",
+      label: "کد",
+      width: 70,
+      renderItem: (item: any) => String(item?.code ?? item?.Code ?? ""),
+      exportValue: (item: any) => String(item?.code ?? item?.Code ?? ""),
+    },
+    {
+      key: "title",
+      label: "عنوان",
+      width: 220,
+      renderItem: (item: any) => String(item?.title ?? item?.Title ?? ""),
+      exportValue: (item: any) => String(item?.title ?? item?.Title ?? ""),
+    },
   ];
 
   // Fetch dropdown data: items (کالا) and customers (مشتریان)
@@ -141,20 +153,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       })
       .catch((err) => console.error("Error fetching sales types:", err));
 
-    // مکان های تحویل (از فرم مکان های تحویل)
-    apiFetch("/api/sle/delivery-locations")
-      .then((res) => res.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.data || [];
-        setDeliveryLocationOptions(
-          list.map((d: any) => ({
-            id: d.DeliveryLocationID || d.id,
-            code: d.Code || d.code || "",
-            title: d.Title || d.title || "",
-          }))
-        );
-      })
-      .catch((err) => console.error("Error fetching delivery locations:", err));
+    // مکان های تحویل (از فرم مکان های تحویل): دراپ‌داون با listApiUrl هر بار هنگام باز شدن
+    // داده‌ها را تازه واکشی می‌کند تا مکان‌های تحویل فعالِ جدید (حتی اگر بعد از باز شدن
+    // این فرم ثبت شده باشند) هم نمایش داده شوند؛ فقط رکوردهای IsActive=true.
 
     // روش های تسویه (از فرم روش تسویه جدید)
     apiFetch("/api/sle/settlement-methods")
@@ -497,17 +498,18 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       render: ({ disabled }) => (
         <div className="grid grid-cols-2 gap-x-2 w-full items-center">
           <SingleSelectDropDown
-            options={deliveryLocationOptions}
+            listApiUrl="/api/sle/delivery-locations?activeOnly=true"
+            filterItem={(d: any) => d.IsActive !== false && d.IsActive !== 0}
+            addFormOptions={{ title: "تعریف مکان تحویل جدید", componentName: "DeliveryLocationForm", groupId: "sle" }}
             columns={refColumns}
             value={values.DeliveryLocationRef || ""}
-            valueKey="id"
+            valueKey="DeliveryLocationID"
             displayKey="title"
-            onChange={(sel: any) => {
-              if (!sel) {
-                setValues((prev) => ({ ...prev, DeliveryLocationRef: "" }));
-                return;
-              }
-              const refId = typeof sel === "object" ? sel.id : sel;
+            searchKeys={["code", "title", "Title", "Title2"]}
+            onChange={(sel: any, selVal: any) => {
+              const refId =
+                selVal ??
+                (typeof sel === "object" ? sel?.DeliveryLocationID ?? sel?.id : sel);
               setValues((prev) => ({ ...prev, DeliveryLocationRef: refId ? Number(refId) : "" }));
             }}
             placeholder="انتخاب محل تحویل..."

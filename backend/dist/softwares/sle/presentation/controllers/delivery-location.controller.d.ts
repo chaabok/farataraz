@@ -3,7 +3,7 @@ import { CreateDeliveryLocationDto, UpdateDeliveryLocationDto } from '../../appl
 export declare class DeliveryLocationController {
     private readonly service;
     constructor(service: DeliveryLocationService);
-    findAll(): Promise<{
+    findAll(activeOnly?: string): Promise<{
         data: import("../../domain/entities/delivery-location.entity").DeliveryLocation[];
         success: boolean;
     }>;

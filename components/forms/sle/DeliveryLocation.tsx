@@ -11,6 +11,7 @@ import { useToast } from "@/components/ToastProvider";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { useLanguage } from "@/components/Providers";
 import { safeStringify } from "@/lib/utils";
+import { eventBus, EVENTS } from "@/lib/events";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 
 export function DeliveryLocationComponent({ 
@@ -172,6 +173,8 @@ export function DeliveryLocationComponent({
           setData(savedItem);
           handleResponse(savedItem, 'DeliveryLocationID');
         }
+        // اطلاع به همه‌ی دراپ‌داون‌ها و لیست‌های باز (مثل دراپ‌داون محل تحویل در سفارش فروش)
+        eventBus.emit(EVENTS.DATA_CHANGED, { entity: 'DeliveryLocation' });
         showToast(result.message || 'اطلاعات با موفقیت ذخیره گردید.', 'success');
         if (onSaved) onSaved();
 
@@ -262,6 +265,7 @@ export function DeliveryLocationComponent({
          try {
             const res = await apiFetch(`/api/sle/delivery-locations/${data.DeliveryLocationID}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('خطا در حذف');
+            eventBus.emit(EVENTS.DATA_CHANGED, { entity: 'DeliveryLocation' });
             showToast('با موفقیت حذف شد', 'success');
             if (activeTabId) removeTab(activeTabId);
          } catch (err: any) {
