@@ -3,7 +3,7 @@
 import { useLanguage, useCompany } from '@/components/Providers';
 import { Hash, Calendar, Clock, ChevronDown, Plus, Key, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/utils';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useTabs } from '@/components/TabsProvider';
@@ -21,6 +21,7 @@ export function Footer() {
   const [fiscalYears, setFiscalYears] = useState<any[]>([]);
   const [activeFiscalYear, setActiveFiscalYear] = useState('');
   const [showNoFiscalYearDialog, setShowNoFiscalYearDialog] = useState(false);
+  const fiscalLoadSeqRef = useRef(0);
   
   const { addTab } = useTabs();
 
@@ -54,56 +55,75 @@ export function Footer() {
       return;
     }
 
-    apiFetch('/api/common/fiscalyear')
-      .then(async res => {
-        if (res.status === 503) return { _isRestarting: true };
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(`Failed to fetch fiscal years: ${res.status} ${res.statusText}. ${text.slice(0, 100)}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data && data._isRestarting) return; // Silent skip
-        const items = Array.isArray(data) ? data : (data?.items || []);
-        if (items.length === 0) {
-          setFiscalYears([]);
-          setShowNoFiscalYearDialog(true);
-          setActiveFiscalYear('');
-          localStorage.removeItem('app-fiscal-year');
-          window.dispatchEvent(new Event('storage'));
+    const seq = ++fiscalLoadSeqRef.current;
+
+    const applyData = (data: any) => {
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      if (items.length === 0) {
+        setFiscalYears([]);
+        setShowNoFiscalYearDialog(true);
+        setActiveFiscalYear('');
+        localStorage.removeItem('app-fiscal-year');
+        window.dispatchEvent(new Event('storage'));
+      } else {
+        setFiscalYears(items);
+        setShowNoFiscalYearDialog(false);
+
+        const savedFiscalYear = localStorage.getItem('app-fiscal-year');
+        const hasSaved = savedFiscalYear && items.some((fy: any) => String(fy.fiscalYearID || fy.id) === String(savedFiscalYear));
+
+        let targetId = '';
+        if (preferredId && items.some((fy: any) => String(fy.fiscalYearID || fy.id) === String(preferredId))) {
+          targetId = String(preferredId);
+        } else if (hasSaved) {
+          targetId = String(savedFiscalYear);
         } else {
-          setFiscalYears(items);
-          setShowNoFiscalYearDialog(false);
-
-          const savedFiscalYear = localStorage.getItem('app-fiscal-year');
-          const hasSaved = savedFiscalYear && items.some((fy: any) => String(fy.fiscalYearID || fy.id) === String(savedFiscalYear));
-
-          let targetId = '';
-          if (preferredId && items.some((fy: any) => String(fy.fiscalYearID || fy.id) === String(preferredId))) {
-            targetId = String(preferredId);
-          } else if (hasSaved) {
-            targetId = String(savedFiscalYear);
-          } else {
-            // If no fiscal year was previously defined/selected, select newly created or active/first
-            const active = items.find((fy: any) => fy.isActive) || items[0];
-            targetId = String(active.fiscalYearID || active.id || '');
-          }
-
-          setActiveFiscalYear(targetId);
-          if (targetId) {
-            localStorage.setItem('app-fiscal-year', targetId);
-          } else {
-            localStorage.removeItem('app-fiscal-year');
-          }
-          window.dispatchEvent(new Event('storage'));
+          // If no fiscal year was previously defined/selected, select newly created or active/first
+          const active = items.find((fy: any) => fy.isActive) || items[0];
+          targetId = String(active.fiscalYearID || active.id || '');
         }
-      })
-      .catch(err => {
-        if (!window.location.pathname.startsWith('/login')) {
-          console.error("Error loading fiscal years", err);
+
+        setActiveFiscalYear(targetId);
+        if (targetId) {
+          localStorage.setItem('app-fiscal-year', targetId);
+        } else {
+          localStorage.removeItem('app-fiscal-year');
         }
-      });
+        window.dispatchEvent(new Event('storage'));
+      }
+    };
+
+    // بک‌اند ممکن است موقتاً در حال ری‌استارت باشد؛ با فاصله دوباره تلاش می‌کنیم
+    // (خطاهای گذرا نباید اورلی خطای کنسول/Next را فعال کنند — فقط warn)
+    const delays = [0, 2500, 6000, 12000, 20000];
+    const attempt = (idx: number) => {
+      if (seq !== fiscalLoadSeqRef.current) return; // درخواست جدیدتری آمده است
+      apiFetch('/api/common/fiscalyear')
+        .then(async res => {
+          if (res.status === 503) return { _isRestarting: true };
+          if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            throw new Error(`Failed to fetch fiscal years: ${res.status} ${res.statusText}. ${text.slice(0, 100)}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (seq !== fiscalLoadSeqRef.current) return;
+          if (data && data._isRestarting) return; // Silent skip
+          applyData(data);
+        })
+        .catch(err => {
+          if (seq !== fiscalLoadSeqRef.current) return;
+          if (window.location.pathname.startsWith('/login')) return;
+          if (idx + 1 < delays.length) {
+            console.warn(`Fiscal years fetch failed (attempt ${idx + 1}/${delays.length}), retrying...`, (err as any)?.message || err);
+            setTimeout(() => attempt(idx + 1), delays[idx + 1]);
+          } else {
+            console.warn('Fiscal years temporarily unavailable; will refresh on next data change.', (err as any)?.message || err);
+          }
+        });
+    };
+    attempt(0);
   }, [currentCompany, currentCompany?.businessStructureId]);
 
   useEffect(() => {
