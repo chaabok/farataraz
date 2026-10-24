@@ -435,14 +435,16 @@ export function CustomerComponent({
           listApiUrl={`/api/common/parties?isCustomer=true&excludeAssignedCustomers=true${activeId || data?.CustomerID ? `&excludeCustomerId=${activeId || data?.CustomerID}` : ''}`}
           columns={[
             { key: 'partyId', label: 'کد', width: 60 },
-            { key: 'code', label: 'کد تفصیلی', width: 80 },
+            // The party payload has no direct `code`; the detailed-account code
+            // lives at detailedAccount.code (getResolvedValue supports dot-path keys).
+            { key: 'detailedAccount.code', label: 'کد تفصیلی', width: 80 },
             { key: 'firstName', label: 'نام', width: 100 },
             { key: 'lastName', label: 'نام خانوادگی', width: 120 },
             { key: 'title', label: 'عنوان شرکت', width: 150 },
             { key: 'nationalCode', label: 'کد ملی / شناسه', width: 100 },
           ]}
-          displayKey="code"
-          renderSelection={(p: any) => p ? String(p.code || p.partyId || '') : ''}
+          displayKey="detailedAccount.code"
+          renderSelection={(p: any) => p ? String(p.detailedAccount?.code || p.code || '') : ''}
           value={parties.find((p) => String(p.partyId || p.id) === String(values.PartyRef)) || null}
           onChange={(item: any) => {
             handleChange('PartyRef', item ? (item.partyId || item.id) : null);
@@ -767,7 +769,10 @@ export function CustomerComponent({
         { 
           key: 'PartyRef', 
           header: 'کدتفصیلی', 
-          renderItem: (item: any) => item.party?.code || item.PartyRef || '-' 
+          // Party payload has no `code` field: the detailed-account code lives
+          // at party.detailedAccount.code. Falling back to PartyRef here used
+          // to display the party ID (1, 2, ...) instead of the real code (10001, ...).
+          renderItem: (item: any) => item.party?.detailedAccount?.code || item.party?.code || '-' 
         },
         { 
           key: 'CustomerGroup', 

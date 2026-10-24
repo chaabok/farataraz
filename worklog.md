@@ -703,3 +703,22 @@ Work Log:
 
 Stage Summary:
 - از هر نوع تفصیلی سیستمی دقیقاً یک رکورد باقی است (21 رکورد، IDهای 1..21)؛ هر دو فرم «شماره گذاری تفصیلی» و «فهرست انواع تفصیلی» اکنون بدون رکورد تکراری رندر می‌شوند. علت ساخت دوبله (بررسی per-ref ناهم‌سو با اسکوپ ذخیره‌سازی) به‌صورت ریشه‌ای اصلاح و پاک‌سازی خودآیی هم اضافه شد تا در صورت تکرار سناریو (boot دوبل، تغییر کانتکست)، سیستم خودش داده را ترمیم کند. داده‌های کاربر (تفصیلی‌های ثبت‌شده) دست‌نخورده و ارجاع‌ها سالم ماندند. فایل dbq.js (ابزار خواندن SQL برای دیباگ) به .zscripts اضافه شد.
+
+---
+Task ID: 55
+Agent: main (Z.ai Code)
+Task: «توی دراپ دان آیکون لیست در فرم تعریف مشتری جدید، کد تفصیلی دارد اشتباه نمایش داده می شود» (+اسکرین‌شات: ستون کدتفصیلی برای Ghodsi Sharifi مقدار 1 و برای علی جهانی مقدار 2 نشان می‌داد)
+
+Work Log:
+- ریشه‌یابی: پاسخ API هیچ‌وقت فیلد code روی خودِ party ندارد؛ کد تفصیلی واقعی داخل رابطه‌ی eager است: party.detailedAccount.code (Party ← OneToOne به Acc.DetailedAccounts). تأیید دیتابیس: Party 1 (Ghodsi Sharifi) ← DA Code=10001، Party 2 (علی جهانی) ← 10002، Party 3 (شرکت پارس داده) ← 30001.
+- دو نقطه‌ی معیوب در components/forms/sle/Customer.tsx (هر دو از همان ریشه):
+  ۱) دراپ‌داون «آیکون لیست» فرم (listColumns ستون PartyRef با header «کدتفصیلی»): renderItem = item.party?.code || item.PartyRef → چون party.code همیشه undefined است، به PartyRef (شناسه‌ی party = 1/2) fallback می‌شد = دقیقاً نمایش اشتباه اسکرین‌شات. فیکس: item.party?.detailedAccount?.code || item.party?.code || '-' (fallback به شناسه حذف شد؛ اگر کد تفصیلی نباشد «-» نشان می‌دهد).
+  ۲) دراپ‌داون انتخابگر فیلد «کدتفصیل مشتری» (SingleSelectDropDown روی /api/common/parties): ستون {key:'code'} و displayKey='code' هرگز مقدار نداشتند و renderSelection به p.partyId fallback می‌شد. فیکس: key/displayKey = 'detailedAccount.code' (getResolvedValue و رندر سلول‌های SingleSelectDropDown هر دو کلید dot-path را پشتیبانی می‌کنند - خطوط 76 و 1726) و renderSelection = p.detailedAccount?.code || p.code.
+- eslint Customer.tsx: 0 error. تغییر فقط در همان یک فایل فرانت‌اند؛ بدون تغییر بک‌اند (ساختار پاسخ از قبل درست بود).
+- تأیید E2E (agent-browser، لاگین admin/1234 ← انبار و بازرگانی ← فروش ← اطلاعات پایه ← مشتری جدید):
+  • آیکون لیست ← لیست مشتریان: علی جهانی ← کدتفصیلی «10002»، Ghodsi Sharifi ← «10001» (قبلاً 2 و 1)؛ بقیه ستون‌ها (کد/نام مشتری/گروه مشتری/نام ارز/نوع) دست‌نخورده و صحیح.
+  • دراپ‌داون انتخابگر کدتفصیل مشتری: ردیف شرکت پارس داده با کد تفصیلی «30001»؛ پس از انتخاب، فیلد مقدار «30001» را نشان می‌دهد.
+  • console errors = 0، page errors = 0. اسکرین‌شات: .zscripts/verify-customer-dacode.png.
+
+Stage Summary:
+- ستون «کدتفصیلی» در دراپ‌داون لیستِ فرم مشتری اکنون کد واقعی حساب تفصیلی (10001/10002/...) را نشان می‌دهد نه شناسه‌ی party را؛ انتخابگر «کدتفصیل مشتری» هم به‌جای مقدار خالی/شناسه، کد تفصیلی واقعی را نمایش می‌دهد. الگوی خراب «fallback به شناسه» از ستون کدتفصیلی حذف شد (الگوی صحیحِ بقیه‌ی فرم‌ها مثل WarehouseReceipt/PurchaseInvoice همان detailedAccount?.code بود که اینجا اعمال شد).
