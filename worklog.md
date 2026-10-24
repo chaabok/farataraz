@@ -482,3 +482,18 @@ Work Log:
 Stage Summary:
 - ریپوی گیت تمیز (بدون باینری‌های pgdata در تاریخچه، بدون سکرت‌ها) آماده push است؛ فقط PAT گیت‌هاب از کاربر لازم است.
 - روال دائمی از این پس: بعد از هر تغییر → push-to-github.sh (سورس + دامپ DB + اسنپ‌شات محلی).
+
+---
+Task ID: 44-b
+Agent: main (Z.ai Code)
+Task: اجرای push اولیه به GitHub با توکن دریافتی + فعال‌سازی روال دائمی checkpoint
+
+Work Log:
+- توکن fine-grained کاربر دریافت شد؛ credential.helper=store و ~/.git-credentials با chmod 600 ذخیره شد (بیرون از پروژه؛ هرگز track نمی‌شود).
+- push اولیه: baseline 5c33fa7 + کامیت خودکار پلتفرم d997377 (فقط worklog + push-to-github.sh — بررسی شد، بی‌ضرر، بدون سکرت) → «* [new branch] main -> main».
+- تأیید امنیتی: git ls-files → هیچ فایل سکرتی (env/erp.env/license) track نشده ✓.
+- تست end-to-end روال: bash .zscripts/push-to-github.sh → dump DB (تغییر 2 خط دامپ) → commit 6bf7650 → push (d997377..6bf7650) → repo.tar refresh → DONE ✓.
+- تأیید سمت GitHub API: repo=nilash44/farataraz، public، default_branch=main، backups/parsa-db-latest.sql روی ریپو موجود ✓.
+
+Stage Summary:
+- روال دائمی فعال شد: بعد از هر تغییر → .zscripts/push-to-github.sh (دامپ DB → commit → push origin main → refresh repo.tar). سورس + دیتابیس از این پس همیشه روی GitHub و اسنپ‌شات محلی هم‌گام هستند.
