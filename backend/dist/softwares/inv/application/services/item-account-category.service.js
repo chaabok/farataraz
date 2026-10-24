@@ -170,6 +170,9 @@ let ItemAccountCategoryService = class ItemAccountCategoryService {
         const userId = this.requestContextService.getUserId();
         const companyId = (this.requestContextService.getCompanyId() && this.requestContextService.getCompanyId() > 1) ? this.requestContextService.getCompanyId() : 2;
         const bsId = (this.requestContextService.getBusinessStructureId() && this.requestContextService.getBusinessStructureId() > 1) ? this.requestContextService.getBusinessStructureId() : 2;
+        if (!String(createDto.ItemAccountCategoryName2 ?? '').trim()) {
+            createDto.ItemAccountCategoryName2 = String(createDto.ItemAccountCategoryName ?? '').trim();
+        }
         let codeToSave = createDto.ItemAccountCategoryCode;
         const docRes = await this.repository.calculateNextCode(bsId, companyId);
         if (docRes.numberingMethod === '2' || !codeToSave) {
@@ -200,6 +203,9 @@ let ItemAccountCategoryService = class ItemAccountCategoryService {
         const existing = await this.findOne(id);
         if (updateDto.ItemAccountCategoryCode === undefined) {
             updateDto.ItemAccountCategoryCode = existing.ItemAccountCategoryCode;
+        }
+        if (updateDto.ItemAccountCategoryName2 !== undefined && !String(updateDto.ItemAccountCategoryName2 ?? '').trim()) {
+            updateDto.ItemAccountCategoryName2 = String(updateDto.ItemAccountCategoryName ?? existing.ItemAccountCategoryName ?? '').trim();
         }
         await this.validateDuplicates(updateDto, id);
         const userId = this.requestContextService.getUserId();

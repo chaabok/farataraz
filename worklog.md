@@ -749,3 +749,28 @@ Work Log:
 
 Stage Summary:
 - دراپ‌داون «محل تحویل» سفارش فروش اکنون همیشه فهرست تازه‌ی «مکان های تحویل فعال» را نشان می‌دهد: واکشی سمت سرور با activeOnly=فقط فعال، رندر درست ردیف‌های خام (کد+عنوان)، میان‌بر تعریف مکان تحویل جدید، retry در خطا و رفرش زنده‌ی لحظه‌ای پس از ثبت/حذف در فرم مکان های تحویل (حتی وقتی فرم سفارش از قبل باز بوده است). چرخه‌ی کامل انتخاب→ذخیره→بازخوانی در مرورگر تأیید شد.
+
+---
+Task ID: 57
+Agent: main (Z.ai Code)
+Task: «توی فرم طبقه حساب کالا اگر کاربر فیلد عنوان (2) را تکمیل نکرده بود با همان اطلاعات وارد شده در فیلد عنوان ذخیره گردید» (+اسکرین‌شات خطای «عنوان (2) اجباری است»)
+
+Work Log:
+- ریشه‌یابی: «عنوان (2)» (ItemAccountCategoryName2) در سه لایه اجباری شده بود: validate() فرانت («عنوان (2) اجباری است *»)، required:true در config فیلد (ستاره‌ی قرمز UI) و @IsNotEmpty در CreateItemAccountCategoryDto بک‌اند؛ در نتیجه رد کردن خالیِ آن غیرممکن بود.
+- فیکس فرانت (ItemAccountCategory.tsx):
+  ۱) حذف چک اجباری Name2 از validate() (کامنت توضیحی گذاشته شد).
+  ۲) حذف required از config فیلد → ستاره‌ی قرمز برچسب حذف شد (تأیید DOM: no-asterisk).
+  ۳) در payload برای submitData: «ItemAccountCategoryName2 = trim(Name2) || trim(Name)» — همان الگوی فرم مکان تحویل (Title2 fallback به Title).
+- فیکس بک‌اند:
+  ۱) create-item-account-category.dto.ts: @IsNotEmpty روی Name2 → @IsOptional.
+  ۲) item-account-category.service.ts: fallback دفاعی در create() و update() — اگر Name2 خالی/undefined بود با Name (در update: Name جدید یا Name موجود) پر می‌شود تا فراخوانی مستقیم API هم همان رفتار را داشته باشد.
+- استقرار: npx tsc (0) → ری‌استارت بک‌اند (PID 22260).
+- تأییدها:
+  • API: POST بدون Name2 → پاسخ ItemAccountCategoryName2 = ItemAccountCategoryName.
+  • E2E (agent-browser): فرم «طبقه حساب کالا جدید» → فقط «عنوان» پر شد، «عنوان (2)» خالی ماند → ذخیره بدون هیچ خطای اعتبارسنجی/toast خطا → DB: رکورد با Name2 = Name ذخیره شد.
+  • ستاره‌ی قرمز «عنوان (2)» حذف شد؛ console/page errors = 0.
+- پاک‌سازی: دو رکورد تستی (ID 1 و 2) از Inv.ItemAccountCategories حذف شد (جدول به حالت خالی اولیه برگشت).
+- eslint ItemAccountCategory.tsx: 0 error.
+
+Stage Summary:
+- در فرم طبقه حساب کالا فیلد «عنوان (2)» دیگر اجباری نیست (نه اعتبارسنجی دارد، نه ستاره‌ی قرمز) و اگر خالی رها شود، هم در UI و هم در سطح سرویس بک‌اند، به‌صورت خودکار با همان مقدار «عنوان» ذخیره می‌شود — شامل درگاه مستقیم API. تغییرات: ItemAccountCategory.tsx (فرانت)، create-item-account-category.dto.ts و item-account-category.service.ts (بک‌اند).

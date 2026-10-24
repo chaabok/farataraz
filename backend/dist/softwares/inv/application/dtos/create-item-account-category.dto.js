@@ -25,7 +25,7 @@ __decorate([
     __metadata("design:type", String)
 ], CreateItemAccountCategoryDto.prototype, "ItemAccountCategoryName", void 0);
 __decorate([
-    (0, class_validator_1.IsNotEmpty)({ message: 'عنوان دوم طبقه حساب کالا اجباری است' }),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateItemAccountCategoryDto.prototype, "ItemAccountCategoryName2", void 0);

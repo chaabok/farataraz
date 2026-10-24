@@ -187,6 +187,11 @@ export class ItemAccountCategoryService {
     const companyId = (this.requestContextService.getCompanyId() && this.requestContextService.getCompanyId()! > 1) ? this.requestContextService.getCompanyId()! : 2;
     const bsId = (this.requestContextService.getBusinessStructureId() && this.requestContextService.getBusinessStructureId()! > 1) ? this.requestContextService.getBusinessStructureId()! : 2;
 
+    // عنوان (2) اختیاری است: در صورت خالی بودن با همان «عنوان» ذخیره می‌شود
+    if (!String((createDto as any).ItemAccountCategoryName2 ?? '').trim()) {
+      (createDto as any).ItemAccountCategoryName2 = String(createDto.ItemAccountCategoryName ?? '').trim();
+    }
+
     let codeToSave = createDto.ItemAccountCategoryCode;
     
     const docRes = await this.repository.calculateNextCode(bsId, companyId);
@@ -224,6 +229,11 @@ export class ItemAccountCategoryService {
     
     if (updateDto.ItemAccountCategoryCode === undefined) {
        (updateDto as any).ItemAccountCategoryCode = existing.ItemAccountCategoryCode;
+    }
+    
+    // عنوان (2) اختیاری است: در صورت خالی بودن با همان «عنوان» ذخیره می‌شود
+    if (updateDto.ItemAccountCategoryName2 !== undefined && !String(updateDto.ItemAccountCategoryName2 ?? '').trim()) {
+      (updateDto as any).ItemAccountCategoryName2 = String(updateDto.ItemAccountCategoryName ?? existing.ItemAccountCategoryName ?? '').trim();
     }
     
     await this.validateDuplicates(updateDto, id);

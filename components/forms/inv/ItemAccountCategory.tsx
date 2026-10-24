@@ -146,9 +146,7 @@ export function ItemAccountCategory({ id }: ItemAccountCategoryProps) {
     if (!values.ItemAccountCategoryName) {
       newErrors.ItemAccountCategoryName = "عنوان اجباری است *";
     }
-    if (!values.ItemAccountCategoryName2) {
-      newErrors.ItemAccountCategoryName2 = "عنوان (2) اجباری است *";
-    }
+    // عنوان (2) اجباری نیست؛ در صورت خالی بودن با همان «عنوان» ذخیره می‌شود (در submitData)
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -173,6 +171,9 @@ export function ItemAccountCategory({ id }: ItemAccountCategoryProps) {
       const payload: any = {
         ...values,
         ItemAccountCategoryCode: values.ItemAccountCategoryCode ? Number(values.ItemAccountCategoryCode) : undefined,
+        // اگر عنوان (2) تکمیل نشده باشد، با همان مقدار «عنوان» ذخیره می‌شود
+        ItemAccountCategoryName2:
+          String(values.ItemAccountCategoryName2 ?? "").trim() || String(values.ItemAccountCategoryName ?? "").trim(),
         PricingMethod: Number(values.PricingMethod),
         StandardRate: Number(values.StandardRate),
         IsActive: Boolean(values.IsActive),
@@ -306,7 +307,6 @@ export function ItemAccountCategory({ id }: ItemAccountCategoryProps) {
       name: "ItemAccountCategoryName2",
       label: "عنوان (2)",
       type: "text",
-      required: true,
       colSpan: 1,
       disabled: isUsed,
     },

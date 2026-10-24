@@ -9,7 +9,7 @@ export class CreateItemAccountCategoryDto {
   @IsString()
   ItemAccountCategoryName: string;
 
-  @IsNotEmpty({ message: 'عنوان دوم طبقه حساب کالا اجباری است' })
+  @IsOptional()
   @IsString()
   ItemAccountCategoryName2: string;
 
