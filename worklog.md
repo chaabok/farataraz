@@ -652,3 +652,17 @@ Work Log:
 
 Stage Summary:
 - هیچ کار نیمه‌تمامی روی کد وجود ندارد؛ فقط تسویه‌ی push باقی است. هر عامل جدید کافی است این فایل (حداقل ۳ تسک آخر) و AGENTS.md را بخواند و روال‌های دائمی (پاسخ فارسی، worklog، push-to-github) را ادامه دهد.
+
+---
+Task ID: 52
+Agent: main (Z.ai Code)
+Task: تغییر مقصد push از این به بعد به مخزن گیت‌هاب حساب کاربر (chaabok/farataraz)
+
+Work Log:
+- علت: توکن GitHub کاربر متعلق به حساب chaabok است و به nilash44/farataraz اجازه‌ی push ندارد (403 Permission denied to chaabok).
+- بررسی API: مخزن chaabok/farataraz موجود و خالی است (size=0، default_branch=main) و توکن push:True دارد.
+- تغییر ریموت‌ها: origin ← https://github.com/chaabok/farataraz.git (مقصد رسمی push از این به بعد)؛ upstream ← https://github.com/nilash44/farataraz.git (فقط برای مرجع/تاریخچه قبلی).
+- push-to-github.sh اجرا شد: دامپ DB (173 جدول/535 ردیف) + push موفق «main -> main» به chaabok/farataraz (کل تاریخچه شامل b7e7227، bd5a3b3، 9e23d4a + کامیت جدید) + بازسازی /home/sync/repo.tar. اسکریپت تغییر نکرد (URL هاردکد ندارد، به origin ارجاع می‌دهد).
+
+Stage Summary:
+- 🔄 قرارداد دائمی پروژه تغییر کرد: مقصد push از این به بعد «origin = chaabok/farataraz» است (قبلاً nilash44/farataraz بود که به‌عنوان upstream حفظ شد). بدهی push (۳ کامیت معوق) تسویه شد و مخزن گیت‌هاب با پروژه همگام است.
