@@ -1,0 +1,4 @@
+[install]
+network-concurrency = 8
+backend = "copyfile"
+exact = true

@@ -1,0 +1,33 @@
+export declare class CreatePartyDto {
+    nature: string;
+    isActive?: boolean;
+    subType?: string;
+    website?: string;
+    email?: string;
+    firstName?: string;
+    latinFirstName?: string;
+    lastName?: string;
+    latinLastName?: string;
+    economicCode?: string;
+    nationalCode?: string;
+    passportNumber?: string;
+    birthDate?: string | Date;
+    marriageDate?: string | Date;
+    nationalId?: string;
+    registrationNumber?: string;
+    isSupplier?: boolean;
+    balance?: string;
+    balanceStatus?: string;
+    isCustomer?: boolean;
+    customerBalance?: string;
+    customerBalanceStatus?: string;
+    isSalesIntermediary?: boolean;
+    salesIntermediaryBalance?: string;
+    salesIntermediaryBalanceStatus?: string;
+    PartyRelatedPersons?: any[];
+    partyRelatedPersons?: any[];
+    PartyAddresses?: any[];
+    partyAddresses?: any[];
+    PartyPhones?: any[];
+    partyPhones?: any[];
+}

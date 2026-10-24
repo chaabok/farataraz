@@ -1,0 +1,38 @@
+import { AppBaseEntity } from '../../../../core/entities/app-base.entity';
+import { DetailedAccount } from '../../../accounting/domain/entities/detailed-account.entity';
+import { PartyRelated } from './party-related.entity';
+import { PartyAddress } from './party-address.entity';
+import { PartyPhone } from './party-phone.entity';
+export declare class Party extends AppBaseEntity {
+    partyId: number;
+    nature: string;
+    isActive: boolean;
+    subType: string;
+    website: string;
+    email: string;
+    firstName: string;
+    latinFirstName: string;
+    lastName: string;
+    latinLastName: string;
+    detailedAccountId: number;
+    detailedAccount: DetailedAccount;
+    economicCode: string;
+    nationalCode: string;
+    passportNumber: string;
+    birthDate: Date;
+    marriageDate: Date;
+    nationalId: string;
+    registrationNumber: string;
+    isSupplier: boolean;
+    balance: string;
+    balanceStatus: string;
+    isCustomer: boolean;
+    customerBalance: string;
+    customerBalanceStatus: string;
+    isSalesIntermediary: boolean;
+    salesIntermediaryBalance: string;
+    salesIntermediaryBalanceStatus: string;
+    partyRelatedPersons: PartyRelated[];
+    partyAddresses: PartyAddress[];
+    partyPhones: PartyPhone[];
+}

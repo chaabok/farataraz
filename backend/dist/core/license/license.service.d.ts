@@ -1,0 +1,55 @@
+import { IdGenerationService } from '../services/id-generation.service';
+import { OnModuleInit } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { LicenseActivation } from './entities/license-activation.entity';
+import { AppModules, DecryptedLicense } from './license.types';
+export declare class LicenseService implements OnModuleInit {
+    private readonly activationRepo;
+    private readonly idGenService;
+    private readonly logger;
+    private currentLicense;
+    private currentLicenseString;
+    private currentLicenseIsDevTrial;
+    private readonly LICENSE_FILE_PATHS;
+    constructor(activationRepo: Repository<LicenseActivation>, idGenService: IdGenerationService);
+    onModuleInit(): Promise<void>;
+    resolvePublicKeyPem(): string;
+    private loadLicense;
+    private issueDevTrial;
+    getMachineId(): string;
+    getLicense(): DecryptedLicense | null;
+    isDevTrial(): boolean;
+    isLicenseValid(): boolean;
+    getActivationStatus(): Promise<{
+        isValid: boolean;
+        needsActivation: boolean;
+        message: string;
+        licenseType: any;
+        features: any[];
+        modules: any[];
+        limits: any;
+        machineId: string;
+        licensee?: undefined;
+        product?: undefined;
+        expiryDate?: undefined;
+        daysLeft?: undefined;
+        isDevTrial?: undefined;
+    } | {
+        isValid: boolean;
+        needsActivation: boolean;
+        licensee: string;
+        product: string;
+        licenseType: string;
+        features: string[];
+        modules: string[];
+        limits: any;
+        expiryDate: string;
+        daysLeft: number;
+        machineId: string;
+        isDevTrial: boolean;
+        message?: undefined;
+    }>;
+    activateLicense(licenseString: string): Promise<boolean>;
+    hasModuleAccess(module: AppModules): boolean;
+    getLimits(): any;
+}

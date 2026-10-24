@@ -1,0 +1,36 @@
+import { AppBaseEntity } from '../../../../core/entities/app-base.entity';
+import { WarehouseType } from './warehouse-type.enum';
+import { WarehouseNature } from './warehouse-nature.enum';
+import { DetailedAccount } from '../../../accounting/domain/entities/detailed-account.entity';
+import { Party } from '../../../common/domain/entities/party.entity';
+import { WarehouseProduct } from './warehouse-product.entity';
+import { WarehouseUser } from './warehouse-user.entity';
+import { WarehouseAddress } from './warehouse-address.entity';
+import { WarehouseKeeper } from './warehouse-keeper.entity';
+export declare class Warehouse extends AppBaseEntity {
+    WarehouseID: number;
+    WarehouseType: WarehouseType;
+    WarehouseCode: string;
+    WarehouseTitle: string;
+    WarehouseTitle2: string;
+    WarehouseNature: WarehouseNature;
+    Phone: string;
+    DetailedAccountRef: number;
+    DetailedAccount: DetailedAccount;
+    IsActive: boolean;
+    ParentRef: number;
+    Parent: Warehouse;
+    AddressState: string;
+    AddressCity: string;
+    AddressTitle: string;
+    AddressTitle2: string;
+    PostalCode: string;
+    Longitude: string;
+    Latitude: string;
+    WarehouseKeeperRef: number;
+    WarehouseKeeper: Party;
+    WarehouseProducts: WarehouseProduct[];
+    WarehouseUsers: WarehouseUser[];
+    WarehouseAddresses: WarehouseAddress[];
+    WarehouseKeepers: WarehouseKeeper[];
+}

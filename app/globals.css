@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-600: #4b5563;
+    --color-gray-700: #374151;
+    --color-gray-800: #1f2937;
+    --color-gray-900: #111827;
+    --color-gray-950: #030712;
+
+    --color-blue-50: #eff6ff;
+    --color-blue-100: #dbeafe;
+    --color-blue-200: #bfdbfe;
+    --color-blue-300: #93c5fd;
+    --color-blue-400: #60a5fa;
+    --color-blue-500: #3b82f6;
+    --color-blue-600: #2563eb;
+    --color-blue-700: #1d4ed8;
+    --color-blue-800: #1e40af;
+    --color-blue-900: #1e3a8a;
+    --color-blue-950: #172554;
+  }
+  
+  .dark {
+    /* We don't invert CSS variables for dark mode because the codebase uses explicit dark: modifiers (like dark:bg-gray-900). */
+  }
+  
+  html {
+    font-size: 90%;
+  }
+  .spring {
+    /* Spring Theme: Fresh Greens & Teals */
+    --color-gray-50: #f0fdf4;
+    --color-gray-100: #dcfce7;
+    --color-gray-200: #bbf7d0;
+    --color-gray-300: #86efac;
+    --color-gray-400: #4ade80;
+    --color-gray-500: #22c55e;
+    --color-gray-600: #16a34a;
+    --color-gray-700: #15803d;
+    --color-gray-800: #166534;
+    --color-gray-900: #14532d;
+    --color-gray-950: #052e16;
+    --color-blue-50: #ecfdf5;
+    --color-blue-100: #d1fae5;
+    --color-blue-200: #a7f3d0;
+    --color-blue-300: #6ee7b7;
+    --color-blue-400: #34d399;
+    --color-blue-500: #10b981;
+    --color-blue-600: #059669;
+    --color-blue-700: #047857;
+    --color-blue-800: #065f46;
+    --color-blue-900: #064e3b;
+    --color-blue-950: #022c22;
+  }
+  .summer {
+    /* Summer Theme: Amber & Warm Sunny colors */
+    --color-gray-50: #fffbeb;
+    --color-gray-100: #fef3c7;
+    --color-gray-200: #fde68a;
+    --color-gray-300: #fcd34d;
+    --color-gray-400: #fbbf24;
+    --color-gray-500: #f59e0b;
+    --color-gray-600: #d97706;
+    --color-gray-700: #b45309;
+    --color-gray-800: #92400e;
+    --color-gray-900: #78350f;
+    --color-gray-950: #451a03;
+    --color-blue-50: #f0f9ff;
+    --color-blue-100: #e0f2fe;
+    --color-blue-200: #bae6fd;
+    --color-blue-300: #7dd3fc;
+    --color-blue-400: #38bdf8;
+    --color-blue-500: #0ea5e9;
+    --color-blue-600: #0284c7;
+    --color-blue-700: #0369a1;
+    --color-blue-800: #075985;
+    --color-blue-900: #0c4a6e;
+    --color-blue-950: #082f49;
+  }
+  .autumn {
+    /* Autumn Theme: Soft Stone & Burnt Orange */
+    --color-gray-50: #fafaf9;
+    --color-gray-100: #f5f5f4;
+    --color-gray-200: #e7e5e4;
+    --color-gray-300: #d6d3d1;
+    --color-gray-400: #a8a29e;
+    --color-gray-500: #78716c;
+    --color-gray-600: #57534e;
+    --color-gray-700: #44403c;
+    --color-gray-800: #292524;
+    --color-gray-900: #1c1917;
+    --color-gray-950: #0c0a09;
+    --color-blue-50: #fff7ed;
+    --color-blue-100: #ffedd5;
+    --color-blue-200: #fed7aa;
+    --color-blue-300: #fdba74;
+    --color-blue-400: #fb923c;
+    --color-blue-500: #f97316;
+    --color-blue-600: #ea580c;
+    --color-blue-700: #c2410c;
+    --color-blue-800: #9a3412;
+    --color-blue-900: #7c2d12;
+    --color-blue-950: #431407;
+  }
+  .winter {
+    /* Winter Theme: Icy Sky & Cyan */
+    --color-gray-50: #f0f9ff;
+    --color-gray-100: #e0f2fe;
+    --color-gray-200: #bae6fd;
+    --color-gray-300: #7dd3fc;
+    --color-gray-400: #38bdf8;
+    --color-gray-500: #0ea5e9;
+    --color-gray-600: #0284c7;
+    --color-gray-700: #0369a1;
+    --color-gray-800: #075985;
+    --color-gray-900: #0c4a6e;
+    --color-gray-950: #082f49;
+    --color-blue-50: #ecfeff;
+    --color-blue-100: #cffafe;
+    --color-blue-200: #a5f3fc;
+    --color-blue-300: #67e8f9;
+    --color-blue-400: #22d3ee;
+    --color-blue-500: #06b6d4;
+    --color-blue-600: #0891b2;
+    --color-blue-700: #0e7490;
+    --color-blue-800: #155e75;
+    --color-blue-900: #164e63;
+    --color-blue-950: #083344;
+  }
+}
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer base {
+  /* Standard inputs when disabled */
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Custom input wrappers when containing a disabled input */
+  div.border:has(> input:disabled),
+  div.border:has(> select:disabled),
+  div.border:has(> div > input:disabled),
+  div.border:has(> span + input:disabled) {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    background-color: rgb(249 250 251 / 0.5) !important; /* bg-gray-50/50 */
+    border-color: #e2e8f0 !important; /* border-slate-200 */
+  }
+
+  .dark div.border:has(> input:disabled),
+  .dark div.border:has(> select:disabled),
+  .dark div.border:has(> div > input:disabled),
+  .dark div.border:has(> span + input:disabled) {
+    background-color: rgb(30 41 59 / 0.5) !important; /* dark:bg-slate-800/50 */
+    border-color: #334155 !important; /* dark:border-slate-700 */
+  }
+  
+  /* Make sure the inner transparent inputs don't double-dim their text */
+  div.border:has(> input:disabled) > input:disabled,
+  div.border:has(> select:disabled) > select:disabled,
+  div.border:has(> div > input:disabled) input:disabled,
+  div.border:has(> span + input:disabled) > input:disabled {
+    opacity: 1 !important;
+  }
+
+  /* TabCellRow custom render inputs - remove default borders and background to match cell style */
+  .tab-cell-no-border input[type="text"]:not(.border-rose-500),
+  .tab-cell-no-border input[type="number"]:not(.border-rose-500) {
+    border-color: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  .tab-cell-no-border input[type="text"]:focus:not(.border-rose-500),
+  .tab-cell-no-border input[type="number"]:focus:not(.border-rose-500) {
+    background-color: #ffffff !important;
+  }
+  
+  .dark .tab-cell-no-border input[type="text"]:focus:not(.border-rose-500),
+  .dark .tab-cell-no-border input[type="number"]:focus:not(.border-rose-500) {
+    background-color: rgb(31 41 55) !important; /* gray-800 */
+  }
+}
+
+.text-sm {
+  font-size: 10px !important;
+  line-height: 1.25rem !important;
+}
+

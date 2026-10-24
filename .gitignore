@@ -1,0 +1,74 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+local-*
+.claude
+.z-ai-config
+*.log
+dev.log
+dev.out.log
+test
+prompt
+
+server.log
+# Skills directory
+/skills/
+# === Parsa ERP (Task 44) — runtime artifacts, secrets & local-only files ===
+.next/
+pg-local/pgdata
+pg-local/pgdata.log
+server.log
+dev.log
+database.sqlite
+upload/
+download/
+tool-results/
+*.tar.gz
+.env
+erp.env
+license.key
+backend/license.key
+backend/.hidden_license.data
+backups/*
+!backups/parsa-db-latest.sql
+pg-local/pgsql/extracted/
+pg-local/pgsql/pg.jar

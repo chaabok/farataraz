@@ -1,0 +1,8 @@
+{
+  "name": "farataraz-v7-077",
+  "description": "An elegant, interactive workspace for note-taking, task management, and server-side AI-assisted content generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,65 @@
+import { OnModuleInit } from '@nestjs/common';
+import { IItemRepository } from '../../domain/repositories/item.repository.interface';
+import { Item } from '../../domain/entities/item.entity';
+import { CreateItemDto } from '../dtos/create-item.dto';
+import { UpdateItemDto } from '../dtos/update-item.dto';
+import { IdGenerationService } from '../../../../core/services/id-generation.service';
+import { RequestContextService } from '../../../../core/services/request-context.service';
+import { UsageCheckService } from '../../../../core/services/usage-check.service';
+export declare class ItemService implements OnModuleInit {
+    private readonly repository;
+    private readonly idGenerationService;
+    private readonly requestContextService;
+    private readonly usageCheckService;
+    constructor(repository: IItemRepository, idGenerationService: IdGenerationService, requestContextService: RequestContextService, usageCheckService: UsageCheckService);
+    onModuleInit(): Promise<void>;
+    private getScope;
+    findAll(query: any): Promise<any>;
+    getDropdownItems(type?: string | number, warehouseId?: string | number, onlyActive?: boolean | string): Promise<any[]>;
+    private ensurePhysicalLocationsTable;
+    getPhysicalLocations(itemId: number): Promise<any>;
+    savePhysicalLocations(itemId: number, locations: any[], bsId: number, compId: number): Promise<void>;
+    private ensureSubUnitsTable;
+    getSubUnits(itemId: number): Promise<any>;
+    saveSubUnits(itemId: number, subUnits: any[], bsId: number, compId: number): Promise<void>;
+    private ensureInventoryControlsTable;
+    getInventoryControls(itemId: number): Promise<any>;
+    saveInventoryControls(itemId: number, controls: any[], bsId: number, compId: number): Promise<void>;
+    private ensureVolumeCbmsTable;
+    getVolumeCbms(itemId: number): Promise<any>;
+    saveVolumeCbms(itemId: number, volumeCbms: any[], bsId: number, compId: number): Promise<void>;
+    private ensureSimilarItemsTable;
+    getSimilarItems(itemId: number): Promise<any>;
+    saveSimilarItems(itemId: number, similarItems: any[], bsId: number, compId: number): Promise<void>;
+    private ensureItemImagesTable;
+    getItemImages(itemId: number): Promise<any>;
+    saveItemImages(itemId: number, images: any[], bsId: number, compId: number): Promise<void>;
+    findOne(id: number): Promise<any>;
+    getNextNumber(): Promise<{
+        documentNumber: string;
+        isDocumentNumberAuto: boolean;
+        error?: string;
+    }>;
+    checkDuplicate(field: string, value: any, excludeId?: number): Promise<boolean>;
+    private getInventorySettings;
+    private validateDuplicates;
+    create(createDto: CreateItemDto): Promise<Item>;
+    update(id: number, updateDto: UpdateItemDto): Promise<any>;
+    remove(id: number): Promise<void>;
+    getStockSummary(itemId: number, warehouseId?: number, excludeVoucherId?: number, partyId?: number | string, currentDate?: string, docType?: string): Promise<any>;
+    private fetchLastMovements;
+    getKardexActiveItems(warehouseId?: string, fromDate?: string, toDate?: string, fiscalYearId?: string, companyId?: string): Promise<any>;
+    getItemKardex(itemId: number, warehouseId?: string, fromDate?: string, toDate?: string): Promise<any[]>;
+    getItemTrackingFactorMovements(itemId: number, warehouseId?: string, fromDate?: string, toDate?: string): Promise<{
+        trackingFactors: any[];
+        movements: any[];
+    }>;
+    private toJalaliString;
+    getKardexWarehouses(fiscalYearId?: string, companyId?: string): Promise<any>;
+    getKardexDateBounds(fiscalYearId?: string, companyId?: string): Promise<{
+        fromDate: string;
+        toDate: string;
+        fiscalYearId: number;
+        fiscalYearTitle: string;
+    }>;
+}

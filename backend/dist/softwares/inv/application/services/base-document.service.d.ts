@@ -1,0 +1,36 @@
+import { Repository } from 'typeorm';
+import { PurchaseInvoice } from '../../domain/entities/purchase-invoice.entity';
+import { PurchaseInvoiceDetail } from '../../domain/entities/purchase-invoice-detail.entity';
+import { PurchaseInvoiceFactor } from '../../domain/entities/purchase-invoice-factor.entity';
+import { TemporaryItemReceipt } from '../../domain/entities/temporary-item-receipt.entity';
+import { TemporaryItemReceiptDetail } from '../../domain/entities/temporary-item-receipt-detail.entity';
+import { TemporaryItemReceiptFactor } from '../../domain/entities/temporary-item-receipt-factor.entity';
+import { ItemSupplyRequest } from '../../domain/entities/item-supply-request.entity';
+import { ItemSupplyRequestDetail } from '../../domain/entities/item-supply-request-detail.entity';
+import { ItemRequest } from '../../domain/entities/item-request.entity';
+import { ItemRequestDetail } from '../../domain/entities/item-request-detail.entity';
+import { WarehouseReceipt } from '../../domain/entities/warehouse-receipt.entity';
+import { WarehouseReceiptDetail } from '../../domain/entities/warehouse-receipt-detail.entity';
+import { WarehouseReceiptFactor } from '../../domain/entities/warehouse-receipt-factor.entity';
+import { RequestContextService } from '../../../../core/services/request-context.service';
+export declare class BaseDocumentService {
+    private readonly piRepository;
+    private readonly piDetailRepository;
+    private readonly piFactorRepository;
+    private readonly trRepository;
+    private readonly trDetailRepository;
+    private readonly trFactorRepository;
+    private readonly srRepository;
+    private readonly srDetailRepository;
+    private readonly irRepository;
+    private readonly irDetailRepository;
+    private readonly wrRepository;
+    private readonly wrDetailRepository;
+    private readonly wrFactorRepository;
+    private readonly requestContextService;
+    constructor(piRepository: Repository<PurchaseInvoice>, piDetailRepository: Repository<PurchaseInvoiceDetail>, piFactorRepository: Repository<PurchaseInvoiceFactor>, trRepository: Repository<TemporaryItemReceipt>, trDetailRepository: Repository<TemporaryItemReceiptDetail>, trFactorRepository: Repository<TemporaryItemReceiptFactor>, srRepository: Repository<ItemSupplyRequest>, srDetailRepository: Repository<ItemSupplyRequestDetail>, irRepository: Repository<ItemRequest>, irDetailRepository: Repository<ItemRequestDetail>, wrRepository: Repository<WarehouseReceipt>, wrDetailRepository: Repository<WarehouseReceiptDetail>, wrFactorRepository: Repository<WarehouseReceiptFactor>, requestContextService: RequestContextService);
+    private getScope;
+    private getUsedQuantities;
+    getAvailableBaseDocuments(docType: string, targetDocType?: string): Promise<any[]>;
+    getBaseDocumentDetails(docType: string, id: number, currentDocId?: number, targetDocType?: string): Promise<any>;
+}

@@ -1,0 +1,35 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AppModules = void 0;
+var AppModules;
+(function (AppModules) {
+    AppModules["ACCOUNTING"] = "accounting";
+    AppModules["INVENTORY"] = "inventory";
+    AppModules["SALES"] = "sales";
+    AppModules["FIXED_ASSETS"] = "fixed_assets";
+    AppModules["RECEIPT_PAYMENT"] = "receipt_payment";
+    AppModules["CURRENCY_SUBSYSTEM"] = "currency_subsystem";
+    AppModules["FINANCIAL_STATEMENTS"] = "financial_statements";
+    AppModules["MANAGEMENT_REPORTS"] = "management_reports";
+    AppModules["INTERNAL_PROCUREMENT"] = "internal_procurement";
+    AppModules["EXTERNAL_ORDERS"] = "external_orders";
+    AppModules["PAYROLL"] = "payroll";
+    AppModules["RECRUITMENT"] = "recruitment";
+    AppModules["EMPLOYEE_TRAINING"] = "employee_training";
+    AppModules["ATTENDANCE"] = "attendance";
+    AppModules["PRODUCTION_PLANNING"] = "production_planning";
+    AppModules["MATERIAL_DELIVERY_CONTROL"] = "material_delivery_control";
+    AppModules["COSTING"] = "costing";
+    AppModules["HOT_DISTRIBUTION"] = "hot_distribution";
+    AppModules["COLD_DISTRIBUTION"] = "cold_distribution";
+    AppModules["OFFICE_AUTOMATION"] = "office_automation";
+    AppModules["RETAIL"] = "retail";
+    AppModules["AFTER_SALES_SERVICE"] = "after_sales_service";
+    AppModules["CRM"] = "crm";
+    AppModules["ONLINE_WEBSITE"] = "online_website";
+    AppModules["WEB_SERVICE"] = "web_service";
+    AppModules["FORM_BUILDER"] = "form_builder";
+    AppModules["REPORT_BUILDER"] = "report_builder";
+    AppModules["WORKFLOW_MANAGEMENT"] = "workflow_management";
+})(AppModules || (exports.AppModules = AppModules = {}));
+//# sourceMappingURL=license.types.js.map

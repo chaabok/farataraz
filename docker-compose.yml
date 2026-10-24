@@ -1,0 +1,56 @@
+# Parsa ERP — production compose (frontend+backend unified, PostgreSQL 17)
+# Usage:
+#   JWT_SECRET=$(openssl rand -hex 48) docker compose up -d --build
+# The app container runs TypeORM migrations (backend/src/migrations) before boot;
+# schema sync and boot DDL are disabled in this production profile.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-parsa}
+      POSTGRES_DB: parsaDb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d parsaDb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-parsa}@db:5432/parsaDb
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-parsa}
+      DB_DATABASE: parsaDb
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (openssl rand -hex 48)}
+      BACKEND_PORT: "3005"
+      NODE_ENV: production
+      DB_SYNCHRONIZE: "false"
+      BOOTSTRAP_DDL: "false"
+      # Licensing: paste your public key (base64 SPKI) to enforce your own
+      # signed licenses; the built-in dev fallback key is used when empty.
+      LICENSE_PUBLIC_KEY: ${LICENSE_PUBLIC_KEY:-}
+      # LICENSE_ENFORCEMENT: "false"  # emergency escape hatch
+    ports:
+      - "3000:3000"
+    command:
+      - sh
+      - -c
+      - |
+        node node_modules/typescript/bin/tsc --project backend/tsconfig.json && \
+        cd backend && node ../node_modules/typeorm/cli.js migration:run -d data-source.cjs && \
+        cd .. && node server.js
+
+volumes:
+  pgdata:

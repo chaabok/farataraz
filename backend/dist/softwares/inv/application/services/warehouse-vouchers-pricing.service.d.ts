@@ -1,0 +1,33 @@
+import { Repository } from 'typeorm';
+import { WarehouseVouchersPricing } from '../../domain/entities/warehouse-vouchers-pricing.entity';
+import { CreateWarehouseVouchersPricingDto, UpdateWarehouseVouchersPricingDto, CalculateWarehousePricingDto } from '../dtos/warehouse-vouchers-pricing.dto';
+import { IdGenerationService } from '../../../../core/services/id-generation.service';
+import { RequestContextService } from '../../../../core/services/request-context.service';
+import { WarehouseReceipt } from '../../domain/entities/warehouse-receipt.entity';
+import { WarehouseReceiptDetail } from '../../domain/entities/warehouse-receipt-detail.entity';
+import { Item } from '../../domain/entities/item.entity';
+import { ItemAccountCategory } from '../../domain/entities/item-account-category.entity';
+import { StandardItemRate } from '../../domain/entities/standard-item-rate.entity';
+import { StandardItemRateDetail } from '../../domain/entities/standard-item-rate-detail.entity';
+import { Warehouse } from '../../domain/entities/warehouse.entity';
+export declare class WarehouseVouchersPricingService {
+    private readonly repository;
+    private readonly receiptRepo;
+    private readonly receiptDetailRepo;
+    private readonly itemRepo;
+    private readonly categoryRepo;
+    private readonly stdRateRepo;
+    private readonly stdRateDetailRepo;
+    private readonly warehouseRepo;
+    private readonly idGenService;
+    private readonly requestContextService;
+    constructor(repository: Repository<WarehouseVouchersPricing>, receiptRepo: Repository<WarehouseReceipt>, receiptDetailRepo: Repository<WarehouseReceiptDetail>, itemRepo: Repository<Item>, categoryRepo: Repository<ItemAccountCategory>, stdRateRepo: Repository<StandardItemRate>, stdRateDetailRepo: Repository<StandardItemRateDetail>, warehouseRepo: Repository<Warehouse>, idGenService: IdGenerationService, requestContextService: RequestContextService);
+    private getScope;
+    create(dto: CreateWarehouseVouchersPricingDto): Promise<WarehouseVouchersPricing>;
+    createBatch(dtos: CreateWarehouseVouchersPricingDto[]): Promise<WarehouseVouchersPricing[]>;
+    calculatePricing(dto: CalculateWarehousePricingDto): Promise<any>;
+    findAll(query?: any): Promise<WarehouseVouchersPricing[]>;
+    findOne(id: number): Promise<WarehouseVouchersPricing>;
+    update(id: number, dto: UpdateWarehouseVouchersPricingDto): Promise<WarehouseVouchersPricing>;
+    remove(id: number): Promise<void>;
+}

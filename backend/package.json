@@ -1,0 +1,21 @@
+{
+  "name": "parsa-erp-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "license:generate": "node scripts/generate-license.cjs",
+    "license:keygen": "node scripts/generate-license.cjs --keygen",
+    "migration:generate": "node ../node_modules/typeorm/cli.js migration:generate -d data-source.cjs",
+    "migration:run": "node ../node_modules/typeorm/cli.js migration:run -d data-source.cjs",
+    "migration:revert": "node ../node_modules/typeorm/cli.js migration:revert -d data-source.cjs"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7",
+    "pg": "^8.11.0",
+    "typeorm": "^0.3.20",
+    "class-validator": "^0.14.0",
+    "class-transformer": "^0.5.1"
+  }
+}

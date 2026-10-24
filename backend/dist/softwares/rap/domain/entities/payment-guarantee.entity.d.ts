@@ -1,0 +1,36 @@
+import { GuaranteeType } from './guarantee-type.enum';
+import { AppBaseEntity } from '../../../../core/entities/app-base.entity';
+import { PaymentNotification } from './payment-notification.entity';
+import { RapReason } from './rap-reason.entity';
+import { RecieptAndPaymentAccountingSetting } from './reciept-and-payment-accounting-setting.entity';
+import { Currency } from '../../../common/domain/entities/currency.entity';
+import { Cash } from './cash.entity';
+import { Bank } from './bank.entity';
+import { BankAccount } from './bank-account.entity';
+export declare class PaymentGuarantee extends AppBaseEntity {
+    paymentGuaranteeId: number;
+    paymentNotificationRef: number;
+    paymentNotification: PaymentNotification;
+    accountingSettingRef: number;
+    accountingSetting: RecieptAndPaymentAccountingSetting;
+    reasonRef: number;
+    reason: RapReason;
+    cashRef: number;
+    cash: Cash;
+    amount: number;
+    currencyRef: number;
+    currency: Currency;
+    equivalentAmount: number | null;
+    dueDate: Date;
+    guaranteeNumber: string;
+    guaranteeType: GuaranteeType | null;
+    baseDocument: string | null;
+    description: string;
+    bankRef: number | null;
+    bank: Bank;
+    bankAccountRef: number | null;
+    bankAccount: BankAccount;
+    accountNumber: string | null;
+    notificationDate: Date | null;
+    dynamicDetailedData: any;
+}

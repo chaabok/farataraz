@@ -1,0 +1,71 @@
+import { IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class SalesOrderItemDto {
+  @IsOptional()
+  RowNo?: number;
+
+  @IsOptional()
+  ItemRef?: any;
+
+  @IsOptional()
+  ItemCode?: any;
+
+  @IsOptional()
+  ItemName?: any;
+
+  @IsOptional()
+  UnitName?: any;
+
+  @IsOptional()
+  Quantity?: any;
+
+  @IsOptional()
+  UnitPrice?: any;
+
+  @IsOptional()
+  TotalPrice?: any;
+
+  @IsOptional()
+  Description?: any;
+}
+
+export class CreateSalesOrderDto {
+  @IsOptional()
+  OrderNumber?: any;
+
+  @IsOptional()
+  OrderDate?: any;
+
+  @IsOptional()
+  DeliveryDate?: any;
+
+  @IsOptional()
+  CustomerRef?: any;
+
+  @IsOptional()
+  CustomerName?: any;
+
+  @IsOptional()
+  SalesTypeRef?: any;
+
+  @IsOptional()
+  DeliveryLocationRef?: any;
+
+  @IsOptional()
+  SettlementMethodRef?: any;
+
+  @IsOptional()
+  Status?: any;
+
+  @IsOptional()
+  Description?: any;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SalesOrderItemDto)
+  items?: SalesOrderItemDto[];
+}
+
+export class UpdateSalesOrderDto extends CreateSalesOrderDto {}
