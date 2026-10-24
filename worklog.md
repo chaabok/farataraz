@@ -462,3 +462,23 @@ Work Log:
 Stage Summary:
 - پاسخ مشاوره: پاک شدن‌ها از recycle سندباکس + اسنپ‌شات کهنه repo.tar + ریستور عمدی بکاپ قدیمی است، نه از تغییرات کد.
 - لایه‌های محافظت فعال: بکاپ تازه قابل دانلود + repo.tar به‌روز + بوت خودترمیم (restore خودکار dump در بوت بعدی) + بکاپ‌های rollback تسک 42.
+
+---
+Task ID: 44
+Agent: main (Z.ai Code)
+Task: اتصال پروژه به GitHub (https://github.com/nilash44/farataraz.git) + روال checkpoint (سورس + دیتابیس) پس از هر تغییر
+
+Work Log:
+- بررسی اولیه: ریپو عمومی و خالیه (ls-remote بدون ref)؛ بدون credentials (نه توکن، نه SSH، نه helper)؛ git 2.47.3.
+- حساسیت‌سنجی: backend/keys/license_public_key.pem = کلید عمومی (قابل انتشار)؛ license.key، backend/license.key، backend/.hidden_license.data، .env و erp.env (JWT_SECRET) = محرمانه → مستثنا از ریپو.
+- .gitignore به‌روز شد: .next، pg-local/pgdata(+log)، server.log، dev.log، upload/، download/، tool-results/، *.tar.gz، database.sqlite، فایل‌های لایسنس/سکرت، backups/* جز parsa-db-latest.sql، pg-local/pgsql/extracted و pg.jar (دوباره‌کاری zonky).
+- erp.env.example ساخته شد (تمپلیت بدون سکرت برای کلون‌های آینده).
+- بکاپ مرجع DB: backups/parsa-db-latest.sql (173 جدول / 470 ردیف) → در گیت track می‌شود.
+- تاریخچه git قدیمی (4 کامیت UUID پلتفرم با pgdata باینری 78MB) به /home/z/restore-scripts/git-old-history-backup منتقل و ریپو با تاریخچه تمیز init -b main شد؛ identity محلی: Parsa ERP Dev <dev@parsa-erp.local>.
+- کامیت پایه: 5c33fa7 «Parsa ERP baseline: full source + portable PostgreSQL + DB dump» — 4259 فایل / 74MB (همه فایل‌ها زیر سقف 100MB).
+- remote origin = https://github.com/nilash44/farataraz.git تنظیم شد؛ تست push بدون credential با GIT_TERMINAL_PROMPT=0 → خطای موردانتظار «could not read Username» (تنها مانع: توکن).
+- .zscripts/push-to-github.sh ساخته شد (روال checkpoint: dump DB → commit → push origin main → refresh /home/sync/repo.tar) — پس از دریافت توکن، این اسکریپت بعد از هر تسک اجرا می‌شود.
+
+Stage Summary:
+- ریپوی گیت تمیز (بدون باینری‌های pgdata در تاریخچه، بدون سکرت‌ها) آماده push است؛ فقط PAT گیت‌هاب از کاربر لازم است.
+- روال دائمی از این پس: بعد از هر تغییر → push-to-github.sh (سورس + دامپ DB + اسنپ‌شات محلی).
