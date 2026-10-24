@@ -11,6 +11,7 @@ export declare class CustomerGroupService {
     private readonly usageCheckService;
     constructor(repository: ICustomerGroupRepository, idGenerationService: IdGenerationService, requestContextService: RequestContextService, usageCheckService: UsageCheckService);
     private getScope;
+    private enrichGroupsWithAncestors;
     findAll(): Promise<CustomerGroup[]>;
     getTree(): Promise<any>;
     getNextCode(parentRef?: number): Promise<string>;

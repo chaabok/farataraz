@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SimpleFormTwoRowTabbed } from '../SimpleFormTwoRowTabbed';
 import { FieldConfig } from '../SimpleFormTwoRow';
 import { TabCellRow, TabCellConfig } from '../TabCellRow';
@@ -15,6 +15,7 @@ import { AmountInput } from '@/components/inputs/AmountInput';
 import { RadioGroup } from '@/components/inputs/RadioGroup';
 import { Users, ShoppingCart } from 'lucide-react';
 import { apiFetch, safeStringify } from '@/lib/utils';
+import { eventBus, EVENTS } from '@/lib/events';
 import { useToast } from '@/components/ToastProvider';
 import { useTabs } from '@/components/TabsProvider';
 import { useFormUpsert } from '@/hooks/useFormUpsert';
@@ -66,10 +67,9 @@ export function CustomerComponent({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load lookup data
-  useEffect(() => {
-    const loadLookups = async () => {
-      try {
+  // Load lookup data (also re-runs when other forms announce data changes — e.g. new customer group)
+  const loadLookups = React.useCallback(async () => {
+    try {
         const [partiesRes, groupsRes, channelsRes, typesRes] = await Promise.all([
           apiFetch('/api/common/parties'),
           apiFetch('/api/sle/customer-groups'),
@@ -98,12 +98,22 @@ export function CustomerComponent({
         const rawTypes = typesData?.items || typesData?.data || typesData;
         const allTypes = Array.isArray(rawTypes) ? rawTypes : (Array.isArray(rawTypes?.data) ? rawTypes.data : (Array.isArray(rawTypes?.items) ? rawTypes.items : []));
         setSalesTypes(allTypes);
-      } catch (err) {
-        console.error('Error loading lookups:', err);
-      }
-    };
-    loadLookups();
+    } catch (err) {
+      console.error('Error loading lookups:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    loadLookups();
+  }, [loadLookups]);
+
+  // تازه‌سازی لیست‌ها هنگام تغییر داده از فرم‌های دیگر (مثلاً ایجاد گروه مشتری جدید)
+  useEffect(() => {
+    const unsubscribe = eventBus.on(EVENTS.DATA_CHANGED, () => {
+      loadLookups();
+    });
+    return () => unsubscribe();
+  }, [loadLookups]);
 
   // Fetch record if editing
   useEffect(() => {
@@ -351,6 +361,43 @@ export function CustomerComponent({
   const handleSaveNew = () => saveToApi(true, false);
   const handleSaveClose = () => saveToApi(false, true);
 
+  // --- ستون‌های سلسله‌مراتب گروه مشتری (Task 48) ---
+  // حداکثر عمق زنجیره سرشاخه‌ها در داده‌ها؛ سطح ۱ = سرشاخه مستقیم، سطح ۲ = سرشاخه بالاتر و ...
+  const groupMaxAncestorDepth = useMemo(() => {
+    const map = new Map<string, any>();
+    customerGroups.forEach((g) => map.set(String(g.CustomerGroupID ?? g.id), g));
+    let max = 0;
+    customerGroups.forEach((g) => {
+      const seen = new Set<string>([String(g.CustomerGroupID ?? g.id)]);
+      let cur = g.ParentRef ?? null;
+      let depth = 0;
+      while (cur !== null && cur !== undefined) {
+        const key = String(cur);
+        if (!map.has(key) || seen.has(key)) break;
+        depth++;
+        seen.add(key);
+        cur = map.get(key)?.ParentRef ?? null;
+      }
+      if (depth > max) max = depth;
+    });
+    return max;
+  }, [customerGroups]);
+
+  const toFaDigits = (n: number) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
+
+  const groupColumns = useMemo(() => {
+    const cols: { key: string; label: string; width: number }[] = [
+      { key: 'Code', label: 'کد', width: 80 },
+      { key: 'Title', label: 'عنوان', width: 150 },
+    ];
+    for (let level = 1; level <= groupMaxAncestorDepth; level++) {
+      const suffix = level === 1 ? '' : ` ${toFaDigits(level)}`;
+      cols.push({ key: `ParentCode${level}`, label: `کد سرشاخه${suffix}`, width: 90 });
+      cols.push({ key: `ParentTitle${level}`, label: `عنوان سرشاخه${suffix}`, width: 160 });
+    }
+    return cols;
+  }, [groupMaxAncestorDepth]);
+
   const fields: FieldConfig[] = [
     {
       name: 'Code',
@@ -421,10 +468,7 @@ export function CustomerComponent({
         <SingleSelectDropDown
           data={customerGroups}
           listApiUrl="/api/sle/customer-groups"
-          columns={[
-            { key: 'Code', label: 'کد', width: 80 },
-            { key: 'Title', label: 'عنوان', width: 150 },
-          ]}
+          columns={groupColumns}
           displayKey="Title"
           value={customerGroups.find((g) => String(g.CustomerGroupID || g.id) === String(values.CustomerGroupRef)) || null}
           onChange={(item: any) => {

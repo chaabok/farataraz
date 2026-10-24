@@ -47,10 +47,54 @@ export class CustomerGroupService {
     return { bsId, compId, isShared };
   }
 
+  /**
+   * هر گروه مشتری را با زنجیره کامل سرشاخه‌های آن غنی می‌کند:
+   * ParentCode1/ParentTitle1 = سرشاخه مستقیم، ParentCode2/ParentTitle2 = سرشاخه بالاتر و ...
+   * همه ردیف‌ها تا حداکثر عمق موجود در داده‌ها پُر می‌شوند تا ستون‌های دراپ‌داون یکدست باشند.
+   */
+  private enrichGroupsWithAncestors(items: CustomerGroup[]): any[] {
+    const map = new Map<string, CustomerGroup>();
+    items.forEach(i => map.set(String(i.CustomerGroupID), i));
+
+    const chainOf = (item: CustomerGroup): { code: string; title: string }[] => {
+      const chain: { code: string; title: string }[] = [];
+      const visited = new Set<string>([String(item.CustomerGroupID)]);
+      let cur = item.ParentRef === null || item.ParentRef === undefined ? null : String(item.ParentRef);
+      while (cur !== null && map.has(cur) && !visited.has(cur)) {
+        const p = map.get(cur)!;
+        chain.push({ code: p.Code || '', title: p.Title || '' });
+        visited.add(cur);
+        const next = p.ParentRef;
+        cur = next === null || next === undefined ? null : String(next);
+      }
+      return chain;
+    };
+
+    let maxDepth = 0;
+    const chains = new Map<string, { code: string; title: string }[]>();
+    items.forEach(item => {
+      const chain = chainOf(item);
+      chains.set(String(item.CustomerGroupID), chain);
+      if (chain.length > maxDepth) maxDepth = chain.length;
+    });
+
+    return items.map(item => {
+      const chain = chains.get(String(item.CustomerGroupID)) || [];
+      const enriched: any = { ...item };
+      for (let level = 1; level <= maxDepth; level++) {
+        const anc = chain[level - 1];
+        enriched[`ParentCode${level}`] = anc ? anc.code : '';
+        enriched[`ParentTitle${level}`] = anc ? anc.title : '';
+      }
+      return enriched;
+    });
+  }
+
   async findAll(): Promise<CustomerGroup[]> {
     const { bsId, compId, isShared } = await this.getScope();
     const where = isShared ? { businessStructureRef: bsId } : { companyRef: compId };
-    return this.repository.findAll({ where });
+    const items = await this.repository.findAll({ where });
+    return this.enrichGroupsWithAncestors(items);
   }
 
   async getTree(): Promise<any> {

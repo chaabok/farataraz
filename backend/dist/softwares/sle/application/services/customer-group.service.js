@@ -55,10 +55,46 @@ let CustomerGroupService = class CustomerGroupService {
         }
         return { bsId, compId, isShared };
     }
+    enrichGroupsWithAncestors(items) {
+        const map = new Map();
+        items.forEach(i => map.set(String(i.CustomerGroupID), i));
+        const chainOf = (item) => {
+            const chain = [];
+            const visited = new Set([String(item.CustomerGroupID)]);
+            let cur = item.ParentRef === null || item.ParentRef === undefined ? null : String(item.ParentRef);
+            while (cur !== null && map.has(cur) && !visited.has(cur)) {
+                const p = map.get(cur);
+                chain.push({ code: p.Code || '', title: p.Title || '' });
+                visited.add(cur);
+                const next = p.ParentRef;
+                cur = next === null || next === undefined ? null : String(next);
+            }
+            return chain;
+        };
+        let maxDepth = 0;
+        const chains = new Map();
+        items.forEach(item => {
+            const chain = chainOf(item);
+            chains.set(String(item.CustomerGroupID), chain);
+            if (chain.length > maxDepth)
+                maxDepth = chain.length;
+        });
+        return items.map(item => {
+            const chain = chains.get(String(item.CustomerGroupID)) || [];
+            const enriched = { ...item };
+            for (let level = 1; level <= maxDepth; level++) {
+                const anc = chain[level - 1];
+                enriched[`ParentCode${level}`] = anc ? anc.code : '';
+                enriched[`ParentTitle${level}`] = anc ? anc.title : '';
+            }
+            return enriched;
+        });
+    }
     async findAll() {
         const { bsId, compId, isShared } = await this.getScope();
         const where = isShared ? { businessStructureRef: bsId } : { companyRef: compId };
-        return this.repository.findAll({ where });
+        const items = await this.repository.findAll({ where });
+        return this.enrichGroupsWithAncestors(items);
     }
     async getTree() {
         const { bsId, compId, isShared } = await this.getScope();

@@ -11,6 +11,7 @@ import { CheckBoxRightLabel } from '@/components/inputs/CheckBoxRightLabel';
 import { Layers, Info, Search, Plus, Trash2, Save, X, FolderTree, Folder, File } from 'lucide-react';
 import { TabCellRow, TabCellConfig, TabCellColumn } from '../TabCellRow';
 import { apiFetch, safeStringify, cn } from '@/lib/utils';
+import { eventBus, EVENTS } from '@/lib/events';
 import { useLanguage } from '@/components/Providers';
 
 const initialTree: TreeNode = {
@@ -421,6 +422,8 @@ export default function CustomerGroup({ tabId }: { tabId?: string }) {
       const resData = await res.json();
       if (res.ok && resData.success) {
         showToast('اطلاعات گروه مشتری با موفقیت ذخیره شد.', 'success');
+        // اطلاع به فرم‌های باز (مثلاً فرم مشتری) برای تازه‌سازی لیست گروه‌ها
+        eventBus.emit(EVENTS.DATA_CHANGED, { entity: 'CustomerGroups' });
         if (resData.data && resData.data.CustomerGroupID) {
           node.data.recordId = resData.data.CustomerGroupID;
         }
