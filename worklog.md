@@ -538,3 +538,23 @@ Work Log:
 Stage Summary:
 - ریشه باگ رفتار کلی پنل‌های multi-select بود، نه مختص کانال فروش؛ فیکس در MultiColumnDropdown اعمال شد و همه فیلدهای multi-select (کانال فروش، نوع فروش و ...) را بهبود می‌دهد.
 - مشتری شماره ۱ (Ghodsi Sharifi) اکنون کانال فروش «بازاریابی تلفنی» دارد — همان کاری که کاربر می‌خواست انجام شود.
+
+---
+Task ID: 47
+Agent: main (Z.ai Code)
+Task: رفع خطای «Failed to fetch fiscal years: 500 Internal Server Error» در فوتر + بهبود خودترمیمی بوت
+
+Work Log:
+- ریشه: سندباکس recycle شده بود (بین 03:39 و 04:15) و فایل‌های gitignoredِ سِکریت پاک شده بودند: erp.env، license.key، .hidden_license.data و server.log؛ .env به تمپلیت sqlite پلتفرم برگشته بود.
+- نتیجه: server.js بدون env درست → بک‌اند اتصال PostgreSQL را از دست می‌داد («server does not support SSL connections» → fallback به SQLite → کرش TypeORM timestamp) و در حلقه ری‌استارت بود → ری‌رایت /api/* در Next به آپ‌استریم مرده → 500 → خطای فوتر (Footer.tsx loadFiscalYears).
+- بازیابی: erp.env از tar اصلی کاربر (upload/parsa-source-backup-*.tar.gz) استخراج شد؛ لایسنس: کپی‌های backend آپلود «legacy» بودند (بدون alg → legacy-or-forged) ولی ./license.key ریشه tar همان لایسنس معتبر Ed25519 بود (FULL تا 2045، site) → جایگذاری در ریشه.
+- سخت‌سازی بوت (Task 47): .zscripts/boot-db-recovery.js اکنون مرحله recoverEnvAndLicense دارد — اگر erp.env/license.key/.hidden_license.data غایب باشند از upload/env-recovery/ (اسنپ‌شات جدید، از recycle جان سالم می‌برد) یا آپلود اصلی کپی می‌کند و erp.env → .env می‌ریزد (تمپلیت sqlite جایگزین می‌شود)؛ آزمون دستی: OK.
+- اسنپ‌شات بازیابی ساخته شد: upload/env-recovery/{erp.env, license.key(معتبر Ed25519), .hidden_license.data} — خارج از گیت (upload/ در gitignore).
+- بوت تمیز: kill server.js/next/backend → setsid dev.sh → postgres (running)، recovery، Next :3000 + Nest :3005.
+- تأیید: لاگ «License loaded: licensee="Parsa ERP" type=FULL expiry=2045»؛ login 200؛ /api/common/fiscalyear 200 با سال مالی 1404؛ /api/license/machine-id 200؛ E2E مرورگر: ورود → داشبورد، «1404» در فوتر نمایش داده می‌شود، بدون خطای fiscal/500 در کنسول. اسکرین‌شات: tool-results/task-47-fiscal-year-fixed.png.
+- روال دائمی: push-to-github.sh (سورس + دامپ DB + repo.tar).
+
+Stage Summary:
+- خطای 500 فوتر (فیسکال‌یر) رفع شد — علت، مرگ بک‌اند به‌خاطر پاک‌شدن env/لایسنس پس از recycle بود، نه باگ کد فرم.
+- بوت اکنون سه‌لایه خودترمیم دارد: (۱) env+لایسنس، (۲) دیتابیس parsaDb، (۳) کامپایل بک‌اند — همه idempotent.
+- اگر دوباره خطای 500 فوتر دیدید: یعنی recycle جدید بوده؛ چند ثانیه صبر کنید (بوت خودکار) یا صفحه را رفرش کنید؛ داده‌ها با بوت برمی‌گردند.
