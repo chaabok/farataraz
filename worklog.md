@@ -684,3 +684,22 @@ Work Log:
 
 Stage Summary:
 - فیلد «سند مبنا» اکنون رفتار کامل و درست MultiSelectDropDown را دارد: انتخاب چندگانه‌ی مطمئن (حتی با کلیک سریع)، نمایش عناوین واقعی در حالت بسته، رفتار قابل‌پیش‌بینی «تایید/انصراف»، ذخیره و بازخوانی صحیح. قرارداد UI: مقدار در DB همان CSV از id enum است و خودنمایی عنوان‌ها فقط در لایه‌ی UI انجام می‌شود.
+
+---
+Task ID: 54
+Agent: main (Z.ai Code)
+Task: «توی فرم شماره گذاری حسابهای تفصیلی، الان تفصیلی ها دوبل تکراری شده است... توی فرم نوع تفصیلی جدید، هر کدام از نوع تفصیلی ها دوبل شده است. رکوردهای تکراری را حذف کنید و از هر نوع تفصیلی فقط باید یک رکورد وجود داشته باشد»
+
+Work Log:
+- تشخیص داده: جدول «Acc».«DetailedTypes» شامل 42 رکورد بود = 21 نوع سیستمی × 2 نسخه (IDهای 1..21 و کپی‌های IDهای 22..42 با اختلاف ~400ms، هر دو با BusinessStructureRef=2/CompanyRef=2).
+- ریشه‌یابی: در seedForBusinessStructure سرویس DetailedType، بررسی «وجود داشتِن» هر نوع با شرط Title + checkField (BusinessStructureRef یا CompanyRef بسته به IsBasicInfoShared) انجام می‌شد؛ اما ریپازیتوری همیشه رکوردها را با اسکوپ پیش‌فرض (BSRef=2/CompanyRef=2) ذخیره می‌کند. با هر تغییر کانتکست (seed بوت با BS=1 در seedData، seed ویو با BS=2 در getViewList شماره‌گذاری، یا boot دوباره)، شرط بررسی به رکوردهای خودش نمی‌خورد → کل 21 نوع دوباره درج می‌شد (دو اجرای ~400ms فاصله در یک بوت = 42 رکورد).
+- فرم «شماره گذاری تفصیلی» (DetailedAccountsNumbering) ردیف‌ها را از detailedTypeService.findAll() می‌سازد و فرم «فهرست انواع تفصیلی» هم از همان جدول → هر دو دوبله نشان می‌دادند. (جدول Gnr.DetailedAccountsNumbering خالی بود؛ بازه‌های شماره در ویو محاسبه می‌شوند.)
+- بررسی ارجاع‌ها قبل از حذف: Acc.DetailedAccounts فقط به انواع 6/7/13 (مجموعه اصلی) ارجاع دارد؛ Gnr.DetailedAccountsNumbering خالی؛ AccountsRelatedDeatailedAccounts خالی؛ RecieptAndPaymentAccountingSetting.detailedType = 1/3؛ WarehouseDocumentTypes.RelatedDetailedTypeRefs = null → حذف کپی‌های 22..42 کاملاً بی‌خطر.
+- فیکس ریشه‌ای در detailed-type.service.ts (seedForBusinessStructure):
+  ۱) پاک‌سازی خودآیی (self-heal) ابتدای متد: گروه‌بندی فقط عناوین سیستمی در JS؛ برای هر گروه دوبله: ارجاع Acc.DetailedAccounts به ID کهنه (MIN) بازنویسی، تنظیمات Gnr.DetailedAccountsNumbering یا منتقل یا حذف (اگر نوع اصلی از قبل ردیف دارد)، و حذف رکوردهای دوبله با تور امن NOT EXISTS روی DetailedAccounts.
+  ۲) بررسی وجود به‌صورت ref-agnostic: «Title = $1 OR Code = $2» به‌جای شرط per-ref → seed در هر کانتکست/بوت مضاعف (idempotent) شد و دیگر هرگز کپی نمی‌سازد. بلوک مرده محاسبه isShared/checkField حذف شد.
+- استقرار: cd backend && npx tsc (خروجی 0) → kill بک‌اند (PID 8127) → supervisor بلافاصله PID جدید (13528) را بالا آورد → GET /api/common/detailed-accounts-numbering اجرا شد → dedupe اجرا و دیتابیس 42→21 شد (IDهای اصلی 1..21 حفظ شد).
+- تأییدها: COUNT=21 و unique_titles=21؛ ارجاع تفصیلی‌ها (6/7/13) سالم؛ دو بار فراخوانی مکرر API شماره‌گذاری → همچنان 21 (idempotent)؛ API فهرست انواع (pageIndex=0&pageSize=50) → total=21/unique=21؛ E2E با agent-browser (لاگین admin/1234): فرم «شماره گذاری تفصیلی» 21 ردیف یکتا (کانال فروش فقط 1 بار)، فرم «فهرست انواع تفصیلی» 21 ردیف داده واقعی بدون دوبله (21 ردیف دیگرِ شمارش اولیه، ردیف‌های ابزار/فیلتر گرید بودند نه داده)، فرم «نوع تفصیلی جدید» بدون خطا باز شد؛ کنسول مرورگر و page errors خالی. اسکرین‌شات: .zscripts/verify-numbering-21.png.
+
+Stage Summary:
+- از هر نوع تفصیلی سیستمی دقیقاً یک رکورد باقی است (21 رکورد، IDهای 1..21)؛ هر دو فرم «شماره گذاری تفصیلی» و «فهرست انواع تفصیلی» اکنون بدون رکورد تکراری رندر می‌شوند. علت ساخت دوبله (بررسی per-ref ناهم‌سو با اسکوپ ذخیره‌سازی) به‌صورت ریشه‌ای اصلاح و پاک‌سازی خودآیی هم اضافه شد تا در صورت تکرار سناریو (boot دوبل، تغییر کانتکست)، سیستم خودش داده را ترمیم کند. داده‌های کاربر (تفصیلی‌های ثبت‌شده) دست‌نخورده و ارجاع‌ها سالم ماندند. فایل dbq.js (ابزار خواندن SQL برای دیباگ) به .zscripts اضافه شد.

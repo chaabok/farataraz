@@ -100,29 +100,47 @@ let DetailedTypeService = class DetailedTypeService {
             { code: '21', title: 'کانال فروش' },
         ];
         const manager = this.detailedTypeRepository.typeOrmRepo.manager;
-        const structures = await manager.query(`SELECT "BusinessStructureID", "ParentRef", "BusinessStructure", "IsBasicInfoShared" FROM "Gnr"."BusinessStructure" WHERE "BusinessStructureID" IN ($1, 1)`, [businessStructureId]);
-        let businessStructureRef = businessStructureId;
-        let isShared = true;
-        if (structures && structures.length > 0) {
-            const bs = structures.find((r) => (r.BusinessStructureID || r.businessStructureId || r.business_structure_id) === businessStructureId) || structures[0];
-            const bsType = parseInt(bs.BusinessStructure || bs.businessStructure || '0', 10);
-            const parentRef = parseInt(bs.ParentRef || bs.parentRef || '0', 10);
-            let targetForSharingCheck = bs;
-            if (bsType === 2 && parentRef > 0 && parentRef !== 1) {
-                businessStructureRef = parentRef;
-                const parents = await manager.query(`SELECT "IsBasicInfoShared" FROM "Gnr"."BusinessStructure" WHERE "BusinessStructureID" IN ($1, 1)`, [parentRef]);
-                if (parents && parents.length > 0) {
-                    targetForSharingCheck = parents.find((r) => (r.BusinessStructureID || r.businessStructureId || r.business_structure_id) === parentRef) || parents[0];
-                }
+        try {
+            const systemTitles = seedItems.map(i => i.title);
+            const allTypes = await manager.query(`SELECT "DetailedTypesID", "Title" FROM "Acc"."DetailedTypes" WHERE "Title" = ANY($1)`, [systemTitles]);
+            const groups = new Map();
+            for (const row of allTypes) {
+                const key = (row.Title || '').trim();
+                const id = parseInt(row.DetailedTypesID !== undefined && row.DetailedTypesID !== null ? row.DetailedTypesID.toString() : '0', 10);
+                if (!key || !id)
+                    continue;
+                if (!groups.has(key))
+                    groups.set(key, []);
+                groups.get(key).push(id);
             }
-            const val = targetForSharingCheck.IsBasicInfoShared !== undefined ? targetForSharingCheck.IsBasicInfoShared : targetForSharingCheck.isBasicInfoShared;
-            isShared = !(val === false || val === 0 || val === 'false' || val === null);
+            for (const ids of groups.values()) {
+                if (ids.length <= 1)
+                    continue;
+                ids.sort((a, b) => a - b);
+                const keepId = ids[0];
+                const dupIds = ids.slice(1);
+                await manager.query(`UPDATE "Acc"."DetailedAccounts" SET "DetailedTypesID" = $1::bigint WHERE "DetailedTypesID" = ANY($2::bigint[])`, [keepId, dupIds]);
+                const keptRows = await manager.query(`SELECT COUNT(*) as count FROM "Gnr"."DetailedAccountsNumbering" WHERE "DetailedTypesID" = $1::bigint`, [keepId]);
+                if (parseInt(keptRows[0]?.count ?? '0', 10) > 0) {
+                    await manager.query(`DELETE FROM "Gnr"."DetailedAccountsNumbering" WHERE "DetailedTypesID" = ANY($1::bigint[])`, [dupIds]);
+                }
+                else {
+                    await manager.query(`UPDATE "Gnr"."DetailedAccountsNumbering" SET "DetailedTypesID" = $1::bigint WHERE "DetailedTypesID" = ANY($2::bigint[])`, [keepId, dupIds]);
+                }
+                await manager.query(`DELETE FROM "Acc"."DetailedTypes" t
+           WHERE t."DetailedTypesID" = ANY($1::bigint[])
+             AND NOT EXISTS (
+               SELECT 1 FROM "Acc"."DetailedAccounts" da WHERE da."DetailedTypesID" = t."DetailedTypesID"
+             )`, [dupIds]);
+                console.log(`DetailedTypes dedupe: kept ID ${keepId}, removed duplicates [${dupIds.join(', ')}]`);
+            }
         }
-        const checkField = isShared ? 'BusinessStructureRef' : 'CompanyRef';
-        const checkValue = isShared ? businessStructureRef : businessStructureId;
+        catch (e) {
+            console.error('DetailedTypes dedupe failed:', e.message);
+        }
         for (const item of seedItems) {
             try {
-                const existing = await manager.query(`SELECT COUNT(*) as count FROM "Acc"."DetailedTypes" WHERE "Title" = $1 AND "${checkField}" = $2`, [item.title, checkValue]);
+                const existing = await manager.query(`SELECT COUNT(*) as count FROM "Acc"."DetailedTypes" WHERE "Title" = $1 OR "Code" = $2`, [item.title, item.code]);
                 if (parseInt(existing[0].count, 10) === 0) {
                     await this.create({
                         code: item.code,

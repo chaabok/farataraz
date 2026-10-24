@@ -122,44 +122,89 @@ export class DetailedTypeService {
     ];
 
     const manager = (this.detailedTypeRepository as any).typeOrmRepo.manager;
-    const structures = await manager.query(
-      `SELECT "BusinessStructureID", "ParentRef", "BusinessStructure", "IsBasicInfoShared" FROM "Gnr"."BusinessStructure" WHERE "BusinessStructureID" IN ($1, 1)`,
-      [businessStructureId]
-    );
-    
-    let businessStructureRef = businessStructureId;
-    let isShared = true;
-    if (structures && structures.length > 0) {
-      const bs = structures.find((r: any) => (r.BusinessStructureID || r.businessStructureId || r.business_structure_id) === businessStructureId) || structures[0];
-      const bsType = parseInt(bs.BusinessStructure || bs.businessStructure || '0', 10);
-      const parentRef = parseInt(bs.ParentRef || bs.parentRef || '0', 10);
-      
-      let targetForSharingCheck = bs;
-      if (bsType === 2 && parentRef > 0 && parentRef !== 1) { // 2 = Company
-        businessStructureRef = parentRef;
-        const parents = await manager.query(
-          `SELECT "IsBasicInfoShared" FROM "Gnr"."BusinessStructure" WHERE "BusinessStructureID" IN ($1, 1)`,
-          [parentRef]
-        );
-        if (parents && parents.length > 0) {
-          targetForSharingCheck = parents.find((r: any) => (r.BusinessStructureID || r.businessStructureId || r.business_structure_id) === parentRef) || parents[0];
-        }
-      }
-      
-      const val = targetForSharingCheck.IsBasicInfoShared !== undefined ? targetForSharingCheck.IsBasicInfoShared : targetForSharingCheck.isBasicInfoShared;
-      isShared = !(val === false || val === 0 || val === 'false' || val === null);
-    }
 
-    const checkField = isShared ? 'BusinessStructureRef' : 'CompanyRef';
-    const checkValue = isShared ? businessStructureRef : businessStructureId;
+    // --- Self-healing dedupe of the system types -----------------------------
+    // The old existence check matched rows per BusinessStructureRef/CompanyRef,
+    // while the repository always persists system types under the default scope
+    // (BusinessStructureRef=2 / CompanyRef=2). Any context change (boot seed
+    // with BS=1, view seed with BS=2, double boot, ...) failed that check and
+    // inserted a full duplicate copy of the 21 system types on every run.
+    // System types are global constants: they must exist exactly once, so we
+    // remap every reference to the oldest record and remove the duplicates.
+    try {
+      const systemTitles = seedItems.map(i => i.title);
+      const allTypes: Array<any> = await manager.query(
+        `SELECT "DetailedTypesID", "Title" FROM "Acc"."DetailedTypes" WHERE "Title" = ANY($1)`,
+        [systemTitles]
+      );
+
+      const groups = new Map<string, number[]>();
+      for (const row of allTypes) {
+        const key = (row.Title || '').trim();
+        const id = parseInt(row.DetailedTypesID !== undefined && row.DetailedTypesID !== null ? row.DetailedTypesID.toString() : '0', 10);
+        if (!key || !id) continue;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(id);
+      }
+
+      for (const ids of groups.values()) {
+        if (ids.length <= 1) continue;
+        ids.sort((a, b) => a - b);
+        const keepId = ids[0];
+        const dupIds = ids.slice(1);
+
+        // 1) Detailed accounts created for a duplicate type move to the kept type
+        await manager.query(
+          `UPDATE "Acc"."DetailedAccounts" SET "DetailedTypesID" = $1::bigint WHERE "DetailedTypesID" = ANY($2::bigint[])`,
+          [keepId, dupIds]
+        );
+
+        // 2) Numbering settings: keep a single row per type. If the kept type
+        //    already owns one, drop the duplicate rows; otherwise move them.
+        const keptRows = await manager.query(
+          `SELECT COUNT(*) as count FROM "Gnr"."DetailedAccountsNumbering" WHERE "DetailedTypesID" = $1::bigint`,
+          [keepId]
+        );
+        if (parseInt(keptRows[0]?.count ?? '0', 10) > 0) {
+          await manager.query(
+            `DELETE FROM "Gnr"."DetailedAccountsNumbering" WHERE "DetailedTypesID" = ANY($1::bigint[])`,
+            [dupIds]
+          );
+        } else {
+          await manager.query(
+            `UPDATE "Gnr"."DetailedAccountsNumbering" SET "DetailedTypesID" = $1::bigint WHERE "DetailedTypesID" = ANY($2::bigint[])`,
+            [keepId, dupIds]
+          );
+        }
+
+        // 3) Finally remove the duplicate type records (safety net: skip any
+        //    row that is still referenced by a detailed account)
+        await manager.query(
+          `DELETE FROM "Acc"."DetailedTypes" t
+           WHERE t."DetailedTypesID" = ANY($1::bigint[])
+             AND NOT EXISTS (
+               SELECT 1 FROM "Acc"."DetailedAccounts" da WHERE da."DetailedTypesID" = t."DetailedTypesID"
+             )`,
+          [dupIds]
+        );
+
+        console.log(`DetailedTypes dedupe: kept ID ${keepId}, removed duplicates [${dupIds.join(', ')}]`);
+      }
+    } catch (e: any) {
+      console.error('DetailedTypes dedupe failed:', e.message);
+    }
 
     for (const item of seedItems) {
       try {
+        // Ref-agnostic existence check: system types are global constants and
+        // the repository always stores them under the default scope, so match
+        // by Title or Code instead of BusinessStructureRef/CompanyRef. This
+        // keeps re-seeding idempotent (no duplicate copies ever again).
         const existing = await manager.query(
-          `SELECT COUNT(*) as count FROM "Acc"."DetailedTypes" WHERE "Title" = $1 AND "${checkField}" = $2`,
-          [item.title, checkValue]
+          `SELECT COUNT(*) as count FROM "Acc"."DetailedTypes" WHERE "Title" = $1 OR "Code" = $2`,
+          [item.title, item.code]
         );
-        
+
         if (parseInt(existing[0].count, 10) === 0) {
           await this.create({
             code: item.code,
