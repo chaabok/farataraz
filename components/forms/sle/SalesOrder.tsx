@@ -12,6 +12,8 @@ import { DateInput } from "@/components/inputs/DateInput";
 import { StateListInput, DocumentState, DocumentStateLabels } from "@/components/inputs/StateListInput";
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
+import { SubUnitModal } from "@/components/inputs/SubUnitModal";
+import { Plus } from "lucide-react";
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
@@ -70,6 +72,24 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Task 61: مودال واحدهای سنجش فرعی (مشابه فرم رسید انبار)
+  const [subUnitModalState, setSubUnitModalState] = useState<{
+    isOpen: boolean;
+    rowIndex: number;
+    itemId?: number | string;
+    itemCode?: string | number;
+    itemTitle?: string;
+    primaryUnitName?: string;
+    subUnits: any[];
+    selectedSubUnitId?: any;
+    initialSubQuantity?: number | string;
+    initialMainQuantity?: number | string;
+  }>({
+    isOpen: false,
+    rowIndex: -1,
+    subUnits: [],
+  });
+
   const customerColumns: SingleSelectColumn[] = [
     { key: "code", label: "کد", width: 100 },
     { key: "title", label: "عنوان مشتری", width: 260 },
@@ -107,8 +127,12 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               ItemID: item.ItemID || item.id,
               ItemCode: item.ItemCode || item.code || "",
               ItemName: item.ItemName || item.title || item.name || "",
-              UnitName: item.MeasurementUnit?.MeasurementUnitTitle || item.UnitName || item.unit || "عدد",
+              UnitName: item.MeasurementUnit?.MeasurementUnitTitle || item.MeasurementUnit?.MeasurementUnitName || item.UnitName || item.unit || item.MeasurementUnitName || "عدد",
               ItemType: Number(item.ItemType),
+              // Task 61: اطلاعات واحدهای سنجش فرعی (مشابه فرم رسید انبار)
+              mainUnit: item.mainUnit || null,
+              subUnits: item.subUnits || [],
+              allUnits: item.allUnits || [],
             }))
         );
       })
@@ -628,6 +652,11 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                 ItemCode: firstItem.ItemCode || "",
                 ItemName: firstItem.ItemName || "",
                 UnitName: firstItem.UnitName || "عدد",
+                // Task 61: با تغییر کالا، انتخاب واحد فرعی قبلی بازنشانی می‌شود
+                UnitType: "اصلی",
+                SubQuantity: undefined,
+                MainToSubRatio: undefined,
+                IsVariableRatio: false,
               };
 
               for (let i = 1; i < selectedList.length; i++) {
@@ -667,15 +696,82 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       ),
     },
     {
+      // Task 61: ستون واحد سنجش با دکمه پلاس برای کالاهای دارای واحد سنجش فرعی (مشابه فرم رسید انبار)
       name: "UnitName",
       label: "واحد سنجش",
-      type: "text",
-      width: "100px",
-      render: (row) => (
-        <span className="flex items-center justify-center w-full h-[25px] px-1 text-xs text-gray-600 dark:text-gray-300 text-center select-none">
-          {row?.UnitName || "-"}
-        </span>
-      ),
+      type: "custom",
+      width: "120px",
+      render: (row, rowIndex) => {
+        const matchedItem =
+          availableItems.find(
+            (i) =>
+              (row?.ItemRef !== null && row?.ItemRef !== undefined && Number(i.ItemID) === Number(row.ItemRef)) ||
+              (row?.ItemCode && String(i.ItemCode || i.code) === String(row.ItemCode))
+          ) || null;
+
+        const allUnits = (matchedItem?.allUnits && matchedItem.allUnits.length > 0)
+          ? matchedItem.allUnits
+          : (row?.allUnits && row.allUnits.length > 0)
+          ? row.allUnits
+          : [];
+
+        const rawSubUnits = matchedItem?.subUnits || row?.subUnits || [];
+        const subUnitsList = rawSubUnits.length > 0
+          ? rawSubUnits
+          : allUnits.filter((u: any) => u.UnitType === "فرعی" || u.UnitType === 2 || u.SubUnitName || u.MeasurementUnitName);
+
+        const hasSubUnits = subUnitsList.length > 0 || allUnits.length > 1;
+
+        const primaryUnit = matchedItem?.UnitName || matchedItem?.mainUnit?.MeasurementUnitName || row?.UnitName || "عدد";
+        const currentUnitDisplay = row?.UnitName || primaryUnit;
+
+        if (!hasSubUnits) {
+          return (
+            <span className="flex items-center justify-center w-full h-[25px] px-1 text-xs text-gray-600 dark:text-gray-300 text-center select-none font-medium">
+              {currentUnitDisplay}
+            </span>
+          );
+        }
+
+        return (
+          <div className="flex items-center justify-between w-full h-[25px] px-1 gap-1">
+            <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate" title={currentUnitDisplay}>
+              {currentUnitDisplay}
+            </span>
+            <button
+              type="button"
+              disabled={isUsed}
+              onClick={() => {
+                const subUnitsForModal = subUnitsList.map((u: any, idx: number) => ({
+                  ItemSubUnitID: u.ItemSubUnitID || u.id || u.MeasurementUnitID || (idx + 1),
+                  SubUnitRef: u.SubUnitRef || u.subUnitRef || u.id || (idx + 1),
+                  SubUnitName: u.MeasurementUnitName || u.SubUnitName || u.title || "فرعی",
+                  MainToSubRatio: Number(u.MainToSubRatio || u.ConversionFactor || u.ratio || 1),
+                  IsVariableRatio: u.IsVariableRatio ?? u.isVariable ?? false,
+                  TolerancePercent: Number(u.TolerancePercent || u.tolerance || 0),
+                }));
+
+                setSubUnitModalState({
+                  isOpen: true,
+                  rowIndex,
+                  itemId: row?.ItemRef || matchedItem?.ItemID || matchedItem?.id,
+                  itemCode: row?.ItemCode || matchedItem?.ItemCode || "-",
+                  itemTitle: row?.ItemName || matchedItem?.ItemName || "-",
+                  primaryUnitName: primaryUnit,
+                  subUnits: subUnitsForModal,
+                  selectedSubUnitId: row?.UnitName,
+                  initialSubQuantity: row?.SubQuantity || row?.Quantity || 1,
+                  initialMainQuantity: row?.Quantity,
+                });
+              }}
+              className="p-1 flex items-center justify-center rounded bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800 cursor-pointer h-[22px] px-1.5 shrink-0 gap-0.5 text-[10px] font-bold shadow-2xs"
+              title="انتخاب واحد فرعی / ضریب تبدیل"
+            >
+              <Plus className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            </button>
+          </div>
+        );
+      },
     },
     {
       name: "Quantity",
@@ -759,58 +855,116 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   ];
 
   return (
-    <SimpleFormTwoRowTabbed
-      title={activeId ? "ویرایش سفارش فروش" : "سفارش فروش جدید"}
-      fields={fields}
-      values={values}
-      onChange={handleChange}
-      onSave={handleSave}
-      onSaveNew={handleSaveNew}
-      onNew={handleNew}
-      onDelete={handleDelete}
-      onListSelect={handleListSelect}
-      listApiUrl="/api/sle/sales-orders"
-      listDisplayKey="OrderNumber"
-      listColumns={[
-        { key: "OrderNumber", label: "شماره", title: "شماره" },
-        {
-          key: "OrderDate",
-          label: "تاریخ",
-          title: "تاریخ",
-          render: (val: string) => (val ? gregorianToJalaliDisplay(val) : ""),
-        },
-        { key: "CustomerName", label: "مشتری", title: "مشتری" },
-        {
-          key: "Status",
-          label: "وضعیت",
-          title: "وضعیت",
-          render: (val: number) => DocumentStateLabels[val as DocumentState] || val,
-        },
-      ]}
-      targetForm="SalesOrder"
-      isReadonly={isUsed}
-      bottomTabs={[
-        {
-          id: "items_tab",
-          label: "اقلام سفارش فروش",
-          content: (
-            <TabCellRow
-              tabs={detailTabConfig}
-              value={values.items || []}
-              onChange={(newItems) =>
-                setValues((prev) => ({
-                  ...prev,
-                  items: newItems.map((item, idx) => ({ ...item, RowNo: idx + 1 })),
-                }))
-              }
-              hideHeader={false}
-              hideAddButton={isUsed}
-              hideDeleteButton={isUsed}
-            />
-          ),
-        },
-      ]}
-    />
+    <>
+      <SimpleFormTwoRowTabbed
+        title={activeId ? "ویرایش سفارش فروش" : "سفارش فروش جدید"}
+        fields={fields}
+        values={values}
+        onChange={handleChange}
+        onSave={handleSave}
+        onSaveNew={handleSaveNew}
+        onNew={handleNew}
+        onDelete={handleDelete}
+        onListSelect={handleListSelect}
+        listApiUrl="/api/sle/sales-orders"
+        listDisplayKey="OrderNumber"
+        listColumns={[
+          { key: "OrderNumber", label: "شماره", title: "شماره" },
+          {
+            key: "OrderDate",
+            label: "تاریخ",
+            title: "تاریخ",
+            render: (val: string) => (val ? gregorianToJalaliDisplay(val) : ""),
+          },
+          { key: "CustomerName", label: "مشتری", title: "مشتری" },
+          {
+            key: "Status",
+            label: "وضعیت",
+            title: "وضعیت",
+            render: (val: number) => DocumentStateLabels[val as DocumentState] || val,
+          },
+        ]}
+        targetForm="SalesOrder"
+        isReadonly={isUsed}
+        bottomTabs={[
+          {
+            id: "items_tab",
+            label: "اقلام سفارش فروش",
+            content: (
+              <TabCellRow
+                tabs={detailTabConfig}
+                value={values.items || []}
+                onChange={(newItems) =>
+                  setValues((prev) => ({
+                    ...prev,
+                    items: newItems.map((item, idx) => ({ ...item, RowNo: idx + 1 })),
+                  }))
+                }
+                hideHeader={false}
+                hideAddButton={isUsed}
+                hideDeleteButton={isUsed}
+              />
+            ),
+          },
+        ]}
+      />
+      {/* Task 61: مودال واحدهای سنجش فرعی (مشابه فرم رسید انبار) */}
+      <SubUnitModal
+        isOpen={subUnitModalState.isOpen}
+        onClose={() => setSubUnitModalState((prev) => ({ ...prev, isOpen: false }))}
+        itemId={subUnitModalState.itemId}
+        itemCode={subUnitModalState.itemCode}
+        itemTitle={subUnitModalState.itemTitle}
+        primaryUnitName={subUnitModalState.primaryUnitName}
+        subUnits={subUnitModalState.subUnits}
+        selectedSubUnitId={subUnitModalState.selectedSubUnitId}
+        initialSubQuantity={subUnitModalState.initialSubQuantity}
+        initialMainQuantity={subUnitModalState.initialMainQuantity}
+        isReadonly={isUsed}
+        onConfirm={(result) => {
+          const idx = subUnitModalState.rowIndex;
+          if (idx < 0 || idx >= (values.items || []).length) return;
+          const updatedItems = [...(values.items || [])];
+          const targetRow = updatedItems[idx];
+          const subQty = result.subQuantity;
+          const priceVal = Number(targetRow?.UnitPrice) || 0;
+
+          updatedItems[idx] = {
+            ...targetRow,
+            UnitName: result.subUnit.SubUnitName,
+            UnitType: "فرعی",
+            SubQuantity: subQty,
+            Quantity: subQty,
+            MainToSubRatio: result.ratioUsed,
+            IsVariableRatio: result.isVariable,
+            TotalPrice: subQty * priceVal,
+          };
+
+          setValues((prev) => ({ ...prev, items: updatedItems }));
+        }}
+        onSelectPrimaryUnit={(result) => {
+          const idx = subUnitModalState.rowIndex;
+          if (idx < 0 || idx >= (values.items || []).length) return;
+          const updatedItems = [...(values.items || [])];
+          const targetRow = updatedItems[idx];
+          const fixedQty = result ? result.fixedMainQuantity : 0;
+          const priceVal = Number(targetRow?.UnitPrice) || 0;
+
+          updatedItems[idx] = {
+            ...targetRow,
+            UnitName: result?.primaryUnitName || subUnitModalState.primaryUnitName,
+            UnitType: "اصلی",
+            SubQuantity: undefined,
+            Quantity: fixedQty,
+            MainToSubRatio: 1,
+            IsVariableRatio: false,
+            TotalPrice: fixedQty * priceVal,
+          };
+
+          setValues((prev) => ({ ...prev, items: updatedItems }));
+        }}
+      />
+    </>
   );
 }
 

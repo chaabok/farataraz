@@ -863,3 +863,25 @@ Work Log:
 
 Stage Summary:
 - دراپ‌داون «کد کالا» تب «کالاهای مرتبط» فرم انبار اکنون به داده واقعی متصل است: فقط کالاهای فعال تعریف‌شده در فرم کالا/خدمت (از /api/inv/items) نمایش داده می‌شوند؛ کالاهای تستی هاردکد P001-P005 به‌کلی حذف شدند (هیچ ردی در فرانت/بک/دیتابیس نبود). کالاهایی که قبلاً به همان انبار متصل شده‌اند در لیست انتخاب نمی‌آیند (به‌جز برای ردیف خودشان). ضمناً باگ commit انتخاب چندتایی MultiColumnDropdown هنگام باز شدن با مقدار خالی رفع شد، FK واحد سنجش (MeasurementUnitRef) در کالاهای مرتبط ذخیره و در بازخوانی به‌درستی نمایش داده می‌شود، و میان‌بر افزودن کالای جدید به فرم درست هدایت شد.
+
+---
+Task ID: 61
+Agent: main (Z.ai Code)
+Task: «توی فرم سفارش فروش، در تب اقلام سفارش فروش اگر کالایی دارای واحد سنجش فرعی بود باید در ستون واحد سنجش دکمه پلاس نمایش داده شود و لیست واحدهای سنجش فرعی کالا نمایش داده شود. دقیقا باید مشابه فرم رسید انبار باشد.»
+
+Work Log:
+- بررسی فرم مرجع (WarehouseReceipt.tsx): ستون «واحد سنجش» از نوع custom است؛ با matchedItem از availableItems، subUnits/allUnits را می‌خواند؛ اگر کالا واحد فرعی داشته باشد به‌جای متن ساده، «نام واحد + دکمه پلاس آبی» رندر می‌کند؛ کلیک پلاس → setSubUnitModalState → کامپوننت مشترک SubUnitModal (خودش از /api/inv/items/{id}/sub-units واکشی می‌کند) با onConfirm (UnitName=SubUnitName، UnitType=فرعی، SubQuantity، Quantity، MainToSubRatio، TotalPrice) و onSelectPrimaryUnit (بازگشت به واحد اصلی با fixedMainQuantity).
+- بررسی API: /api/inv/items/dropdown?type=1 از قبل subUnits/allUnits/mainUnit را برمی‌گرداند (کالای «نشاسته» کاربر: واحد فرعی «بسته»، ضریب 50، متغیر، تلرانس 5٪) — بک‌اند نیازی به تغییر نداشت.
+- پیاده‌سازی (components/forms/sle/SalesOrder.tsx):
+  ۱) import SubUnitModal + Plus؛ state subUnitModalState (همان شکل رسید انبار).
+  ۲) نگاشت availableItems اکنون mainUnit/subUnits/allUnits را عبور می‌دهد + fallback کامل‌تر UnitName (MeasurementUnitName).
+  ۳) ستون UnitName از type:"text" به custom با همان منطق رسید انبار تبدیل شد: بدون واحد فرعی → متن ساده؛ با واحد فرعی → نام واحد + دکمه پلاس آبی (title=«انتخاب واحد فرعی / ضریب تبدیل»، disabled در isUsed).
+  ۴) SubUnitModal در انتهای JSX (فرگمنت با SimpleFormTwoRowTabbed) با onConfirm/onSelectPrimaryUnit مشابه رسید انبار (بدون calculateRowFields/recalculateInvoiceVat — TotalPrice ساده = Quantity×UnitPrice).
+  ۵) onChange کالا: با تغییر کالا، UnitType/SubQuantity/MainToSubRatio/IsVariableRatio بازنشانی می‌شوند.
+  ۶) رفع تکرار prop isReadonly و اصلاح تورفتگی return.
+- موانع: پنل انتخاب کالا multi-select است (تیک + بستن = commit — فیکس Task 60 کار می‌کند)؛ dropdown روش تسویه در جریان تست زودتر انتخاب شد («نقدی») — مشکلی ایجاد نکرد.
+- E2E کامل (agent-browser، admin/1234): منوی شروع → جستجوی «سفارش فروش» → «سفارش فروش جدید» → تب اقلام → انتخاب «نشاسته» (تیک + Escape) → ستون واحد سنجش: «عدد» + دکمه پلاس آبی ✓ → کلیک پلاس → مودال «واحدهای سنجش فرعی» دقیقاً مثل رسید انبار (کد کالا 1 / واحد اصلی عدد / عنوان نشاسته / ردیف «بسته | ۵۰ | ۵٪») ✓ → مقدار فرعی 2 → محاسبه ثابت 100 (2×50) ✓ → تأیید → ردیف: واحد=«بسته»، مقدار=2 ✓ → دوباره پلاس → «انتخاب واحد سنجش اصلی» → واحد=«عدد»، مقدار=100 (fixedMainQuantity) ✓ → مجدد «بسته» با مقدار 2 → پر کردن سربرگ (علی جهانی/لطلطی/درب نمایندگی/نقدی) → ذخیره → POST 201 → DB: SalesOrderItems {UnitName:'بسته', Quantity:2.0000} ✓ → بازخوانی از لیست: «ویرایش سفارش فروش» با واحد «بسته» + دکمه پلاس ✓ → پاک‌سازی: DELETE سفارش تستی (ID 9) → سفارش خود کاربر (ID 8) دست‌نخورده.
+- console/page errors = 0؛ eslint SalesOrder.tsx = 0 error. اسکرین‌شات‌ها: t61-plus-button.png، t61-modal-open.png، t61-after-confirm.png، t61-roundtrip.png.
+
+Stage Summary:
+- تب «اقلام سفارش فروش» اکنون دقیقاً مثل فرم رسید انبار رفتار می‌کند: کالاهای دارای واحد سنجش فرعی در ستون «واحد سنجش» دکمه پلاس آبی دارند که مودال مشترک «واحدهای سنجش فرعی» (لیست واحدهای فرعی با ضریب تبدیل/تلرانس، محاسبه مقدار اصلی با ضریب ثابت/متغیر، دکمه بازگشت به واحد اصلی) را باز می‌کند؛ انتخاب واحد فرعی در ردیف (UnitName=نام واحد فرعی، Quantity=مقدار ورودی، SubQuantity/MainToSubRatio) اعمال و در پایگاه داده ذخیره و پس از بازخوانی درست نمایش داده می‌شود. تغییر فقط در SalesOrder.tsx بود (کامپوننت مشترک SubUnitModal و API بدون تغییر).
