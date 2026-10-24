@@ -3,6 +3,8 @@
 import React from "react";
 import { FormFieldWrapper } from "./FormFieldWrapper";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/stores/languageStore";
+import { latinizeDigits, localizeNumericString, normalizeNumericInput } from "@/lib/digitLocale";
 
 interface NumberInputProps {
   label?: string;
@@ -25,6 +27,8 @@ interface NumberInputProps {
   alignVertical?: boolean;
   integerOnly?: boolean;
   thousandsSeparator?: boolean;
+  /** Task 62: نمایش و ورود اعداد بر اساس زبان انتخاب‌شده کاربر (مثلاً ارقام فارسی در زبان فارسی) */
+  localizeDigits?: boolean;
   className?: string;
   labelClassName?: string;
 }
@@ -50,21 +54,38 @@ export function NumberInput({
   id,
   integerOnly,
   thousandsSeparator,
+  localizeDigits,
   className,
   labelClassName
 }: NumberInputProps) {
   
+  const { language } = useLanguage();
+
   const displayValue = React.useMemo(() => {
-    if (!thousandsSeparator || value === null || value === undefined || value === "") return value;
-    
-    let valStr = value.toString().replace(/,/g, '');
-    const parts = valStr.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return parts.join('.');
-  }, [value, thousandsSeparator]);
+    if (value === null || value === undefined || value === "") return value;
+    if (!thousandsSeparator && !localizeDigits) return value;
+
+    let valStr = latinizeDigits(String(value)).replace(/,/g, '');
+
+    if (thousandsSeparator) {
+      const parts = valStr.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      valStr = parts.join('.');
+    }
+
+    // Task 62: نمایش ارقام بر اساس زبان انتخاب‌شده (مثلاً ۱٬۲۳۴٬۵۶۷ در فارسی)
+    if (localizeDigits) {
+      valStr = localizeNumericString(valStr, language);
+    }
+
+    return valStr;
+  }, [value, thousandsSeparator, localizeDigits, language]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/,/g, '');
+    // Task 62: نرمال‌سازی ورودی کاربر از هر زبانی (ارقام فارسی/عربی/هندی و...) به عدد لاتین
+    let val = localizeDigits
+      ? normalizeNumericInput(e.target.value, language)
+      : e.target.value.replace(/,/g, '');
     
     if (integerOnly) {
       if (val !== "" && !/^-?\d*$/.test(val)) return;

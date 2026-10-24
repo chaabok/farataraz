@@ -15,6 +15,8 @@ import { useToast } from "@/components/ToastProvider";
 import { SubUnitModal } from "@/components/inputs/SubUnitModal";
 import { Plus } from "lucide-react";
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay } from "@/lib/utils";
+import { useLanguage } from "@/lib/stores/languageStore";
+import { formatLocalizedNumber } from "@/lib/digitLocale";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
 import momentJalaali from "moment-jalaali";
@@ -48,6 +50,8 @@ const emptyRow = () => ({
 export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const { removeTab } = useTabs();
   const { showToast } = useToast();
+  // Task 62: زبان انتخاب‌شده کاربر برای نمایش اعداد (فی/مقدار/مبلغ کل) در همان زبان
+  const { language } = useLanguage();
   const { activeId, setActiveId, method, getUrl, handleResponse } = useFormUpsert(id);
   const { isUsed } = useFormUsageCheck("SalesOrders", activeId);
 
@@ -781,6 +785,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       render: (row, rowIndex) => (
         <NumberInput
           value={row?.Quantity || ""}
+          localizeDigits
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = {
@@ -799,12 +804,14 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
     {
       name: "UnitPrice",
-      label: "مبلغ واحد",
+      label: "فی",
       type: "custom",
       width: "130px",
       render: (row, rowIndex) => (
         <NumberInput
           value={row?.UnitPrice || ""}
+          localizeDigits
+          thousandsSeparator
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = {
@@ -829,7 +836,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       render: (row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs font-semibold text-gray-800 dark:text-gray-200 text-center select-none">
           {row?.TotalPrice !== "" && row?.TotalPrice !== undefined && row?.TotalPrice !== null
-            ? Number(row.TotalPrice).toLocaleString("fa-IR")
+            ? formatLocalizedNumber(row.TotalPrice, language)
             : "-"}
         </span>
       ),
@@ -897,7 +904,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                 onChange={(newItems) =>
                   setValues((prev) => ({
                     ...prev,
-                    items: newItems.map((item, idx) => ({ ...item, RowNo: idx + 1 })),
+                    items: newItems.map((item: any, idx: number) => ({ ...item, RowNo: idx + 1 })),
                   }))
                 }
                 hideHeader={false}
