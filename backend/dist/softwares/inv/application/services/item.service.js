@@ -930,6 +930,9 @@ let ItemService = class ItemService {
         }
         createDto.ItemCode = codeToSave;
         await this.validateDuplicates(createDto);
+        if (!String(createDto.ItemName2 ?? '').trim()) {
+            createDto.ItemName2 = String(createDto.ItemName ?? '').trim();
+        }
         const id = await this.idGenerationService.generateNextId('Items');
         const { ItemPhysicalLocations, ItemSubUnits, ItemInventoryControls, ItemVolumeCbms, ItemSimilarItems, ItemImages, ...coreItemData } = createDto;
         if (createDto.ItemAccountCategoryRef) {
@@ -978,6 +981,9 @@ let ItemService = class ItemService {
             throw new common_1.ConflictException(`این کالا در فرم ${usage.usedInEntity || usage.usedInTable} استفاده شده است و امکان ویرایش آن وجود ندارد.`);
         }
         const existing = await this.findOne(id);
+        if (updateDto.ItemName2 !== undefined && !String(updateDto.ItemName2 ?? '').trim()) {
+            updateDto.ItemName2 = String(updateDto.ItemName ?? existing.ItemName ?? '').trim();
+        }
         const effectiveType = updateDto.ItemType !== undefined ? Number(updateDto.ItemType) : Number(existing.ItemType);
         const effectiveCategory = updateDto.ItemAccountCategoryRef !== undefined ? updateDto.ItemAccountCategoryRef : existing.ItemAccountCategoryRef;
         if (effectiveType !== item_enums_1.ItemType.SERVICE && !effectiveCategory) {

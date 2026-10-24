@@ -1013,6 +1013,11 @@ export class ItemService implements OnModuleInit {
     createDto.ItemCode = codeToSave;
     await this.validateDuplicates(createDto);
 
+    // نام کالا (2) اختیاری است: در صورت خالی بودن با همان «نام کالا» ذخیره می‌شود
+    if (!String(createDto.ItemName2 ?? '').trim()) {
+      createDto.ItemName2 = String(createDto.ItemName ?? '').trim();
+    }
+
     const id = await this.idGenerationService.generateNextId('Items');
 
     const {
@@ -1077,6 +1082,11 @@ export class ItemService implements OnModuleInit {
     }
 
     const existing = await this.findOne(id);
+
+    // نام کالا (2) اختیاری است: در صورت خالی بودن با همان «نام کالا» ذخیره می‌شود
+    if (updateDto.ItemName2 !== undefined && !String(updateDto.ItemName2 ?? '').trim()) {
+      updateDto.ItemName2 = String(updateDto.ItemName ?? existing.ItemName ?? '').trim();
+    }
 
     const effectiveType = updateDto.ItemType !== undefined ? Number(updateDto.ItemType) : Number(existing.ItemType);
     const effectiveCategory = updateDto.ItemAccountCategoryRef !== undefined ? updateDto.ItemAccountCategoryRef : existing.ItemAccountCategoryRef;

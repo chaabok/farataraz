@@ -380,9 +380,7 @@ export function ProductService({ id }: ProductServiceProps) {
     if (!values.ItemName) {
       newErrors.ItemName = "نام کالا اجباری است *";
     }
-    if (!values.ItemName2) {
-      newErrors.ItemName2 = "نام کالا(2) اجباری است *";
-    }
+    // نام کالا (2) اختیاری است: در صورت خالی بودن با همان «نام کالا» ذخیره می‌شود (fallback در submitData)
     if (!values.MeasurementUnitRef) {
       newErrors.MeasurementUnitRef = "واحد سنجش اجباری است *";
     }
@@ -425,6 +423,8 @@ export function ProductService({ id }: ProductServiceProps) {
 
       const payload: any = {
         ...values,
+        // نام کالا (2) اختیاری است: اگر خالی باشد با همان «نام کالا» ذخیره می‌شود
+        ItemName2: String(values.ItemName2 ?? "").trim() || String(values.ItemName ?? "").trim(),
         ItemType: Number(values.ItemType),
         ItemCode: itemCodePayload,
         TaxRate: Number(values.TaxRate || 0),
@@ -691,7 +691,6 @@ export function ProductService({ id }: ProductServiceProps) {
       name: "ItemName2",
       label: "نام کالا(2)",
       type: "text",
-      required: true,
       colSpan: 1,
       disabled: isUsed,
     },

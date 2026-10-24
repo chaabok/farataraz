@@ -774,3 +774,29 @@ Work Log:
 
 Stage Summary:
 - در فرم طبقه حساب کالا فیلد «عنوان (2)» دیگر اجباری نیست (نه اعتبارسنجی دارد، نه ستاره‌ی قرمز) و اگر خالی رها شود، هم در UI و هم در سطح سرویس بک‌اند، به‌صورت خودکار با همان مقدار «عنوان» ذخیره می‌شود — شامل درگاه مستقیم API. تغییرات: ItemAccountCategory.tsx (فرانت)، create-item-account-category.dto.ts و item-account-category.service.ts (بک‌اند).
+
+---
+Task ID: 58
+Agent: main (Z.ai Code)
+Task: «توی فرم تعریف کالا خدمت اگر عنوان (2) توسط کاربر تکمیل نشده بود با اطلاعات وارد شده در فیلد عنوان ذخیره گردید» (+اسکرین‌شات فرم «کالا خدمت جدید»)
+
+Work Log:
+- ریشه‌یابی: «نام کالا(2)» (ItemName2) در دو لایه فرانت اجباری بود: validate() فرم ProductService («نام کالا(2) اجباری است *») و required:true در config فیلد (ستاره قرمز + آیکن هشدار UI)؛ در نتیجه رد کردن خالیِ آن غیرممکن بود.
+- فیکس فرانت (components/forms/inv/ProductService.tsx):
+  ۱) حذف چک اجباری ItemName2 از validate() (کامنت توضیحی گذاشته شد).
+  ۲) حذف required از config فیلد نام کالا(2) → ستاره قرمز و آیکن هشدار حذف شد (تأیید DOM: برچسب «نام کالا(2) :» بدون <span class="text-rose-500">*</span>، در حالی که «نام کالا :» همچنان ستاره دارد).
+  ۳) در payload داخل submitData: «ItemName2 = trim(ItemName2) || trim(ItemName)» — همان الگوی فرم طبقه حساب کالا (Task 57).
+- فیکس بک‌اند (backend/src/softwares/inv/application/services/item.service.ts):
+  ۱) create(): بعد از validateDuplicates، اگر ItemName2 خالی/undefined بود با ItemName پر می‌شود (fallback دفاعی برای فراخوانی مستقیم API).
+  ۲) update(): اگر ItemName2 ارسال‌شده خالی بود با ItemName جدید یا ItemName موجود رکورد پر می‌شود.
+  (DTO از قبل @IsOptional روی ItemName2 داشت؛ نیازی به تغییر نبود.)
+- استقرار: npx tsc (0 خطا) → ری‌استارت بک‌اند (PID 23221) → eslint ProductService.tsx (0 error).
+- تأییدها:
+  • API: POST /api/inv/items بدون ItemName2 → پاسخ ItemName2 = ItemName («کالای تستی API»)؛ PUT با ItemName2 خالی → ItemName2 = ItemName؛ DB تأیید شد.
+  • E2E کامل (agent-browser، admin/1234): منو انبار و بازرگانی → انبار → اطلاعات پایه → «کالا خدمت جدید» → فقط نام کالا/واحد سنجش/طبقه کالا پر شد و نام کالا(2) خالی ماند → دکمه سبز ذخیره (کلیک بومی مختصاتی) → POST /api/inv/items → 201 → DB: ItemName2 = «کالای تستی مرورگر» = ItemName؛ فرم پس از ذخیره (ویرایش کالا خدمت) نام کالا(2) را با همان مقدار نمایش داد. console/page errors = 0.
+  • نکته E2E: دراپ‌داون‌های SingleSelectDropDown این فرم با focus + Enter باز می‌شوند (کلیک بومی روی دکمه «+» پنل را باز نکرد)؛ ردیف‌ها با mouse move/down/up انتخاب شدند.
+- پاک‌سازی: کالای تستی (ItemID=2) از Inv.Items حذف شد؛ جدول به حالت خالی برگشت (طبقه حساب و واحد سنجش کاربر دست‌نخورده ماندند).
+- اسکرین‌شات‌ها: .zscripts/t58-form-initial.png (بدون ستاره اجباری)، t58-after-save.png (نام کالا(2) پرشده).
+
+Stage Summary:
+- در فرم تعریف کالا/خدمت فیلد «نام کالا(2)» دیگر اجباری نیست (بدون اعتبارسنجی، بدون ستاره قرمز و آیکن هشدار) و اگر خالی رها شود، هم در UI و هم در سطح سرویس بک‌اند (create و update، شامل درگاه مستقیم API) به‌صورت خودکار با همان مقدار «نام کالا» ذخیره می‌شود. چرخه کامل پر کردن→ذخیره→بازخوانی در مرورگر و پایگاه داده تأیید شد.
