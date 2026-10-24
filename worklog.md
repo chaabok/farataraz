@@ -497,3 +497,25 @@ Work Log:
 
 Stage Summary:
 - روال دائمی فعال شد: بعد از هر تغییر → .zscripts/push-to-github.sh (دامپ DB → commit → push origin main → refresh repo.tar). سورس + دیتابیس از این پس همیشه روی GitHub و اسنپ‌شات محلی هم‌گام هستند.
+
+---
+Task ID: 45
+Agent: main (Z.ai Code)
+Task: بازاعمال فیکس باگ فرم مشتری جدید (ستون «کد تفصیلی» خالی در دراپ‌داون کدتفصیل مشتری + عدم نمایش کد پس از انتخاب طرف حساب) — فیکسی که با ریستور بکاپ در Task 42 از دست رفته بود
+
+Work Log:
+- تأیید پیش‌فرض: سورس ریستورشده (پایان Task 37) فاقد withDetailedCode بود؛ سه فایل مجدداً اصلاح شدند.
+- Fix 1 — party.service.ts: متد withDetailedCode (تزریق سطح‌بالای code/detailedCode/title/companyTitle از detailedAccount) در findAll، findWithPagination و findOne اعمال شد.
+- Fix 2 — party.repository.ts: متد mapDetailedAccountKeys (نگاشت code/detailedCode/detailedAccount.code→da.code و title/companyTitle/detailedAccount.title→da.title) برای sorting/columnFilters/advancedFilters قبل از applyDataGridParams در findAdvanced.
+- Fix 3 — core/utils/typeorm-query-builder.ts: پشتیبانی فیلدهای نقطه‌دار (alias خودشان) در columnFilters و advancedFilters + امن‌سازی نام پارامترها (نقطه→underscore).
+- tsc exit 0؛ kill :3005 → ری‌استارت خودکار؛ health 200.
+- داده‌های واقعی: کشف شد کاربر خودش یک مشتری (Ghodsi Sharifi، partyId=1، code=10001) در UI ساخته بود + دو طرف حساب آزمایشی از API (علی جهانی 10002، شرکت پارس داده 30001) ساخته شد.
+- تست API (هر ۴ مسیر): findAll → code=10001؛ مسیر واقعی دراپ‌داون (pageIndex+isCustomer) → هر ۳ ردیف با code/title سطح بالا؛ columnFilters روی code → 10002؛ advancedFilters روی code → ۳ ردیف؛ sorting کد نزولی → 30001,10002,10001؛ columnFilters روی title (فارسی) → شرکت پارس داده. همه بدون خطای SQL.
+- E2E مرورگر (admin/1234): فرم مشتری جدید → تریگر div[title="بازکردن جستجو"] (در این سورس div است نه button — نکته ابزاری ثبت شد) → پنل: «1 ~ 10001 ~ Ghodsi ~ Sharifi ~ Ghodsi Sharifi» / «2 ~ 10002 ~ علی ~ جهانی ~ علی جهانی» / «3 ~ 30001 ~ ...» → کلیک ردیف 10002 → مقدار فیلد = «10002» ✓؛ بدون خطای کنسول. اسکرین‌شات: tool-results/task-45-customer-detailed-code.png.
+- eslint سه فایل: بدون خطا.
+- روال جدید: push-to-github.sh اجرا شد → commit 05b0be9 روی origin/main (سورس + دامپ 480 ردیفی) + repo.tar به‌روز.
+
+Stage Summary:
+- هر دو باگ گزارش‌شده رفع شد: ستون «کد تفصیلی» دراپ‌داون پر می‌شود و پس از انتخاب طرف حساب، کد تفصیلی در فیلد نمایش داده می‌شود.
+- جستجو/مرتب‌سازی روی کد تفصیلی و عنوان شرکت در دراپ‌داون نیز کار می‌کند.
+- فیکس اکنون روی گیت‌هاب (05b0be9) و اسنپ‌شات محلی ذخیره است — دیگر با ریست سندباکس از دست نمی‌رود.
