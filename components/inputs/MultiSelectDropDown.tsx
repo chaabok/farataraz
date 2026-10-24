@@ -79,7 +79,10 @@ export function MultiSelectDropDown<T extends Record<string, any>>({
       if (found) setSelectedItems([found]);
       else setSelectedItems([]);
     }
-  }, [value, items, valueKey]);
+    // Re-syncing on `isOpen` too: closing the panel without pressing «تایید»
+    // (e.g. clicking outside) discards the uncommitted toggles, so reopening
+    // always reflects the value the parent actually holds.
+  }, [value, items, valueKey, isOpen]);
 
   const updatePosition = () => {
     if (containerRef.current) {
@@ -150,15 +153,17 @@ export function MultiSelectDropDown<T extends Record<string, any>>({
 
   const toggleItemSelection = (item: T) => {
     const itemId = item[valueKey];
-    const isAlreadySelected = selectedItems.some((it) => it[valueKey] === itemId);
-
-    let newSelected: T[];
-    if (isAlreadySelected) {
-      newSelected = selectedItems.filter((it) => it[valueKey] !== itemId);
-    } else {
-      newSelected = [...selectedItems, item];
-    }
-    setSelectedItems(newSelected);
+    // Functional update: never derive from the stale `selectedItems` closure.
+    // The previous closure-based version made rapid/synchronous toggles
+    // (e.g. two rows clicked in the same tick) overwrite each other and
+    // silently drop selections.
+    setSelectedItems((prev) => {
+      const isAlreadySelected = prev.some((it) => it[valueKey] === itemId);
+      if (isAlreadySelected) {
+        return prev.filter((it) => it[valueKey] !== itemId);
+      }
+      return [...prev, item];
+    });
   };
 
   const handleSelectRowDirectly = (item: T) => {
@@ -189,7 +194,13 @@ export function MultiSelectDropDown<T extends Record<string, any>>({
     if (selectedItems.length === 1) {
       return String(selectedItems[0][displayKey] || selectedItems[0][valueKey] || "");
     }
-    return `${selectedItems.length} آیتم انتخاب شده`;
+    // Show the actual selected titles (Persian comma separated) instead of a
+    // bare count — in ERP forms users must see what is committed; the trigger
+    // span truncates long lists.
+    return selectedItems
+      .map((it) => String(it?.[displayKey] ?? it?.[valueKey] ?? ""))
+      .filter(Boolean)
+      .join("، ");
   }, [selectedItems, displayKey, valueKey]);
 
   return (
