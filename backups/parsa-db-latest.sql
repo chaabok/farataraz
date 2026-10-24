@@ -2,7 +2,7 @@
 -- Parsa ERP Full Database Backup
 -- Database : parsaDb
 -- Server   : PostgreSQL 17.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
--- Taken at : 2026-10-24T04:34:15.431Z
+-- Taken at : 2026-10-24T04:34:24.778Z
 -- Encoding : UTF8
 -- ============================================================
 SET client_encoding = 'UTF8';
