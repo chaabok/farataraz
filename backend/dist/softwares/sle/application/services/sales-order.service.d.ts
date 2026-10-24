@@ -17,7 +17,10 @@ export declare class SalesOrderService {
     private validateRequiredRefs;
     create(dto: CreateSalesOrderDto): Promise<SalesOrder>;
     private saveItems;
-    findAll(query?: any): Promise<SalesOrder[]>;
+    findAll(query?: any): Promise<{
+        items: SalesOrder[];
+        total: number;
+    }>;
     findOne(id: number): Promise<SalesOrder>;
     update(id: number, dto: UpdateSalesOrderDto): Promise<SalesOrder>;
     remove(id: number): Promise<{

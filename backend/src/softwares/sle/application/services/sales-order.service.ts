@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { SalesOrder } from '../../domain/entities/sales-order.entity';
 import { SalesOrderItem } from '../../domain/entities/sales-order-item.entity';
 import { CreateSalesOrderDto, UpdateSalesOrderDto } from '../dtos/sales-order.dto';
 import { IdGenerationService } from '../../../../core/services/id-generation.service';
 import { RequestContextService } from '../../../../core/services/request-context.service';
+import { applyDataGridParams, toLatinDigits } from '../../../../core/utils/typeorm-query-builder';
 
 @Injectable()
 export class SalesOrderService {
@@ -116,16 +117,22 @@ export class SalesOrderService {
         UnitName: d.UnitName || null,
         Quantity: qty,
         UnitPrice: price,
+        // Task 64: مبلغ کل بدون اعشار (گرد شده) — ستون «مبلغ» نباید اعشار داشته باشد
         TotalPrice: d.TotalPrice !== undefined && d.TotalPrice !== null && d.TotalPrice !== ''
-          ? Number(d.TotalPrice)
-          : qty * price,
+          ? Math.round(Number(d.TotalPrice))
+          : Math.round(qty * price),
         Description: d.Description || null,
       });
     });
     await this.itemRepository.save(itemsToSave);
   }
 
-  async findAll(query?: any): Promise<SalesOrder[]> {
+  /**
+   * Task 64: فهرست سفارش‌های فروش با پشتیبانی کامل از پارامترهای دیتاگرید:
+   * pageIndex/pageSize، sorting، columnFilters، advancedFilters و search/globalFilter.
+   * خروجی { items, total } — پنل فهرست و RecordNavigator هر دو سازگار هستند.
+   */
+  async findAll(query?: any): Promise<{ items: SalesOrder[]; total: number }> {
     const { bsId, compId, fiscalYearId } = this.getScope();
 
     const qb = this.repository
@@ -135,7 +142,25 @@ export class SalesOrderService {
       .andWhere('so.FiscalYearRef = :fiscalYearId', { fiscalYearId })
       .orderBy('so.OrderNumber', 'DESC');
 
-    return qb.getMany();
+    // جستجوی سریع (search / globalFilter): جستجوی متنی در شماره، مشتری و توضیحات
+    // (ارقام بومی کاربر مثل ۳ به لاتین نرمال می‌شود تا با داده‌های لاتین مقایسه شوند)
+    const searchQ = toLatinDigits(String(query?.search ?? query?.globalFilter ?? '')).trim();
+    if (searchQ) {
+      qb.andWhere(
+        new Brackets((b) => {
+          b.where('CAST(so.OrderNumber AS VARCHAR) ILIKE :soSearch', { soSearch: `%${searchQ}%` })
+            .orWhere('so.CustomerName ILIKE :soSearch', { soSearch: `%${searchQ}%` })
+            .orWhere('so.Description ILIKE :soSearch', { soSearch: `%${searchQ}%` });
+        }),
+      );
+    }
+
+    // فیلترهای ستونی/پیشرفته + مرتب‌سازی؛ صفحه‌بندی فقط وقتی pageSize ارسال شده باشد
+    const hasPageSize = query && query.pageSize !== undefined && query.pageSize !== null && String(query.pageSize).trim() !== '';
+    applyDataGridParams(qb, query as any, 'so', { skipPagination: !hasPageSize });
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
   }
 
   async findOne(id: number): Promise<SalesOrder> {

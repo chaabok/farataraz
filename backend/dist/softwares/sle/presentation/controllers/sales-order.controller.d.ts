@@ -4,7 +4,10 @@ export declare class SalesOrderController {
     private readonly service;
     constructor(service: SalesOrderService);
     create(createDto: CreateSalesOrderDto): Promise<import("../../domain/entities/sales-order.entity").SalesOrder>;
-    findAll(query: any): Promise<import("../../domain/entities/sales-order.entity").SalesOrder[]>;
+    findAll(query: any): Promise<{
+        items: import("../../domain/entities/sales-order.entity").SalesOrder[];
+        total: number;
+    }>;
     getNextNumber(): Promise<{
         documentNumber: number;
     }>;

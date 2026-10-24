@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { cn, safeStringify, escapeHtml, formatDateByLocale } from '@/lib/utils';
 import { apiFetch } from '@/lib/utils';
+import { latinizeDigits, localizeNumericString } from '@/lib/digitLocale';
 import { useLanguage } from "@/components/Providers";
 import { useTabs } from "@/components/TabsProvider";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -781,23 +782,29 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
     if (filterItem) {
       result = result.filter(filterItem);
     }
-    if (listApiUrl) return result; // Backend handles filtering
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(item => 
-        Object.values(item).some(val => 
-          String(val).toLowerCase().includes(q)
+    // Task 64: فیلتر و جستجو حتی وقتی listApiUrl ست شده هم سمت کلاینت اعمال می‌شود
+    // (قبلاً به‌کلی غیرفعال بود و چون برخی endpointها پارامترها را نادیده می‌گرفتند،
+    // فیلتر/جستجوی پنل فهرست در اکشن بار کار نمی‌کرد. اگر بک‌اند فیلتر کرده باشد
+    // اعمال مجدد همان شرط‌ها نتیجه را تغییر نمی‌دهد.)
+    const q = latinizeDigits(searchQuery).trim().toLowerCase();
+    if (q) {
+      result = result.filter(item =>
+        visibleColumns.some(col =>
+          String(getResolvedValue(item, col.key) ?? '').toLowerCase().includes(q)
+        ) ||
+        Object.values(item || {}).some(val =>
+          String(val ?? '').toLowerCase().includes(q)
         )
       );
     }
     if (showColumnFilters) {
       Object.entries(columnFilters || {}).forEach(([key, filter]) => {
         if (!filter) return;
-        const val = filter.value?.toLowerCase();
+        const val = latinizeDigits(filter.value || '').trim().toLowerCase();
         const type = filter.type;
         if (!val && type !== 'isEmpty' && type !== 'isNotEmpty') return;
         result = result.filter(item => {
-          const itemVal = String(getResolvedValue(item, key) || '').toLowerCase();
+          const itemVal = latinizeDigits(String(getResolvedValue(item, key) ?? '')).toLowerCase();
           switch (type) {
             case 'contains': return itemVal.includes(val);
             case 'equals': return itemVal === val;
@@ -811,7 +818,7 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
       });
     }
     return result;
-  }, [internalData, searchQuery, columnFilters, showColumnFilters, listApiUrl, filterItem]);
+  }, [internalData, searchQuery, columnFilters, showColumnFilters, filterItem, visibleColumns]);
 
   // Sorting
   const sortedData = useMemo(() => {
@@ -1724,11 +1731,21 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
                           const colLabel = col?.label || (col as any)?.title || '';
                           const isDateCol = colKey.toLowerCase().includes('date') || colLabel.includes('تاریخ');
                           const rawValue = colKey.includes('.') ? colKey.split('.').reduce((obj: any, k: string) => (obj || {})[k], item) : (item && colKey ? item[colKey] : undefined);
-                          const displayValue = isDateCol && rawValue ? formatDateByLocale(String(rawValue), language) : String(rawValue ?? '');
-                          
+                          // Task 62/64: ارقام مقدار نمایشی به زبان انتخاب‌شده تبدیل می‌شود
+                          const displayValue = isDateCol && rawValue
+                            ? localizeNumericString(formatDateByLocale(String(rawValue), language), language)
+                            : localizeNumericString(String(rawValue ?? ''), language);
+
                           return (
                             <td key={col.key} className={cn("px-2 py-[3px] text-[11px] text-slate-600 dark:text-slate-300 truncate border border-slate-200 dark:border-slate-700", dir === 'rtl' ? "text-right" : "text-left")}>
-                              {col.renderItem ? col.renderItem(item) : (col as any).render ? (col as any).render(rawValue, item) : displayValue}
+                              {(() => {
+                                if (col.renderItem) return col.renderItem(item);
+                                const rendered = (col as any).render ? (col as any).render(rawValue, item) : displayValue;
+                                // خروجی رشته‌ای/عددی رندرهای اختصاصی هم بومی‌سازی می‌شود (مثل تاریخ شمسی)
+                                return typeof rendered === 'string' || typeof rendered === 'number'
+                                  ? localizeNumericString(String(rendered), language)
+                                  : rendered;
+                              })()}
                             </td>
                           );
                         })}

@@ -244,9 +244,10 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                       ItemCode: d.ItemCode || "",
                       ItemName: d.ItemName || "",
                       UnitName: d.UnitName || "عدد",
-                      Quantity: d.Quantity || 1,
-                      UnitPrice: d.UnitPrice || "",
-                      TotalPrice: d.TotalPrice || "",
+                      // Task 64: نرمال‌سازی اعداد بارگذاری‌شده — فی و مبلغ کل بدون اعشار نمایش داده شوند
+                      Quantity: Number(d.Quantity) || 1,
+                      UnitPrice: d.UnitPrice !== "" && d.UnitPrice !== undefined && d.UnitPrice !== null ? Math.round(Number(d.UnitPrice)) : "",
+                      TotalPrice: d.TotalPrice !== "" && d.TotalPrice !== undefined && d.TotalPrice !== null ? Math.round(Number(d.TotalPrice)) : "",
                       Description: d.Description || "",
                     }))
                   : [emptyRow()],
@@ -352,11 +353,11 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         ItemName: item.ItemName || "",
         UnitName: item.UnitName || "",
         Quantity: Number(item.Quantity),
-        UnitPrice: Number(item.UnitPrice || 0),
+        UnitPrice: Math.round(Number(item.UnitPrice || 0)),
         TotalPrice:
           item.TotalPrice !== "" && item.TotalPrice !== undefined && item.TotalPrice !== null
-            ? Number(item.TotalPrice)
-            : Number(item.Quantity) * Number(item.UnitPrice || 0),
+            ? Math.round(Number(item.TotalPrice))
+            : Math.round(Number(item.Quantity || 0) * Number(item.UnitPrice || 0)),
         Description: item.Description || "",
       })),
     };
@@ -802,7 +803,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               Quantity: newVal,
               TotalPrice:
                 updatedItems[rowIndex].UnitPrice !== "" && updatedItems[rowIndex].UnitPrice !== undefined
-                  ? Number(newVal) * Number(updatedItems[rowIndex].UnitPrice)
+                  ? Math.round(Number(newVal || 0) * Number(updatedItems[rowIndex].UnitPrice))
                   : updatedItems[rowIndex].TotalPrice,
             };
             setValues((prev) => ({ ...prev, items: updatedItems }));
@@ -821,6 +822,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
           value={row?.UnitPrice || ""}
           localizeDigits
           thousandsSeparator
+          integerOnly
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = {
@@ -828,7 +830,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               UnitPrice: newVal,
               TotalPrice:
                 updatedItems[rowIndex].Quantity !== "" && updatedItems[rowIndex].Quantity !== undefined
-                  ? Number(updatedItems[rowIndex].Quantity) * Number(newVal || 0)
+                  ? Math.round(Number(updatedItems[rowIndex].Quantity || 0) * Number(newVal || 0))
                   : updatedItems[rowIndex].TotalPrice,
             };
             setValues((prev) => ({ ...prev, items: updatedItems }));
@@ -845,7 +847,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       render: (row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs font-semibold text-gray-800 dark:text-gray-200 text-center select-none">
           {row?.TotalPrice !== "" && row?.TotalPrice !== undefined && row?.TotalPrice !== null
-            ? formatLocalizedNumber(row.TotalPrice, language)
+            ? formatLocalizedNumber(Math.round(Number(row.TotalPrice)), language)
             : "-"}
         </span>
       ),

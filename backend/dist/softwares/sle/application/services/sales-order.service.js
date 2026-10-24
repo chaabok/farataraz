@@ -20,6 +20,7 @@ const sales_order_entity_1 = require("../../domain/entities/sales-order.entity")
 const sales_order_item_entity_1 = require("../../domain/entities/sales-order-item.entity");
 const id_generation_service_1 = require("../../../../core/services/id-generation.service");
 const request_context_service_1 = require("../../../../core/services/request-context.service");
+const typeorm_query_builder_1 = require("../../../../core/utils/typeorm-query-builder");
 let SalesOrderService = class SalesOrderService {
     constructor(repository, itemRepository, idGenerationService, requestContextService) {
         this.repository = repository;
@@ -111,8 +112,8 @@ let SalesOrderService = class SalesOrderService {
                 Quantity: qty,
                 UnitPrice: price,
                 TotalPrice: d.TotalPrice !== undefined && d.TotalPrice !== null && d.TotalPrice !== ''
-                    ? Number(d.TotalPrice)
-                    : qty * price,
+                    ? Math.round(Number(d.TotalPrice))
+                    : Math.round(qty * price),
                 Description: d.Description || null,
             });
         });
@@ -126,7 +127,18 @@ let SalesOrderService = class SalesOrderService {
             .andWhere('so.companyRef = :compId', { compId })
             .andWhere('so.FiscalYearRef = :fiscalYearId', { fiscalYearId })
             .orderBy('so.OrderNumber', 'DESC');
-        return qb.getMany();
+        const searchQ = (0, typeorm_query_builder_1.toLatinDigits)(String(query?.search ?? query?.globalFilter ?? '')).trim();
+        if (searchQ) {
+            qb.andWhere(new typeorm_2.Brackets((b) => {
+                b.where('CAST(so.OrderNumber AS VARCHAR) ILIKE :soSearch', { soSearch: `%${searchQ}%` })
+                    .orWhere('so.CustomerName ILIKE :soSearch', { soSearch: `%${searchQ}%` })
+                    .orWhere('so.Description ILIKE :soSearch', { soSearch: `%${searchQ}%` });
+            }));
+        }
+        const hasPageSize = query && query.pageSize !== undefined && query.pageSize !== null && String(query.pageSize).trim() !== '';
+        (0, typeorm_query_builder_1.applyDataGridParams)(qb, query, 'so', { skipPagination: !hasPageSize });
+        const [items, total] = await qb.getManyAndCount();
+        return { items, total };
     }
     async findOne(id) {
         const order = await this.repository.findOne({

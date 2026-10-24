@@ -1,10 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.toLatinDigits = toLatinDigits;
 exports.applyDataGridParams = applyDataGridParams;
 const typeorm_1 = require("typeorm");
-function applyDataGridParams(queryBuilder, params, alias = 'entity') {
+function toLatinDigits(value) {
+    if (typeof value !== 'string')
+        return value;
+    return value
+        .replace(/[\u06F0-\u06F9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 48))
+        .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+        .replace(/[\u0966-\u096F]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48))
+        .replace(/[\uFF10-\uFF19]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xff10 + 48));
+}
+function applyDataGridParams(queryBuilder, params, alias = 'entity', options) {
     const { pageIndex = 0, pageSize = 50, sorting, columnFilters, globalFilter, advancedFilters } = params;
-    queryBuilder.skip(pageIndex * pageSize).take(pageSize);
+    if (!options?.skipPagination) {
+        queryBuilder.skip(pageIndex * pageSize).take(pageSize);
+    }
     if (sorting && sorting !== 'undefined' && sorting !== 'null') {
         try {
             const sortState = typeof sorting === 'string' ? (sorting.trim() !== '' ? JSON.parse(sorting) : []) : sorting;
@@ -33,8 +45,8 @@ function applyDataGridParams(queryBuilder, params, alias = 'entity') {
                     const field = String(f.id).includes('.') ? f.id : `${alias}.${f.id}`;
                     const safeId = String(f.id).replace(/\./g, '_');
                     if (typeof val === 'object' && val !== null && 'op' in val) {
-                        const op = val.op;
-                        const filterValue = val.value;
+                        const op = val.op === 'isEmpty' ? 'empty' : val.op === 'isNotEmpty' ? 'notEmpty' : val.op;
+                        const filterValue = toLatinDigits(val.value);
                         switch (op) {
                             case 'contains':
                                 queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${filterValue}%` });
@@ -69,7 +81,7 @@ function applyDataGridParams(queryBuilder, params, alias = 'entity') {
                         }
                     }
                     else if (typeof val === 'string' && val.trim() !== '') {
-                        queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${val}%` });
+                        queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${toLatinDigits(val)}%` });
                     }
                 });
             }
@@ -85,8 +97,8 @@ function applyDataGridParams(queryBuilder, params, alias = 'entity') {
                 queryBuilder.andWhere(new typeorm_1.Brackets((qb) => {
                     filters.forEach((f, index) => {
                         const field = String(f.columnId).includes('.') ? f.columnId : `${alias}.${f.columnId}`;
-                        const op = f.operator;
-                        const filterValue = f.value;
+                        const op = f.operator === 'isEmpty' ? 'empty' : f.operator === 'isNotEmpty' ? 'notEmpty' : f.operator;
+                        const filterValue = toLatinDigits(f.value);
                         const paramName = `adv_${String(f.id).replace(/\./g, '_')}`;
                         let conditionString = "";
                         let sqlParams = {};

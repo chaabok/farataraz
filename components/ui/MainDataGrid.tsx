@@ -73,6 +73,7 @@ import { eventBus, EVENTS } from "@/lib/events";
 import { ColumnGrouping } from "./ColumnGrouping";
 import { AdvancedSearch, AdvancedFilterCondition } from "./AdvancedSearch";
 import { formatDateByLocale, apiFetch, getPersianEntityName } from "@/lib/utils";
+import { latinizeDigits, localizeNumericString } from "@/lib/digitLocale";
 import { useGridExport } from "@/hooks/useGridExport";
 import { useGridKeyboardNavigation } from "@/hooks/useGridKeyboardNavigation";
 
@@ -651,6 +652,19 @@ export function MainDataGrid({
     [t]
   );
 
+  /* ---------------- Task 62/64: بومی‌سازی ارقام سلول‌ها ---------------- */
+  // ارقام هر مقدار رشته‌ای/عددی به ارقام زبان انتخاب‌شده تبدیل می‌شود (بدون گروه‌بندی —
+  // کدها و شناسه‌ها نباید گروه‌بندی شوند؛ فرم‌ها برای گروه‌بندی از render اختصاصی استفاده می‌کنند)
+  const locDigits = useCallback(
+    (v: any): any => {
+      if (v === null || v === undefined) return v;
+      if (typeof v === "number") return localizeNumericString(String(v), language);
+      if (typeof v === "string") return localizeNumericString(v, language);
+      return v;
+    },
+    [language]
+  );
+
   const { preferences, setPreferences } = useGridStore();
   const gridPrefs = gridId ? preferences[gridId] : undefined;
 
@@ -887,14 +901,14 @@ export function MainDataGrid({
         enableHiding: col.enableHiding,
         filterFn: (row, columnId, filterValue: any) => {
           const value = row.getValue(columnId) as string | number | null | undefined;
-          const strVal = String(value ?? "").toLowerCase();
+          const strVal = latinizeDigits(String(value ?? "")).toLowerCase();
 
           if (!filterValue || typeof filterValue !== "object") {
-            const searchVal = String(filterValue ?? "").toLowerCase();
+            const searchVal = latinizeDigits(String(filterValue ?? "")).toLowerCase();
             return strVal.includes(searchVal);
           }
 
-          const searchVal = String(filterValue.value ?? "").toLowerCase();
+          const searchVal = latinizeDigits(String(filterValue.value ?? "")).toLowerCase();
           const op = filterValue.op ?? "contains";
 
           switch (op) {
@@ -933,7 +947,11 @@ export function MainDataGrid({
       } else if (col.renderCell) {
         def.cell = (info) => col.renderCell!(info);
       } else if ((col as any).render) {
-        def.cell = ({ row, getValue }) => (col as any).render(getValue(), row.original, row.index);
+        def.cell = ({ row, getValue }: any) => {
+          const r = (col as any).render(getValue(), row.original, row.index);
+          // Task 62/64: خروجی رشته‌ای/عددی رندرهای اختصاصی هم بومی‌سازی می‌شود
+          return typeof r === "string" || typeof r === "number" ? locDigits(String(r)) : r;
+        };
       } else if (col.type === "boolean") {
         def.cell = ({ row }) => {
           const val = row.getValue(colId);
@@ -967,16 +985,30 @@ export function MainDataGrid({
           if (label) {
             return (
               <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-px text-[10.5px] text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-                {label}
+                {locDigits(label)}
               </span>
             );
           }
-          return String(val);
+          return locDigits(String(val));
         };
       } else if (isDateCol) {
         def.cell = ({ row }) => {
           const val = row.getValue(colId);
-          return val ? formatDateByLocale(val as string, language) : "";
+          return val ? locDigits(formatDateByLocale(val as string, language)) : "";
+        };
+      } else {
+        // Task 62/64: سلول پیش‌فرض — در این نسخه tanstack، flexRender برای سلول‌های تابعی
+        // همیشه React element می‌سازد، پس بومی‌سازی ارقام باید داخل خودِ رندرر انجام شود.
+        def.cell = ({ getValue }: any) => {
+          const val = getValue();
+          if (val === null || val === undefined) return "";
+          if (typeof val === "boolean") return val ? "✓" : "✗";
+          if (typeof val === "object") {
+            return locDigits(
+              val.title || val.name || val.Title || val.Name || val.code || val.Code || JSON.stringify(val)
+            );
+          }
+          return locDigits(String(val));
         };
       }
       return def;
@@ -1111,7 +1143,7 @@ export function MainDataGrid({
               const val = row.original[key];
               if (val === null || val === undefined) return "";
               if (typeof val === "object") {
-                return val.title || val.name || val.Title || val.Name || val.code || val.Code || JSON.stringify(val);
+                return locDigits(val.title || val.name || val.Title || val.Name || val.code || val.Code || JSON.stringify(val));
               }
               if (typeof val === "boolean") {
                 return val ? "✓" : "✗";
@@ -1121,9 +1153,9 @@ export function MainDataGrid({
                 return `[${val}] ${enumLabel}`;
               }
               if (isDateKey && (typeof val === "string" || val instanceof Date)) {
-                return formatDateByLocale(val as string, language);
+                return locDigits(formatDateByLocale(val as string, language));
               }
-              return String(val);
+              return locDigits(String(val));
             },
           });
         }
@@ -1170,9 +1202,59 @@ export function MainDataGrid({
     });
   }, [columns]);
 
+  /* ------------- Task 64: اعمال سمت کلاینت جستجوی پیشرفته -------------
+   * شرط‌های جستجوی پیشرفته (دکمه قیف اکشن بار) علاوه بر ارسال به سرور، روی
+   * داده‌های بارگذاری‌شده هم اعمال می‌شوند تا حتی برای endpointهایی که پارامترها را
+   * نادیده می‌گیرند، جستجو واقعاً کار کند. (اگر بک‌اند فیلتر کرده باشد، اعمال مجدد
+   * نتیجه را تغییر نمی‌دهد — idempotent)
+   */
+  const resolvePathValue = (obj: any, path: string): any =>
+    String(path)
+      .split(".")
+      .reduce((o, k) => (o === null || o === undefined ? o : o[k]), obj);
+
+  const advancedFilteredData = useMemo(() => {
+    if (!advancedFilters || advancedFilters.length === 0) return data;
+
+    const matchCondition = (row: any, cond: AdvancedFilterCondition): boolean => {
+      const raw = resolvePathValue(row, cond.columnId);
+      const rowStr = latinizeDigits(String(raw ?? "")).toLowerCase().trim();
+      const q = latinizeDigits(String(cond.value ?? "")).toLowerCase().trim();
+      switch (cond.operator) {
+        case "contains":
+          return rowStr.includes(q);
+        case "notContains":
+          return !rowStr.includes(q);
+        case "startsWith":
+          return rowStr.startsWith(q);
+        case "endsWith":
+          return rowStr.endsWith(q);
+        case "equals":
+          return rowStr === q;
+        case "notEquals":
+          return rowStr !== q;
+        case "empty":
+          return rowStr === "";
+        case "notEmpty":
+          return rowStr !== "";
+        default:
+          return true;
+      }
+    };
+
+    return data.filter((row) => {
+      let acc = matchCondition(row, advancedFilters[0]);
+      for (let i = 1; i < advancedFilters.length; i++) {
+        const res = matchCondition(row, advancedFilters[i]);
+        acc = advancedFilters[i].logicalOp === "or" ? acc || res : acc && res;
+      }
+      return acc;
+    });
+  }, [data, advancedFilters]);
+
   /* --------------------------- table ------------------------------- */
   const table = useReactTable({
-    data,
+    data: advancedFilteredData,
     columns,
     columnResizeMode: "onChange",
     columnResizeDirection: direction as any,
@@ -1440,7 +1522,7 @@ export function MainDataGrid({
           >
             <div className="flex items-center gap-2">
               {icon && <div className="flex items-center justify-center opacity-90">{icon}</div>}
-              {title && <h3 className="text-[13px] font-medium tracking-tight">{title}</h3>}
+              {title && <h3 className="text-[13px] font-medium tracking-tight">{locDigits(title)}</h3>}
             </div>
             <div className="flex items-center gap-0.5">
               <HelpButton
@@ -1812,17 +1894,23 @@ export function MainDataGrid({
                                       )}
                                     </button>
                                     <span className="font-semibold text-blue-700 dark:text-blue-400">
-                                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                      {(() => {
+                                        const rendered = flexRender(cell.column.columnDef.cell, cell.getContext());
+                                        return typeof rendered === "string" || typeof rendered === "number" ? locDigits(rendered) : rendered;
+                                      })()}
                                     </span>
                                     <span className="select-none text-sm text-slate-500 dark:text-slate-400">
                                       ({row.subRows.length})
                                     </span>
                                   </div>
                                 ) : cell.getIsAggregated() ? (
-                                  flexRender(
-                                    cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
-                                    cell.getContext()
-                                  )
+                                  (() => {
+                                    const rendered = flexRender(
+                                      cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    );
+                                    return typeof rendered === "string" || typeof rendered === "number" ? locDigits(rendered) : rendered;
+                                  })()
                                 ) : cell.getIsPlaceholder() ? null : (() => {
                                   let isStatusColumn = false;
 
@@ -1878,7 +1966,10 @@ export function MainDataGrid({
                                     );
                                   }
 
-                                  return flexRender(cell.column.columnDef.cell, cell.getContext());
+                                  return (() => {
+                                    const rendered = flexRender(cell.column.columnDef.cell, cell.getContext());
+                                    return typeof rendered === "string" || typeof rendered === "number" ? locDigits(rendered) : rendered;
+                                  })();
                                 })()}
                               </div>
                             </div>

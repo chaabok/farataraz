@@ -1,5 +1,15 @@
 import { SelectQueryBuilder, ILike, IsNull, Not, Brackets } from 'typeorm';
 
+/** Task 64: تبدیل ارقام بومی (فارسی/عربی/دوناگری/فول‌ویدث) به لاتین برای مقایسه در فیلترها */
+export function toLatinDigits(value: any): any {
+  if (typeof value !== 'string') return value;
+  return value
+    .replace(/[\u06F0-\u06F9]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 48))
+    .replace(/[\u0660-\u0669]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u0966-\u096F]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48))
+    .replace(/[\uFF10-\uFF19]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xff10 + 48));
+}
+
 export interface QueryParams {
   pageIndex?: number;
   pageSize?: number;
@@ -12,12 +22,15 @@ export interface QueryParams {
 export function applyDataGridParams<T>(
   queryBuilder: SelectQueryBuilder<T>,
   params: QueryParams,
-  alias: string = 'entity'
+  alias: string = 'entity',
+  options?: { skipPagination?: boolean }
 ) {
   const { pageIndex = 0, pageSize = 50, sorting, columnFilters, globalFilter, advancedFilters } = params;
 
-  // Pagination
-  queryBuilder.skip(pageIndex * pageSize).take(pageSize);
+  // Pagination (skipPagination=true برای مصرف‌کنندگانی که کل رکوردها را می‌خواهند)
+  if (!options?.skipPagination) {
+    queryBuilder.skip(pageIndex * pageSize).take(pageSize);
+  }
 
   // Sorting
   if (sorting && sorting !== 'undefined' && sorting !== 'null') {
@@ -51,8 +64,9 @@ export function applyDataGridParams<T>(
           const field = String(f.id).includes('.') ? f.id : `${alias}.${f.id}`;
           const safeId = String(f.id).replace(/\./g, '_');
           if (typeof val === 'object' && val !== null && 'op' in val) {
-            const op = val.op;
-            const filterValue = val.value;
+            // Task 64: نگاشت عملگرهای پنل فهرست (isEmpty/isNotEmpty) به عملگرهای استاندارد
+            const op = val.op === 'isEmpty' ? 'empty' : val.op === 'isNotEmpty' ? 'notEmpty' : val.op;
+            const filterValue = toLatinDigits(val.value);
 
             switch (op) {
               case 'contains':
@@ -87,7 +101,7 @@ export function applyDataGridParams<T>(
                 break;
             }
           } else if (typeof val === 'string' && val.trim() !== '') {
-            queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${val}%` });
+            queryBuilder.andWhere(`CAST(${field} AS VARCHAR) ILIKE :val_${safeId}`, { [`val_${safeId}`]: `%${toLatinDigits(val)}%` });
           }
         });
       }
@@ -105,8 +119,8 @@ export function applyDataGridParams<T>(
           filters.forEach((f, index) => {
             // Dotted ids (e.g. "da.code") already carry their own join alias
             const field = String(f.columnId).includes('.') ? f.columnId : `${alias}.${f.columnId}`;
-            const op = f.operator;
-            const filterValue = f.value;
+            const op = f.operator === 'isEmpty' ? 'empty' : f.operator === 'isNotEmpty' ? 'notEmpty' : f.operator;
+            const filterValue = toLatinDigits(f.value);
             const paramName = `adv_${String(f.id).replace(/\./g, '_')}`;
             let conditionString = "";
             let sqlParams: Record<string, any> = {};
