@@ -14,7 +14,7 @@ import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { SubUnitModal } from "@/components/inputs/SubUnitModal";
 import { Plus } from "lucide-react";
-import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay } from "@/lib/utils";
+import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
@@ -293,6 +293,15 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     }
     if (!values.OrderDate) {
       showToast("لطفاً تاریخ سفارش را وارد کنید *", "error");
+      return false;
+    }
+    // Task 63: کنترل صحت تاریخ‌ها — روز/ماه نامعتبر (مثل ۴۵) اجازه ذخیره ندارد
+    if (!isValidJalaliDate(values.OrderDate)) {
+      showToast("تاریخ سفارش وارد شده معتبر نیست *", "error");
+      return false;
+    }
+    if (values.DeliveryDate && !isValidJalaliDate(values.DeliveryDate)) {
+      showToast("تاریخ تحویل وارد شده معتبر نیست *", "error");
       return false;
     }
     if (!values.CustomerRef) {

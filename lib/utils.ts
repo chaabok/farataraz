@@ -206,7 +206,8 @@ export function formatDateByLocale(dateString: string, locale: string): string {
             if (locale === 'ar') {
               return toEnglishDigits(momentHijri(m).format('iYYYY/iMM/iDD'));
             }
-            return m.format('YYYY/MM/DD');
+            // Task 63: locale سراسری moment می‌تواند ar-sa باشد — حتماً en پین می‌شود تا ارقام لاتین بمانند
+            return m.clone().locale('en').format('YYYY/MM/DD');
           }
         } catch (e) {
           console.error("formatDateByLocale Jalaali conversion error:", e);
@@ -341,7 +342,14 @@ export function gregorianToJalaliDisplay(dateStr: string): string {
       }
 
       if (year >= 1300 && year <= 1500) {
-        return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+        // Task 63: فقط تاریخ‌های واقعاً معتبر عبور می‌کنند — روز/ماه نامعتبر (مثل ۴۵) خالی برمی‌گردد
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          const jm = momentJalaali(`${year}/${month}/${day}`, 'jYYYY/jM/jD');
+          if (jm.isValid() && jm.jYear() === year && jm.jMonth() + 1 === month && jm.jDate() === day) {
+            return `${year}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+          }
+        }
+        return "";
       } else if (year >= 1900 && year <= 2200) {
         const m = moment(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, 'YYYY-MM-DD');
         if (m.isValid()) {
@@ -352,12 +360,17 @@ export function gregorianToJalaliDisplay(dateStr: string): string {
 
     const d = new Date(clean);
     if (!isNaN(d.getTime())) {
-      return toEnglishDigits(momentJalaali(d).clone().locale('en').format('jYYYY/jMM/jDD'));
+      const formatted = toEnglishDigits(momentJalaali(d).clone().locale('en').format('jYYYY/jMM/jDD'));
+      // Task 63: سال خارج از محدوده پشتیبانی شمسی (رکوردهای خراب قدیمی) هرگز "Invalid date" برنمی‌گرداند
+      if (!formatted.includes("Invalid")) {
+        return formatted;
+      }
     }
   } catch (e) {
     console.error("gregorianToJalaliDisplay error:", e);
   }
-  return clean;
+  // Task 63: ورودی غیرقابل تجزیه → خالی (به‌جای نمایش رشته خام/"Invalid date")
+  return "";
 }
 
 export function toEnglishDigits(str: string | number): string {
@@ -365,7 +378,40 @@ export function toEnglishDigits(str: string | number): string {
   const s = String(str);
   return s
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+    .replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 0xff10));
+}
+
+/**
+ * Task 63: اعتبارسنجی سخت‌گیرانه تاریخ شمسی (و میلادی) با چرخه بازگشتی
+ * (جلوی رول‌اور moment برای روز/ماه نامعتبر مثل ۴۵ را می‌گیرد)
+ * ورودی قابل قبول: 1405/08/02 | 1405-8-2 | 2026-10-24T12:00:00Z
+ */
+export function isValidJalaliDate(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
+  const clean = toEnglishDigits(String(dateStr)).trim();
+  if (!clean) return false;
+  const cleanStr = clean.split("T")[0].split(" ")[0];
+  const parts = cleanStr.includes("-") ? cleanStr.split("-") : cleanStr.split("/");
+  if (parts.length < 3) return false;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return false;
+  try {
+    if (y >= 1300 && y <= 1500) {
+      const jm = momentJalaali(`${y}/${m}/${d}`, "jYYYY/jM/jD");
+      return jm.isValid() && jm.jYear() === y && jm.jMonth() + 1 === m && jm.jDate() === d;
+    }
+    if (y >= 1900 && y <= 2200) {
+      const gm = moment(`${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`, "YYYY-MM-DD");
+      return gm.isValid() && gm.year() === y && gm.month() + 1 === m && gm.date() === d;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 export function normalizePersianText(str: string | null | undefined): string {

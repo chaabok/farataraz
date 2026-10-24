@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { FormFieldWrapper } from "./FormFieldWrapper";
 import { useLanguage } from "../Providers";
-import { apiFetch, toEnglishDigits, gregorianToJalaliDisplay, jalaliToGregorianISO, cn, formatDateByLocale } from "@/lib/utils";
+import { apiFetch, toEnglishDigits, gregorianToJalaliDisplay, jalaliToGregorianISO, isValidJalaliDate, cn, formatDateByLocale } from "@/lib/utils";
+import { localizeNumericString } from "@/lib/digitLocale";
 import { Calendar } from "lucide-react";
 import momentJalaali from "moment-jalaali";
 
@@ -77,6 +78,8 @@ export function DateInput({
   const { language } = useLanguage();
   const [fiscalYearError, setFiscalYearError] = useState<string>("");
   const [rangeError, setRangeError] = useState<string>("");
+  // Task 63: خطای قالب تاریخ — تاریخ کامل اما نامعتبر (مثل روز ۴۵)
+  const [formatError, setFormatError] = useState<string>("");
   const [fiscalYearRange, setFiscalYearRange] = useState<{ startDate?: string; endDate?: string } | null>(null);
 
   const shouldCheckFiscalYear = checkFiscalYear !== undefined ? checkFiscalYear : isHeader;
@@ -90,11 +93,16 @@ export function DateInput({
     const enVal = toEnglishDigits(val).trim();
     if (!enVal) return "";
     let res = formatDateByLocale(enVal, language);
+    // Task 63: تبدیل ارقام بومی به لاتین قبل از شمارش (locale سراسری moment ممکن است ارقام عربی تولید کند)
+    res = toEnglishDigits(res);
     const digits = res.replace(/[^\d]/g, "");
     if (digits.length >= 8) {
-      return formatDigitsToMask(digits, false);
+      // Task 62: نمایش ارقام تاریخ بر اساس زبان انتخاب‌شده کاربر (مثلاً ۱۴۰۵/۰۸/۰۲ در فارسی)
+      return localizeNumericString(formatDigitsToMask(digits, false), language);
     }
-    return res;
+    // Task 63: مقادیر خراب/غیرقابل تجزیه (مثل "Invalid date") به‌جای نمایش خام، خالی نشان داده می‌شوند
+    if (digits.length === 0) return "";
+    return localizeNumericString(res, language);
   };
 
   const [displayValue, setDisplayValue] = useState<string>(() => normalizeDisplayValue(value));
@@ -103,6 +111,14 @@ export function DateInput({
   const emitValue = (maskedJalali: string) => {
     const digits = cleanDateToDigits(maskedJalali);
     let outVal = maskedJalali;
+
+    // Task 63: تاریخ کامل اما نامعتبر هرگز تبدیل/رول‌اور نمی‌شود — رشته خام ارسال می‌شود
+    // تا اعتبارسنجی فرم (هنگام ذخیره) جلوی ثبت اطلاعات خراب را بگیرد.
+    if (digits.length === 8 && !isValidJalaliDate(maskedJalali)) {
+      lastPropValueRef.current = outVal;
+      onChange(outVal);
+      return;
+    }
 
     if (outputFormat === "dateString") {
       lastPropValueRef.current = outVal;
@@ -162,7 +178,7 @@ export function DateInput({
     if (isHeader && (!value || value.trim() === "") && typeof onChange === 'function' && !initialDefaultSet.current) {
       initialDefaultSet.current = true;
       const todayStr = getTodayFormattedDate(language);
-      setDisplayValue(todayStr);
+      setDisplayValue(localizeNumericString(todayStr, language));
       emitValue(todayStr);
     }
   }, [isHeader, value, language, onChange]);
@@ -175,6 +191,15 @@ export function DateInput({
       setDisplayValue(newDisp);
     }
   }, [value]);
+
+  // Task 62: با تغییر زبان، نمایش تاریخ به زبان جدید منتقل می‌شود
+  // (در فارسی ارقام شمسی، در سایر زبان‌ها معادل میلادی؛ حین تایپ نیمه‌کاره نمایش دست‌نخورده می‌ماند)
+  useEffect(() => {
+    const src = lastPropValueRef.current || value || "";
+    const srcDigits = cleanDateToDigits(src);
+    if (srcDigits.length !== 0 && srcDigits.length !== 8) return;
+    setDisplayValue(normalizeDisplayValue(src));
+  }, [language]);
 
   // Fetch Fiscal Year information for validation
   useEffect(() => {
@@ -294,6 +319,17 @@ export function DateInput({
     }
   }, [displayValue, fiscalYearRange, shouldCheckFiscalYear]);
 
+  // Task 63: اعتبارسنجی تاریخ کامل‌شده — روز/ماه نامعتبر (مثل ۴۵) بلافاصله خطای قرمز می‌گیرد
+  useEffect(() => {
+    const digits = cleanDateToDigits(displayValue);
+    if (digits.length !== 8) {
+      setFormatError("");
+      return;
+    }
+    const masked = formatDigitsToMask(digits, false);
+    setFormatError(isValidJalaliDate(masked) ? "" : "تاریخ وارد شده معتبر نیست");
+  }, [displayValue]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
       const input = e.currentTarget;
@@ -306,7 +342,7 @@ export function DateInput({
         if (currentDigits.length > 0) {
           const newDigits = currentDigits.slice(0, currentDigits.length - 1);
           const masked = formatDigitsToMask(newDigits, false);
-          setDisplayValue(masked);
+          setDisplayValue(localizeNumericString(masked, language));
           emitValue(masked);
         }
       }
@@ -324,11 +360,12 @@ export function DateInput({
     const isDeletingSlash = displayValue.endsWith("/") && !raw.endsWith("/") && cleanDateToDigits(raw).length === cleanDateToDigits(displayValue).length;
     const masked = formatDigitsToMask(digits, !isDeletingSlash);
 
-    setDisplayValue(masked);
+    // Task 62: نمایش ارقام بر اساس زبان انتخاب‌شده؛ emitValue همیشه ماسک لاتین می‌گیرد
+    setDisplayValue(localizeNumericString(masked, language));
     emitValue(masked);
   };
 
-  const activeError = error || fiscalYearError || rangeError;
+  const activeError = error || fiscalYearError || rangeError || formatError;
   const isDisabled = disabled || (isHeader && !!fiscalYearError);
 
   const inputElement = (
