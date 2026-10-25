@@ -25,6 +25,9 @@ let SalesDocumentSettingsController = class SalesDocumentSettingsController {
     getDocumentTypes() {
         return { success: true, data: this.service.getDocumentTypes() };
     }
+    getBaseDocumentTypes() {
+        return { success: true, data: this.service.getBaseDocumentTypes() };
+    }
     async findByType(type) {
         const data = await this.service.findByType(Number(type));
         return { success: true, data };
@@ -65,6 +68,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], SalesDocumentSettingsController.prototype, "getDocumentTypes", null);
+__decorate([
+    (0, common_1.Get)('base-document-types'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], SalesDocumentSettingsController.prototype, "getBaseDocumentTypes", null);
 __decorate([
     (0, common_1.Get)('by-type/:type'),
     __param(0, (0, common_1.Param)('type')),

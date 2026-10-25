@@ -10,6 +10,13 @@ export declare class SalesDocumentSettingsController {
             title: string;
         }[];
     };
+    getBaseDocumentTypes(): {
+        success: boolean;
+        data: {
+            id: number;
+            title: string;
+        }[];
+    };
     findByType(type: string): Promise<{
         success: boolean;
         data: import("../../domain/entities/sales-document-settings.entity").SalesDocumentSettings;

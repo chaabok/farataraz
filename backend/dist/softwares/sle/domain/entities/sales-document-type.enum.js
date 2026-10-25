@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SALES_DOCUMENT_TYPE_LABELS = exports.SalesDocumentType = void 0;
+exports.BASE_DOCUMENT_TYPE_LABELS = exports.BASE_DOCUMENT_EXTRA_TYPES = exports.SALES_DOCUMENT_TYPE_LABELS = exports.SalesDocumentType = void 0;
 exports.salesDocumentTypeLabel = salesDocumentTypeLabel;
 exports.isValidSalesDocumentType = isValidSalesDocumentType;
+exports.isValidBaseDocumentType = isValidBaseDocumentType;
 var SalesDocumentType;
 (function (SalesDocumentType) {
     SalesDocumentType[SalesDocumentType["SalesOrder"] = 1] = "SalesOrder";
@@ -28,5 +29,19 @@ function salesDocumentTypeLabel(value) {
 }
 function isValidSalesDocumentType(value) {
     return exports.SALES_DOCUMENT_TYPE_LABELS.some((x) => x.value === Number(value));
+}
+exports.BASE_DOCUMENT_EXTRA_TYPES = [
+    { value: 0, label: 'بدون مبنا' },
+    { value: 8, label: 'رسید انبار' },
+    { value: 9, label: 'حواله انبار' },
+];
+exports.BASE_DOCUMENT_TYPE_LABELS = [
+    exports.BASE_DOCUMENT_EXTRA_TYPES[0],
+    ...exports.SALES_DOCUMENT_TYPE_LABELS,
+    exports.BASE_DOCUMENT_EXTRA_TYPES[1],
+    exports.BASE_DOCUMENT_EXTRA_TYPES[2],
+];
+function isValidBaseDocumentType(value) {
+    return exports.BASE_DOCUMENT_TYPE_LABELS.some((x) => x.value === Number(value));
 }
 //# sourceMappingURL=sales-document-type.enum.js.map

@@ -18,6 +18,12 @@ export class SalesDocumentSettingsController {
     return { success: true, data: this.service.getDocumentTypes() };
   }
 
+  /** فهرست کامل «سند مبنا»: بدون مبنا + انواع سند فروش + رسید انبار + حواله انبار */
+  @Get('base-document-types')
+  getBaseDocumentTypes() {
+    return { success: true, data: this.service.getBaseDocumentTypes() };
+  }
+
   @Get('by-type/:type')
   async findByType(@Param('type') type: string) {
     const data = await this.service.findByType(Number(type));

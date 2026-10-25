@@ -13,3 +13,12 @@ export declare const SALES_DOCUMENT_TYPE_LABELS: {
 }[];
 export declare function salesDocumentTypeLabel(value: number | string | null | undefined): string;
 export declare function isValidSalesDocumentType(value: unknown): boolean;
+export declare const BASE_DOCUMENT_EXTRA_TYPES: {
+    value: number;
+    label: string;
+}[];
+export declare const BASE_DOCUMENT_TYPE_LABELS: {
+    value: number;
+    label: string;
+}[];
+export declare function isValidBaseDocumentType(value: unknown): boolean;

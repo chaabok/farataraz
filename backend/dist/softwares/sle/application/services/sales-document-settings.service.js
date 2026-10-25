@@ -61,6 +61,9 @@ let SalesDocumentSettingsService = class SalesDocumentSettingsService {
     getDocumentTypes() {
         return sales_document_type_enum_1.SALES_DOCUMENT_TYPE_LABELS.map((x) => ({ id: x.value, title: x.label }));
     }
+    getBaseDocumentTypes() {
+        return sales_document_type_enum_1.BASE_DOCUMENT_TYPE_LABELS.map((x) => ({ id: x.value, title: x.label }));
+    }
     async upsert(dto) {
         (0, create_sales_document_settings_dto_1.assertValidSalesDocumentType)(dto);
         const { bsId, compId } = await this.getScope();
@@ -71,7 +74,7 @@ let SalesDocumentSettingsService = class SalesDocumentSettingsService {
             const ids = String(dto.BaseDocumentTypes)
                 .split(',')
                 .map((x) => Number(x.trim()))
-                .filter((x) => Number.isFinite(x) && (0, sales_document_type_enum_1.isValidSalesDocumentType)(x) && x !== type);
+                .filter((x) => Number.isFinite(x) && (0, sales_document_type_enum_1.isValidBaseDocumentType)(x) && x !== type);
             baseDocumentTypes = ids.length > 0 ? Array.from(new Set(ids)).join(',') : null;
         }
         const defaultWarehouseRef = dto.ShowWarehouse ? dto.DefaultWarehouseRef ?? null : null;

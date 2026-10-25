@@ -16,6 +16,10 @@ export declare class SalesDocumentSettingsService {
         id: number;
         title: string;
     }[];
+    getBaseDocumentTypes(): {
+        id: number;
+        title: string;
+    }[];
     upsert(dto: CreateSalesDocumentSettingsDto): Promise<SalesDocumentSettings>;
     remove(id: number): Promise<void>;
 }

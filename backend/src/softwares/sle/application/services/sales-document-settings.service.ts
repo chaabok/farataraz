@@ -11,6 +11,8 @@ import {
 import {
   SALES_DOCUMENT_TYPE_LABELS,
   isValidSalesDocumentType,
+  BASE_DOCUMENT_TYPE_LABELS,
+  isValidBaseDocumentType,
 } from '../../domain/entities/sales-document-type.enum';
 import { IdGenerationService } from '../../../../core/services/id-generation.service';
 import { RequestContextService } from '../../../../core/services/request-context.service';
@@ -65,6 +67,11 @@ export class SalesDocumentSettingsService {
     return SALES_DOCUMENT_TYPE_LABELS.map((x) => ({ id: x.value, title: x.label }));
   }
 
+  /** فهرست کامل «سند مبنا»: بدون مبنا + انواع سند فروش + رسید انبار + حواله انبار */
+  getBaseDocumentTypes() {
+    return BASE_DOCUMENT_TYPE_LABELS.map((x) => ({ id: x.value, title: x.label }));
+  }
+
   /**
    * Create or update (upsert) by (SalesDocumentType, BusinessStructureRef).
    * Conditional defaults are nulled when their Show* checkbox is off.
@@ -76,13 +83,13 @@ export class SalesDocumentSettingsService {
 
     const type = Number(dto.SalesDocumentType);
 
-    // Sanitize base document types: valid enum IDs only, self excluded
+    // Sanitize base document types: valid IDs only (بدون مبنا/انواع سند فروش/رسید و حواله انبار), self excluded
     let baseDocumentTypes: string | null = null;
     if (dto.HasBaseDocument && dto.BaseDocumentTypes) {
       const ids = String(dto.BaseDocumentTypes)
         .split(',')
         .map((x) => Number(x.trim()))
-        .filter((x) => Number.isFinite(x) && isValidSalesDocumentType(x) && x !== type);
+        .filter((x) => Number.isFinite(x) && isValidBaseDocumentType(x) && x !== type);
       baseDocumentTypes = ids.length > 0 ? Array.from(new Set(ids)).join(',') : null;
     }
 

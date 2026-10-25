@@ -20,6 +20,17 @@ const SALES_DOCUMENT_TYPES_FALLBACK = [
   { id: 7, title: 'فاکتور برگشت از فروش' },
 ];
 
+/**
+ * Fallback mirror of backend «سند مبنا» list (BASE_DOCUMENT_TYPE_LABELS):
+ * بدون مبنا (۰) + انواع سند فروش (۱ تا ۷) + رسید انبار (۸) + حواله انبار (۹)
+ */
+const BASE_DOCUMENT_TYPES_FALLBACK = [
+  { id: 0, title: 'بدون مبنا' },
+  ...SALES_DOCUMENT_TYPES_FALLBACK,
+  { id: 8, title: 'رسید انبار' },
+  { id: 9, title: 'حواله انبار' },
+];
+
 const salesDocumentTypeLabel = (value: any): string => {
   const v = Number(value);
   return SALES_DOCUMENT_TYPES_FALLBACK.find((x) => x.id === v)?.title || 'نامشخص';
@@ -51,6 +62,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
 
   // dropdown data sources
   const [docTypes, setDocTypes] = useState<any[]>(SALES_DOCUMENT_TYPES_FALLBACK);
+  const [baseDocTypes, setBaseDocTypes] = useState<any[]>(BASE_DOCUMENT_TYPES_FALLBACK);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [salesCenters, setSalesCenters] = useState<any[]>([]);
   const [salesTypes, setSalesTypes] = useState<any[]>([]);
@@ -71,6 +83,15 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
         if (list.length > 0) setDocTypes(list);
       } catch (err) {
         console.error('Failed to load sales document types:', err);
+      }
+
+      try {
+        const res = await apiFetch('/api/sle/sales-document-settings/base-document-types');
+        const json = await res.json();
+        const list = parseList(json);
+        if (list.length > 0) setBaseDocTypes(list);
+      } catch (err) {
+        console.error('Failed to load base document types:', err);
       }
 
       const load = async (url: string, setter: (v: any[]) => void) => {
@@ -230,8 +251,8 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     [docTypes, formValues.salesDocumentType]
   );
   const selectedBaseDocOptions = useMemo(
-    () => docTypes.filter((d) => (formValues.baseDocumentTypes || []).map(Number).includes(Number(d.id))),
-    [docTypes, formValues.baseDocumentTypes]
+    () => baseDocTypes.filter((d) => (formValues.baseDocumentTypes || []).map(Number).includes(Number(d.id))),
+    [baseDocTypes, formValues.baseDocumentTypes]
   );
 
   const fields: FieldConfig[] = [
@@ -277,7 +298,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
             colSpan: 1,
             customComponent: (
               <MultiSelectDropDown
-                data={docTypes}
+                data={baseDocTypes}
                 columns={[
                   { key: 'id', label: 'کد', width: 60 },
                   { key: 'title', label: 'عنوان', width: 160 },

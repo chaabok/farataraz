@@ -31,3 +31,28 @@ export function salesDocumentTypeLabel(value: number | string | null | undefined
 export function isValidSalesDocumentType(value: unknown): boolean {
   return SALES_DOCUMENT_TYPE_LABELS.some((x) => x.value === Number(value));
 }
+
+/**
+ * آیتم‌های اضافه مجاز برای «سند مبنا» علاوه بر انواع سند فروش (۱ تا ۷):
+ * ۰ = بدون مبنا، ۸ = رسید انبار، ۹ = حواله انبار
+ */
+export const BASE_DOCUMENT_EXTRA_TYPES: { value: number; label: string }[] = [
+  { value: 0, label: 'بدون مبنا' },
+  { value: 8, label: 'رسید انبار' },
+  { value: 9, label: 'حواله انبار' },
+];
+
+/**
+ * فهرست کامل انواع «سند مبنا» برای دراپ‌دان فرم تنظیمات اسناد فروش:
+ * بدون مبنا + انواع سند فروش (۱ تا ۷) + رسید انبار + حواله انبار
+ */
+export const BASE_DOCUMENT_TYPE_LABELS: { value: number; label: string }[] = [
+  BASE_DOCUMENT_EXTRA_TYPES[0], // بدون مبنا
+  ...SALES_DOCUMENT_TYPE_LABELS,
+  BASE_DOCUMENT_EXTRA_TYPES[1], // رسید انبار
+  BASE_DOCUMENT_EXTRA_TYPES[2], // حواله انبار
+];
+
+export function isValidBaseDocumentType(value: unknown): boolean {
+  return BASE_DOCUMENT_TYPE_LABELS.some((x) => x.value === Number(value));
+}
