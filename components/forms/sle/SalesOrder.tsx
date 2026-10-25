@@ -13,7 +13,9 @@ import { StateListInput, DocumentState, DocumentStateLabels } from "@/components
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { SubUnitModal } from "@/components/inputs/SubUnitModal";
-import { Plus } from "lucide-react";
+import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
+import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
+import { Plus, Pencil, X } from "lucide-react";
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
@@ -47,6 +49,131 @@ const emptyRow = () => ({
   Description: "",
 });
 
+// ---------------------------------------------------------------------------
+// Task 67: کمک‌تابع‌های پارامترهای خرید و فروش (همانند فرم رسید انبار)
+// ---------------------------------------------------------------------------
+const normalizePersianText = (txt: string | null | undefined): string => {
+  if (!txt) return "";
+  return String(txt)
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/\u200c/g, " ")
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+};
+
+const normalizeJalaliDate = (dStr: any): string => {
+  if (!dStr) return "";
+  const cleaned = String(dStr).trim().slice(0, 10).replace(/-/g, "/");
+  const parts = cleaned.split("/");
+  if (parts.length === 3) {
+    const y = parts[0];
+    const m = parts[1].padStart(2, "0");
+    const d = parts[2].padStart(2, "0");
+    return `${y}/${m}/${d}`;
+  }
+  return cleaned;
+};
+
+const isDateInRange = (docDate: string, startDate?: string, endDate?: string): boolean => {
+  const normDoc = normalizeJalaliDate(docDate);
+  const normStart = normalizeJalaliDate(startDate);
+  const normEnd = normalizeJalaliDate(endDate);
+
+  if (!normDoc) return false;
+  if (normStart && normDoc < normStart) return false;
+  if (normEnd && normDoc > normEnd) return false;
+  return true;
+};
+
+const getFactorVatRate = (paramObj: any, factor: any, dateStr: string): number => {
+  const cat = Number(paramObj?.CategoryOther ?? factor?.CategoryOther ?? 0);
+  const titleNorm = normalizePersianText(paramObj?.Title || factor?.FactorTitle);
+
+  const isMunicipal = cat === 2 || titleNorm.includes("عوارض");
+  const isVat = cat === 1 || titleNorm.includes("مالیات") || (titleNorm.includes("ارزش افزوده") && !isMunicipal);
+
+  if (!isVat && !isMunicipal) return 0;
+
+  const valuesList = Array.isArray(paramObj?.ParameterValues)
+    ? paramObj.ParameterValues
+    : Array.isArray(paramObj?.parameterValues)
+    ? paramObj.parameterValues
+    : Array.isArray(paramObj?.dates)
+    ? paramObj.dates
+    : [];
+
+  let rate = 0;
+
+  if (dateStr && valuesList.length > 0) {
+    const match = valuesList.find((v: any) =>
+      isDateInRange(dateStr, v.StartDate || v.startDate, v.EndDate || v.endDate)
+    );
+    if (match) {
+      const rawVal = Number(match.ParameterValue ?? match.parameterValue ?? match.Value ?? match.ValuePercentage ?? 0);
+      if (rawVal > 0) {
+        rate = rawVal > 1 ? rawVal / 100 : rawVal;
+      }
+    }
+  }
+
+  if (rate === 0 && valuesList.length > 0) {
+    for (let i = valuesList.length - 1; i >= 0; i--) {
+      const rawVal = Number(valuesList[i].ParameterValue ?? valuesList[i].parameterValue ?? valuesList[i].Value ?? valuesList[i].ValuePercentage ?? 0);
+      if (rawVal > 0) {
+        rate = rawVal > 1 ? rawVal / 100 : rawVal;
+        break;
+      }
+    }
+  }
+
+  if (rate === 0) {
+    if (isMunicipal) {
+      rate = 0.03;
+    } else if (isVat) {
+      const normDate = normalizeJalaliDate(dateStr);
+      if (normDate && normDate < "1403/01/01") {
+        rate = 0.06;
+      } else {
+        rate = 0.07;
+      }
+    }
+  }
+
+  return rate;
+};
+
+const getParameterValueForDate = (paramObj: any, dateStr: string): number => {
+  if (!paramObj) return 0;
+  const valuesList = Array.isArray(paramObj?.ParameterValues)
+    ? paramObj.ParameterValues
+    : Array.isArray(paramObj?.parameterValues)
+    ? paramObj.parameterValues
+    : Array.isArray(paramObj?.dates)
+    ? paramObj.dates
+    : [];
+
+  if (dateStr && valuesList.length > 0) {
+    const match = valuesList.find((v: any) =>
+      isDateInRange(dateStr, v.StartDate || v.startDate, v.EndDate || v.endDate)
+    );
+    if (match) {
+      return Number(match.ParameterValue ?? match.parameterValue ?? match.Value ?? match.ValuePercentage ?? match.Amount ?? 0);
+    }
+  }
+
+  if (valuesList.length > 0) {
+    for (let i = valuesList.length - 1; i >= 0; i--) {
+      const val = Number(valuesList[i].ParameterValue ?? valuesList[i].parameterValue ?? valuesList[i].Value ?? valuesList[i].ValuePercentage ?? valuesList[i].Amount ?? 0);
+      if (val > 0) return val;
+    }
+  }
+
+  return Number(paramObj?.DefaultAmount || paramObj?.DefaultValue || paramObj?.DefaultPercentage || 0);
+};
+
 export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const { removeTab } = useTabs();
   const { showToast } = useToast();
@@ -68,6 +195,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     Status: DocumentState.InitialRegistration,
     Description: "",
     items: [emptyRow()],
+    factors: [],
   });
 
   const [availableItems, setAvailableItems] = useState<any[]>([]);
@@ -75,6 +203,14 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const [salesTypeOptions, setSalesTypeOptions] = useState<any[]>([]);
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Task 67: تنظیمات سند فروش — تیک «نمایش پارامترهای خرید و فروش» تعیین می‌کند فوتر سه‌باکسه یا دو‌باکسه باشد
+  const [showPurchaseSales, setShowPurchaseSales] = useState(false);
+  const [defaultWarehouseRef, setDefaultWarehouseRef] = useState<number | null>(null);
+  const [parametersList, setParametersList] = useState<any[]>([]);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
+  const [selectedFactorIndex, setSelectedFactorIndex] = useState<number | null>(null);
+  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
 
   // Task 61: مودال واحدهای سنجش فرعی (مشابه فرم رسید انبار)
   const [subUnitModalState, setSubUnitModalState] = useState<{
@@ -199,6 +335,29 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         );
       })
       .catch((err) => console.error("Error fetching settlement methods:", err));
+
+    // Task 67: تنظیمات سند سفارش فروش (SalesDocumentType = 1) — تیک نمایش پارامترهای خرید و فروش
+    apiFetch("/api/sle/sales-document-settings/by-type/1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const data = json?.data;
+        if (json?.success && data) {
+          setShowPurchaseSales(!!data.ShowPurchaseSalesParameters);
+          if (data.DefaultWarehouseRef != null && data.DefaultWarehouseRef !== "") {
+            setDefaultWarehouseRef(Number(data.DefaultWarehouseRef));
+          }
+        }
+      })
+      .catch((err) => console.error("Error fetching sales document settings:", err));
+
+    // Task 67: فهرست پارامترهای خرید و فروش (برای محاسبه خودکار مبلغ عوامل)
+    apiFetch("/api/inv/purchase-sales-parameters")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((resData) => {
+        const list = Array.isArray(resData) ? resData : Array.isArray(resData?.data) ? resData.data : [];
+        setParametersList(list);
+      })
+      .catch((err) => console.error("Error fetching purchase sales parameters:", err));
   }, []);
 
   // Fetch Next Order Number on new form
@@ -283,6 +442,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       Status: DocumentState.InitialRegistration,
       Description: "",
       items: [emptyRow()],
+      factors: [],
     });
     fetchNextNumber();
   };
@@ -423,6 +583,78 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     if (selectedId) {
       setActiveId(Number(selectedId));
     }
+  };
+
+  // Task 67: محاسبات مالی فوتر (جمع اقلام + اضافات/کسورات عوامل) — همانند فرم رسید انبار
+  const totalItemsGross = (values.items || []).reduce((sum: number, item: any) => sum + (Number(item.TotalPrice) || 0), 0);
+  const totalFactorAdditions = (values.factors || [])
+    .filter((f: any) => Number(f.FactorType) === 1)
+    .reduce((sum: number, f: any) => sum + (Number(f.Amount) || 0), 0);
+  const totalFactorDeductions = (values.factors || [])
+    .filter((f: any) => Number(f.FactorType) === 2)
+    .reduce((sum: number, f: any) => sum + (Number(f.Amount) || 0), 0);
+  const displayAdditions = totalFactorAdditions;
+  const displayDeductions = totalFactorDeductions;
+  const finalNetTotal = totalItemsGross + displayAdditions - displayDeductions;
+
+  // Task 67: انتخاب پارامتر برای ردیف عامل — تعیین نوع (اضافه/کسر) و محاسبه خودکار مبلغ اولیه
+  const handleFactorParamSelect = (selectedParam: any, idx: number) => {
+    const titleVal = typeof selectedParam === "object" ? selectedParam?.Title || "" : String(selectedParam || "");
+    let paramObj = typeof selectedParam === "object" ? selectedParam : null;
+
+    // اگر آبجکت انتخابی مقادیر تاریخ‌دار (ParameterValues) نداشت، از فهرست پارامترها تکمیل شود
+    if (paramObj && !Array.isArray(paramObj?.ParameterValues) && !Array.isArray(paramObj?.parameterValues)) {
+      const found = (parametersList || []).find(
+        (p: any) => Number(p.PurchaseSalesParameterID || p.id) === Number(paramObj?.PurchaseSalesParameterID || paramObj?.id)
+      );
+      if (found) paramObj = found;
+    }
+
+    const cat = Number(paramObj?.CategoryOther ?? 0);
+    const opType = Number(paramObj?.OperationType ?? 1);
+    const titleNorm = normalizePersianText(titleVal);
+
+    const isVat = cat === 1 || cat === 2 || titleNorm.includes("مالیات") || titleNorm.includes("ارزش افزوده") || titleNorm.includes("عوارض");
+    const isDiscount = cat === 3 || titleNorm.includes("تخفیف");
+    const factorTypeVal = isDiscount ? 2 : 1;
+
+    const totalGrossSum = (values.items || []).reduce((acc: number, row: any) => acc + (Number(row.TotalPrice) || 0), 0);
+    const totalItemsQuantity = (values.items || []).reduce((acc: number, row: any) => acc + (Number(row.Quantity) || 0), 0);
+
+    let initialAmount = 0;
+    if (isVat) {
+      const rate = getFactorVatRate(paramObj, { FactorTitle: titleVal }, values.OrderDate);
+      initialAmount = Math.round(totalGrossSum * rate);
+    } else if (opType === 3) {
+      const rawVal = getParameterValueForDate(paramObj, values.OrderDate);
+      if (rawVal > 0) {
+        const rate = rawVal > 1 ? rawVal / 100 : rawVal;
+        initialAmount = Math.round(totalGrossSum * rate);
+      }
+    } else if (opType === 4) {
+      const unitVal = getParameterValueForDate(paramObj, values.OrderDate);
+      if (unitVal > 0) {
+        initialAmount = Math.round(totalItemsQuantity * unitVal);
+      }
+    } else if (opType === 1) {
+      const fixedVal = getParameterValueForDate(paramObj, values.OrderDate);
+      if (fixedVal > 0) {
+        initialAmount = Math.round(fixedVal);
+      }
+    }
+
+    const updatedFactors = [...(values.factors || [])];
+    updatedFactors[idx] = {
+      ...updatedFactors[idx],
+      FactorTitle: titleVal || paramObj?.Title || "",
+      paramObj: paramObj || undefined,
+      PurchaseSalesParameterRef: paramObj?.PurchaseSalesParameterID || updatedFactors[idx]?.PurchaseSalesParameterRef,
+      CategoryOther: cat,
+      FactorType: factorTypeVal,
+      Amount: initialAmount > 0 ? initialAmount : updatedFactors[idx]?.Amount || 0,
+    };
+
+    setValues((prev) => ({ ...prev, factors: updatedFactors }));
   };
 
   // Header fields
@@ -909,19 +1141,249 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
             id: "items_tab",
             label: "اقلام سفارش فروش",
             content: (
-              <TabCellRow
-                tabs={detailTabConfig}
-                value={values.items || []}
-                onChange={(newItems) =>
-                  setValues((prev) => ({
-                    ...prev,
-                    items: newItems.map((item: any, idx: number) => ({ ...item, RowNo: idx + 1 })),
-                  }))
-                }
-                hideHeader={false}
-                hideAddButton={isUsed}
-                hideDeleteButton={isUsed}
-              />
+              <div className="flex flex-col h-full flex-1 min-h-0 w-full p-0 gap-0 overflow-hidden">
+                {/* 1. جدول اقلام */}
+                <div className="flex-1 min-h-[150px] overflow-hidden border border-slate-200 dark:border-slate-700/80 rounded-t-md shadow-2xs bg-white dark:bg-slate-900 flex flex-col">
+                  <TabCellRow
+                    tabs={detailTabConfig}
+                    value={values.items || []}
+                    onChange={(newItems) =>
+                      setValues((prev) => ({
+                        ...prev,
+                        items: newItems.map((item: any, idx: number) => ({ ...item, RowNo: idx + 1 })),
+                      }))
+                    }
+                    hideHeader={false}
+                    hideAddButton={isUsed}
+                    hideDeleteButton={isUsed}
+                    onActiveRowChange={(_tabId, rowIndex) => {
+                      if (rowIndex !== null && rowIndex !== undefined) {
+                        setSelectedItemIndex(rowIndex);
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* دستگیره جمع/باز کردن فوتر */}
+                <div
+                  onClick={() => setIsFooterCollapsed(!isFooterCollapsed)}
+                  className="group relative flex items-center justify-center h-2.5 bg-slate-100 hover:bg-blue-500/80 dark:bg-slate-800/80 dark:hover:bg-blue-600/80 cursor-pointer select-none border-y border-slate-200 dark:border-slate-700/60 transition-colors shrink-0 my-0"
+                  title={isFooterCollapsed ? "نمایش خلاصه مبالغ و گردش" : "مخفی‌سازی خلاصه مبالغ جهت بزرگ‌نمایی جدول اقلام"}
+                >
+                  <div className="w-16 h-1 rounded-full bg-slate-300 dark:bg-slate-500 group-hover:bg-white group-hover:w-24 transition-all flex items-center justify-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-600 group-hover:bg-white/80"></span>
+                    <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-600 group-hover:bg-white/80"></span>
+                  </div>
+                </div>
+
+                {/* 2. فوتر: باکس‌های زیر جدول اقلام — Task 67
+                    با تیک «نمایش پارامترهای خرید و فروش» در تنظیمات اسناد فروش: ۳ باکس (عوامل + گردش + مبالغ)
+                    بدون تیک: ۲ باکس (گردش + مبالغ) */}
+                {!isFooterCollapsed && (
+                  <div className={`grid grid-cols-1 ${showPurchaseSales ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-2 w-full shrink-0 transition-all pt-0`}>
+                    {/* ستون راست: عوامل سفارش (فقط با تیک نمایش پارامترهای خرید و فروش) */}
+                    {showPurchaseSales && (
+                      <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                        <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
+                          <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
+                            عوامل سفارش
+                          </span>
+                        </div>
+
+                        <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[105px] border border-slate-100 dark:border-slate-800/60 rounded">
+                          <table className="w-full text-xs text-right border-collapse table-fixed">
+                            <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
+                              <tr className="bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
+                                <th className="p-1 text-center w-7">انتخاب</th>
+                                <th className="p-1 text-right w-[60%]">عنوان عامل</th>
+                                <th className="p-1 text-left w-[40%]">مبلغ</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(values.factors || []).length === 0 ? (
+                                <tr>
+                                  <td colSpan={3} className="p-2 text-center text-slate-400 text-xs">
+                                    هیچ عاملی ثبت نشده است
+                                  </td>
+                                </tr>
+                              ) : (
+                                (values.factors || []).map((f: any, idx: number) => (
+                                  <tr
+                                    key={f.id || idx}
+                                    className={`border-b border-slate-100 dark:border-slate-800 transition-colors ${
+                                      selectedFactorIndex === idx ? "bg-indigo-50/50 dark:bg-indigo-900/20" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/60"
+                                    }`}
+                                  >
+                                    <td className="p-1 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedFactorIndex === idx}
+                                        onChange={() => setSelectedFactorIndex(selectedFactorIndex === idx ? null : idx)}
+                                        disabled={isUsed}
+                                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3 cursor-pointer disabled:cursor-not-allowed"
+                                      />
+                                    </td>
+                                    <td className="p-1">
+                                      <PurchaseSalesParameterDropDown
+                                        value={f.FactorTitle || ""}
+                                        onChange={(selectedParam) => handleFactorParamSelect(selectedParam, idx)}
+                                        placeholder="عنوان عامل..."
+                                        disabled={isUsed}
+                                        noWrapper
+                                      />
+                                    </td>
+                                    <td className="p-1 dir-ltr">
+                                      <NumberInput
+                                        value={f.Amount ?? 0}
+                                        thousandsSeparator={true}
+                                        onChange={(newVal) => {
+                                          const updated = [...(values.factors || [])];
+                                          updated[idx] = { ...updated[idx], Amount: Number(newVal) || 0 };
+                                          setValues((prev) => ({ ...prev, factors: updated }));
+                                        }}
+                                        disabled={isUsed}
+                                        className="w-full bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded px-1.5 py-0.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-left"
+                                      />
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div className="flex items-center justify-start gap-1 pt-1 pb-0.5 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newFactor = {
+                                id: String(Date.now()),
+                                RowNo: (values.factors?.length || 0) + 1,
+                                FactorTitle: "",
+                                FactorType: 1,
+                                Amount: 0,
+                                Description: "",
+                              };
+                              setValues((prev) => ({ ...prev, factors: [...(prev.factors || []), newFactor] }));
+                              setSelectedFactorIndex(values.factors?.length || 0);
+                            }}
+                            disabled={isUsed}
+                            className="p-1 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                            title="افزودن ردیف"
+                          >
+                            <Plus className="w-4 h-4 stroke-[3]" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedFactorIndex !== null && selectedFactorIndex >= 0) {
+                                const updated = (values.factors || []).filter((_: any, i: number) => i !== selectedFactorIndex);
+                                setValues((prev) => ({ ...prev, factors: updated }));
+                                setSelectedFactorIndex(null);
+                              } else if ((values.factors || []).length > 0) {
+                                const updated = (values.factors || []).slice(0, -1);
+                                setValues((prev) => ({ ...prev, factors: updated }));
+                              }
+                            }}
+                            disabled={isUsed || (values.factors || []).length === 0}
+                            className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                            title="حذف ردیف"
+                          >
+                            <X className="w-4 h-4 stroke-[3]" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              showToast("ردیف عامل انتخاب شده آماده ویرایش است", "info");
+                            }}
+                            disabled={isUsed || selectedFactorIndex === null}
+                            className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                            title="ویرایش ردیف"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ستون میانی: خلاصه گردش (موجودی و گردش لحظه‌ای) */}
+                    <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                      <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
+                        <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
+                          خلاصه گردش
+                        </span>
+                      </div>
+
+                      {(() => {
+                        const activeIdx = selectedItemIndex !== null && selectedItemIndex >= 0 && selectedItemIndex < (values.items?.length || 0) ? selectedItemIndex : 0;
+                        const selItem = values.items?.[activeIdx];
+                        const pendingQty = (values.items || [])
+                          .filter((it: any) => Number(it.ItemRef) === Number(selItem?.ItemRef))
+                          .reduce((acc: number, it: any) => acc + (Number(it.Quantity) || 0), 0);
+
+                        return (
+                          <div className="overflow-y-auto w-full flex-1 max-h-[135px]">
+                            <StockSummaryBox
+                              itemId={selItem?.ItemRef || null}
+                              warehouseId={defaultWarehouseRef}
+                              mainUnitName={selItem?.UnitName}
+                              pendingQuantity={pendingQty}
+                              documentType="issue"
+                              documentDate={values.OrderDate}
+                            />
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* ستون چپ: مبالغ */}
+                    <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                      <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
+                        <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
+                          مبالغ
+                        </span>
+                      </div>
+
+                      <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[115px]">
+                        <table className="w-full text-xs text-right border-collapse">
+                          <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
+                            <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
+                              <th className="p-1 text-right">عنوان</th>
+                              <th className="p-1 text-left w-28">مبلغ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-slate-100 dark:border-slate-800">
+                              <td className="p-1 text-slate-700 dark:text-slate-300 font-medium text-[11px]">جمع</td>
+                              <td className="p-1 text-left font-semibold text-slate-900 dark:text-slate-100 dir-ltr text-[11px]">
+                                {formatLocalizedNumber(totalItemsGross, language)}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-slate-100 dark:border-slate-800">
+                              <td className="p-1 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">اضافات</td>
+                              <td className="p-1 text-left font-semibold text-emerald-600 dark:text-emerald-400 dir-ltr text-[11px]">
+                                {formatLocalizedNumber(displayAdditions, language)}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-slate-100 dark:border-slate-800">
+                              <td className="p-1 text-rose-600 dark:text-rose-400 font-medium text-[11px]">کسورات</td>
+                              <td className="p-1 text-left font-semibold text-rose-600 dark:text-rose-400 dir-ltr text-[11px]">
+                                {formatLocalizedNumber(displayDeductions, language)}
+                              </td>
+                            </tr>
+                            <tr className="bg-indigo-50/60 dark:bg-indigo-950/40">
+                              <td className="p-1 text-indigo-900 dark:text-indigo-200 font-extrabold text-[11px]">جمع کل</td>
+                              <td className="p-1 text-left font-extrabold text-indigo-900 dark:text-indigo-200 text-xs dir-ltr">
+                                {formatLocalizedNumber(finalNetTotal, language)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ),
           },
         ]}
