@@ -1414,3 +1414,20 @@ Work Log:
 - نکته داده: جدول پارامترهای خرید و فروش کاربر خالی است (پیش‌موجود؛ درپ‌داون عنوان عامل «اطلاعاتی یافت نشد» می‌دهد — در رسید انبار هم همین‌طور)؛ با تعریف پارامتر از دکمه «تعریف پارامترهای خرید و فروش جدید» پر می‌شود. ChunkLoadErrorهای اولیه نشست قبلی = artifact recompile بود؛ در نشست تازه صفر شد.
 Stage Summary:
 - فرم سفارش فروش اکنون ۴ تب پایینی دارد دقیقاً همانند رسید انبار: اقلام سفارش فروش (با فوتر سه‌باکسه قبلی)، عوامل سفارش (جدول کامل CRUD عوامل با انتخاب پارامتر و محاسبه خودکار مبلغ)، خلاصه مبالغ و محاسبات (کارت‌های مالی + وضعیت سند) و سایر اطلاعات (توضیحات با نشانگر هوشمند «!»). عوامل اکنون ماندگار شدند: جدول Sle.SalesOrderFactors + ذخیره در POST/PUT، بارگذاری در GET و حذف CASCADE — منطق عیناً مطابق عوامل رسید انبار. اسکرین‌شات‌ها: .zscreenshots/t85-factors-tab.png، t85-summary-tab.png، t85-other-info-tab.png، t85-summary-with-factor.png
+---
+Task ID: 86
+Agent: Z.ai Code (main)
+Task: رفع خطای ChunkLoadError در باز کردن فرم تنظیمات پایه («Loading chunk _app-pages-browser_components_forms_common_BaseSettings_tsx failed»)
+
+Work Log:
+- بررسی تصویر خطای کاربر: Runtime ChunkLoadError هنگام باز شدن تب «تنظیمات پایه» (فراخوانی از components/tab-registry.tsx)
+- ریشه‌یابی: سرور فرانت‌اند به‌صورت خودکار ری‌استارت شده بود (در dev.log: «Frontend process exited with code 0 → Restarting Next.js frontend») و دایرکتوری .next/static/chunks پاک شده بود (فقط polyfills.js باقی مانده بود). مرورگر کاربر هنوز صفحه‌ی قدیمی (بیلد قبلی) را باز داشت و درخواست chunk قدیمی → 404 → ChunkLoadError
+- تأیید وجود سالم فایل‌ها: components/forms/common/BaseSettings.tsx (1380 خط) و components/tab-registry.tsx — مشکل کامپایل نبود
+- راه‌حل دائمی: افزودن هوک useChunkErrorAutoRecovery به components/Providers.tsx — گوش دادن به سه کانال خطا: (1) خطای بارگذاری اسکریپت chunk در فاز capture، (2) رویداد error با پیام ChunkLoadError/Loading chunk failed، (3) unhandledrejection برای dynamic import های next/dynamic؛ در صورت تشخیص، یک‌بار window.location.reload() خودکار برای همگام‌سازی مرورگر با بیلد جدید
+- گارد ضد حلقه‌ی بی‌نهایت: ذخیره timestamp آخرین reload در sessionStorage با کلید parsa:chunk-error-reload-at و آستانه ۱۵ ثانیه
+- E2E با agent-browser: (الف) ورود admin و باز کردن فرم تنظیمات پایه → رندر کامل سالم (تاریخ سیستم/سال مالی/مدیریت فونت‌ها) و کامپایل مجدد chunk؛ (ب) شبیه‌سازی دقیق سناریو با network route --abort روی URL همان chunk → کنسول «[ChunkRecovery] Auto-reloading page after chunk load failure» → صفحه خودکار reload شد (marker جاوااسکریپت پاک شد)؛ (ج) گارد cooldown از حلقه‌ی reload جلوگیری کرد؛ (د) پس از حذف route، فرم مجدداً بی‌خطا باز شد — اسکرین‌شات‌ها: .zscreenshots/t86-basesettings-works.png و t86-final-recovery.png
+
+Stage Summary:
+- فایل تغییر یافته: components/Providers.tsx (افزودن useChunkErrorAutoRecovery، eslint پاک)
+- رفتار جدید: اگر هر chunk lazy (تب‌های tab-registry) بعد از ری‌استارت سرور/دیپلوی جدید بارگذاری نشود، صفحه یک‌بار خودکار refresh می‌شود و کاربر دیگر صفحه‌ی قرمز ChunkLoadError نمی‌بیند
+- نکته برای عامل‌های بعدی: ری‌استارت‌های خودکار next dev در این sandbox ادامه دارد (server.js نویز محیط را هندل می‌کند)؛ این recovery لایه‌ی محافظ مرورگر است
