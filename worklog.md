@@ -1346,3 +1346,20 @@ Work Log:
   • شبکه: فقط GET (شامل sales-document-settings/by-type/1 یک‌بار 200) — هیچ POST/PUT/DELETE؛ page errors = 0.
 Stage Summary:
 - فرم سفارش فروش جدید (هم mount اولیه و هم دکمه ایجاد/ذخیره-و-جدید) اکنون فیلدهای نوع فروش، محل تحویل، روش تسویه و مرکز فروش را از پیش‌فرض‌های تیک‌خورده فرم تنظیمات اسناد فروش (نوع سفارش فروش) تکمیل می‌کند؛ رکوردهای لودشده و انتخاب‌های قبلی کاربر هرگز بازنویسی نمی‌شوند و اگر فیلدی تیک/مقدار پیش‌فرض نداشته باشد خالی می‌ماند. تغییر صرفاً frontend است (کش مشترک موجود)؛ اسکرین‌شات: .zscreenshots/t82-new-form-defaults.png
+
+---
+Task ID: 83
+Agent: main (Z.ai Code)
+Task: «توی تمامی کامپوننت های ورودی و فرم های نرم افزار اعداد باید با یک فونت همسان باشند... فونت عدد ردیف انگلیسی است، در باکس خلاصه گردش اعداد انگلیسی است، باکس مبالغ فونت‌های مختلف دارد و اعداد مبالغ بزرگتر و خواناتر شود»
+
+Work Log:
+- ریشه‌یابی: اپ واقعی Next.js در ریشه پروژه (app/ + components/ + Tailwind 3) است و src/app/ اسکفلت مرده زایا (کشف کلیدی — ویرایش اولیه روی src/app اثر نکرد). منابع ناهماهنگی فونت اعداد: ۱) هیچ فونت فارسی سراسری تعریف نشده بود — Geist (لاتین) برای ارقام لاتین، فونت سیستم برای فارسی، Geist Mono برای ۴۶ فایلی که font-mono دارند؛ ۲) StockSummaryBox/Modal اعداد را با toLocaleString("en-US") و کلاس font-mono رندر می‌کرد؛ ۳) ردیف جدول اقلام و شماره سفارش و مبلغ عوامل، ارقام خام لاتین.
+- فونت سراسری: دانلود و self-host کردن Vazirmatn (۵ وزن woff2 در public/fonts/)؛ app/globals.css: @font-face×5 + body{font-family} + input/textarea/select/button{font-family:inherit}؛ tailwind.config.ts: fontFamily.sans و mono ← Vazirmatn (حتی font-mono هم‌فونت متن می‌شود — یک تغییر برای ۴۶ فایل).
+- بومی‌سازی ارقام: SalesOrder.tsx — ردیف اقلام با formatLocalizedNumber(rowIndex+1, language) + tabular-nums؛ NumberInput شماره سفارش و مبلغ عوامل localizeDigits گرفتنند. StockSummaryModal.tsx (باکس خلاصه گردش + مودال) — formatQty/formatPrice با formatLocalizedNumber (حداکثر ۴ رقم اعشار حفظ شد)، حذف همه font-mono/font-sans، کد کالا و ضریب تبدیل و بازه عوامل ردیابی هم بومی شد (کد غیرعددی دست‌نخورده).
+- باکس مبالغ: مقادیر از text-[11px] به text-base (≈14px) و جمع کل به text-lg (≈16px) با font-bold/extrabold + tabular-nums (راست‌چین اعداد)؛ توجه به override سراسری .text-sm{10px!important} در app/globals.css (به همین دلیل text-base انتخاب شد). padding ستون‌ها px-2 py-1 و max-h باکس 125px.
+- زیرساخت (یافته مهم محیطی): watcher توربوپک در این sandbox به‌دلیل fs.inotify.max_user_watches=8192 (بدون دسترسی sysctl) می‌میرد و حتی بعد از restart، توربوپک از گراف کهنه asset سرو می‌کرد (CSS کهنه با ۵ بار بوت سالم هم). راه‌حل: مهاجرت dev سرور به webpack با polling (CHOKIDAR_USEPOLLING/WATCHPACK_POLLING_INTERVAL=1500) — هم در spawn دستی و هم به‌صورت دائمی در server.js (حذف --turbo + env های polling) تا ری‌استارت‌های بعدی هم پایدار بمانند. OOMهای گذرا (کروم+کامپایل همزمان) با گرم‌کردن مسیرها قبل از باز کردن مرورگر مدیریت شد.
+- src/app/globals.css به نسخه اولیه بازگردانده شد (اسکفلت مرده) و globals83.css موقت حذف شد.
+- eslint = 0 خطا.
+- E2E (agent-browser، admin/1234، بدون ذخیره): body font = Vazirmatn و هر ۵ وزن loaded؛ همه عناصر فرم سفارش فروش دقیقاً یک فونت (Vazirmatn)؛ ردیف «۱»، شماره «۵»، ستون مقدار «۱»، خلاصه گردش «۰ واحد» — همه فارسی؛ مبالغ: ۱۴px برای جمع/اضافات/کسورات و ۱۶px جمع کل (قبلاً ۱۱px)؛ صفحه بدون خطا. اسکرین‌شات: .zscreenshots/t83-unified-font.png
+Stage Summary:
+- تمام اعداد نرم‌افزار اکنون با یک فونت واحد (Vazirmatn) و ارقام بومی زبان (فارسی در fa) رندر می‌شوند: فونت self-hosted + fontFamily سراسری (شامل font-mono) + بومی‌سازی نقاط باقی‌مانده (ردیف، شماره، مبلغ عوامل، باکس خلاصه گردش و مودال آن). اعداد باکس مبالغ ~۳۰٪ بزرگتر و با tabular-nums خواناتر شدند. dev سرور از توربوپک معیوب (watcher مرده به‌دلیل محدودیت inotify sandbox) به webpack+polling مهاجرت کرد و در server.js هم دائمی شد.

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/utils";
 import { Package, Warehouse, Building2, Boxes, RefreshCw, X, Tag, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useLanguage } from "@/lib/stores/languageStore";
+import { formatLocalizedNumber } from "@/lib/digitLocale";
 
 interface StockSummaryModalProps {
   isOpen: boolean;
@@ -55,6 +57,8 @@ export function StockSummaryBox({
 }) {
   const [data, setData] = useState<any>(initialData || null);
   const [loading, setLoading] = useState<boolean>(false);
+  // Task 83: اعداد با ارقام بومی زبان کاربر (فارسی) و فونت یکسان نرم‌افزار نمایش داده می‌شوند
+  const { language } = useLanguage();
 
   const fetchStockSummary = async () => {
     if (!itemId) {
@@ -105,13 +109,15 @@ export function StockSummaryBox({
   }, [itemId, warehouseId, excludeVoucherId, partyId, documentDate, documentType, refreshKey, initialData]);
 
   const formatQty = (val: number | string | undefined | null): string => {
-    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return "0";
-    return Number(val).toLocaleString("en-US", { maximumFractionDigits: 4 });
+    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return formatLocalizedNumber(0, language);
+    // حداکثر ۴ رقم اعشار (مطابق رفتار قبلی) و سپس بومی‌سازی ارقام/جداکننده‌ها
+    const rounded = Math.round(Number(val) * 10000) / 10000;
+    return formatLocalizedNumber(rounded, language);
   };
 
   const formatPrice = (val: number | string | undefined | null): string => {
-    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return "0";
-    return Number(val).toLocaleString("en-US");
+    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return formatLocalizedNumber(0, language);
+    return formatLocalizedNumber(Math.round(Number(val)), language);
   };
 
   if (loading) {
@@ -176,11 +182,11 @@ export function StockSummaryBox({
             موجودی قبلی (در دیتابیس):
           </span>
         </div>
-        <div className="dir-ltr text-left font-mono">
+        <div className="dir-ltr text-left">
           <span className="font-semibold text-slate-800 dark:text-slate-200 text-[10px]">
             {formatQty(dbWarehouseStock)}
           </span>
-          <span className="text-[9px] text-slate-500 mr-1 font-sans">
+          <span className="text-[9px] text-slate-500 mr-1">
             {effectiveMainUnitName}
           </span>
         </div>
@@ -197,11 +203,11 @@ export function StockSummaryBox({
               تغییرات این سند:
             </span>
           </div>
-          <div className="dir-ltr text-left font-mono">
+          <div className="dir-ltr text-left">
             <span className={`font-bold text-[10px] ${isIssue ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
               {isIssue ? "-" : "+"}{formatQty(pending)}
             </span>
-            <span className="text-[9px] text-indigo-700 dark:text-indigo-300 mr-1 font-sans">
+            <span className="text-[9px] text-indigo-700 dark:text-indigo-300 mr-1">
               {effectiveMainUnitName}
             </span>
           </div>
@@ -218,11 +224,11 @@ export function StockSummaryBox({
             {pending !== 0 ? "موجودی انبار (پس از سند):" : "موجودی به واحد اصلی:"}
           </span>
         </div>
-        <div className="dir-ltr text-left font-mono">
+        <div className="dir-ltr text-left">
           <span className="font-extrabold text-blue-700 dark:text-blue-300 text-[11px]">
             {formatQty(projectedWarehouseStock)}
           </span>
-          <span className="text-[9px] text-blue-600 dark:text-blue-400 mr-1 font-sans">
+          <span className="text-[9px] text-blue-600 dark:text-blue-400 mr-1">
             {effectiveMainUnitName}
           </span>
         </div>
@@ -239,11 +245,11 @@ export function StockSummaryBox({
               موجودی واحد فرعی {pending !== 0 ? "(پس از سند)" : ""}:
             </span>
           </div>
-          <div className="dir-ltr text-left font-mono">
+          <div className="dir-ltr text-left">
             <span className="font-bold text-slate-900 dark:text-slate-100 text-[10px]">
               {formatQty(projectedSubWarehouseStock)}
             </span>
-            <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1 font-sans">
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1">
               {subUnitName}
             </span>
           </div>
@@ -260,11 +266,11 @@ export function StockSummaryBox({
             موجودی سطح شرکت {pending !== 0 ? "(پس از سند)" : ""}:
           </span>
         </div>
-        <div className="dir-ltr text-left font-mono">
+        <div className="dir-ltr text-left">
           <span className="font-bold text-slate-900 dark:text-slate-100 text-[10px]">
             {formatQty(projectedCompanyStock)}
           </span>
-          <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1 font-sans">
+          <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1">
             {effectiveMainUnitName}
           </span>
         </div>
@@ -281,11 +287,11 @@ export function StockSummaryBox({
               موجودی فرعی در سطح شرکت:
             </span>
           </div>
-          <div className="dir-ltr text-left font-mono">
+          <div className="dir-ltr text-left">
             <span className="font-bold text-slate-900 dark:text-slate-100 text-[10px]">
               {formatQty(projectedSubCompanyStock)}
             </span>
-            <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1 font-sans">
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 mr-1">
               {subUnitName}
             </span>
           </div>
@@ -314,8 +320,8 @@ export function StockSummaryBox({
                   <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/60 dark:hover:bg-slate-800/60">
                     <td className="p-1 font-medium text-slate-800 dark:text-slate-200 text-[10px]">{mov.title}</td>
                     <td className="p-1 text-center text-slate-500 dark:text-slate-400 text-[10px]">{mov.date || "-"}</td>
-                    <td className="p-1 text-center text-slate-700 dark:text-slate-300 font-mono text-[10px]">{formatQty(mov.quantity)}</td>
-                    <td className="p-1 text-left font-semibold text-slate-800 dark:text-slate-200 dir-ltr font-mono text-[10px]">
+                    <td className="p-1 text-center text-slate-700 dark:text-slate-300 text-[10px] tabular-nums">{formatQty(mov.quantity)}</td>
+                    <td className="p-1 text-left font-semibold text-slate-800 dark:text-slate-200 dir-ltr text-[10px] tabular-nums">
                       {formatPrice(mov.price)}
                     </td>
                   </tr>
@@ -343,6 +349,8 @@ export function StockSummaryModal({
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"summary" | "tracking" | "warehouses">("summary");
+  // Task 83: اعداد مودال خلاصه گردش هم با ارقام بومی زبان کاربر نمایش داده می‌شوند
+  const { language } = useLanguage();
 
   const fetchSummary = async () => {
     if (!itemId) return;
@@ -385,9 +393,9 @@ export function StockSummaryModal({
   if (!isOpen) return null;
 
   const formatQty = (val: number | string | undefined | null): string => {
-    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return "0";
-    const num = Number(val);
-    return num.toLocaleString("en-US", { maximumFractionDigits: 4 });
+    if (val === undefined || val === null || val === "" || isNaN(Number(val))) return formatLocalizedNumber(0, language);
+    const rounded = Math.round(Number(val) * 10000) / 10000;
+    return formatLocalizedNumber(rounded, language);
   };
 
   const displayName = data?.itemName || propItemName || "کالای انتخاب‌شده";
@@ -406,8 +414,8 @@ export function StockSummaryModal({
               <DialogTitle className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <span>خلاصه گردش و موجودی لحظه‌ای کالا</span>
                 {displayCode && (
-                  <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono">
-                    کد: {displayCode}
+                  <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded">
+                    کد: {isNaN(Number(displayCode)) ? displayCode : formatLocalizedNumber(displayCode, language)}
                   </span>
                 )}
               </DialogTitle>
@@ -626,8 +634,8 @@ export function StockSummaryModal({
                       <span className="text-indigo-800 dark:text-indigo-300 font-medium">
                         ضریب تبدیل واحد اصلی ({data.mainUnit?.unitName}) به واحد فرعی ({data.subUnit?.unitName}):
                       </span>
-                      <span className="font-extrabold text-indigo-900 dark:text-indigo-200 dir-ltr">
-                        ۱ {data.mainUnit?.unitName} = {data.subUnit?.ratio} {data.subUnit?.unitName}
+                      <span className="font-extrabold text-indigo-900 dark:text-indigo-200 dir-ltr tabular-nums">
+                        {formatLocalizedNumber(1, language)} {data.mainUnit?.unitName} = {formatLocalizedNumber(data.subUnit?.ratio, language)} {data.subUnit?.unitName}
                       </span>
                     </div>
                   )}
@@ -662,7 +670,7 @@ export function StockSummaryModal({
                                 {tf.trackingFactorName}
                               </td>
                               <td className="p-2.5 text-slate-600 dark:text-slate-400">
-                                {tf.factorValue || (tf.startValue ? `از ${tf.startValue} تا ${tf.endValue}` : "-")}
+                                {tf.factorValue || (tf.startValue ? `از ${formatLocalizedNumber(tf.startValue, language)} تا ${formatLocalizedNumber(tf.endValue, language)}` : "-")}
                               </td>
                               <td className="p-2.5 text-left dir-ltr font-bold text-blue-700 dark:text-blue-300">
                                 {formatQty(tf.warehouseStock)} {data.mainUnit?.unitName}

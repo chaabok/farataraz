@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Task 83: فونت یکسان سراسری نرم‌افزار (Vazirmatn — self-hosted)
+   همه متن‌ها و اعداد (فارسی و لاتین) در تمام کامپوننت‌ها و فرم‌ها با یک فونت و
+   یک استایل رندر می‌شوند و فونت اعداد چندگانه نیست (همراه با fontFamily در
+   tailwind.config.ts که حتی font-mono را هم به همین فونت نگاشت می‌کند).
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-ExtraBold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  body {
+    /* Task 83: فونت پایه یکسان برای کل نرم‌افزار (فارسی + اعداد) */
+    font-family: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    /* ورودی‌ها و دکمه‌ها هم همان فونت واحد را به ارث می‌برند */
+    font-family: inherit;
+  }
+}
+
 @layer base {
   :root {
     --color-gray-50: #f9fafb;

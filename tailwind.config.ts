@@ -9,6 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Task 83: فونت یکسان سراسری — Vazirmatn (self-hosted) برای همه متن‌ها و اعداد؛
+      // حتی font-mono هم با همین فونت رندر می‌شود تا اعداد در همه‌جا هم‌شکل باشند
+      fontFamily: {
+        sans: ['Vazirmatn', 'Segoe UI', 'Tahoma', 'Arial', 'sans-serif'],
+        mono: ['Vazirmatn', 'Segoe UI', 'Tahoma', 'Arial', 'sans-serif'],
+      },
       colors: {
         gray: {
           50: 'color-mix(in srgb, var(--color-gray-50) calc(<alpha-value> * 100%), transparent)',

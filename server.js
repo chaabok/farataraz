@@ -132,7 +132,13 @@ async function main() {
     ...process.env,
     ...envOverrides,
     PORT: '3000',
-    HOSTNAME: '0.0.0.0'
+    HOSTNAME: '0.0.0.0',
+    // Task 83: در این محیط limit اعداد inotify (max_user_watches=8192) بسیار پایین است؛
+    // watcher توربوپک بعد از مدتی می‌میرد و خروجی کهنه سرو می‌شود. حالت webpack با
+    // polling (chokidar/watchpack) پایدار است و تغییرات فایل‌ها را همیشه تشخیص می‌دهد.
+    CHOKIDAR_USEPOLLING: 'true',
+    CHOKIDAR_INTERVAL: '1500',
+    WATCHPACK_POLLING_INTERVAL: '1500'
   };
 
   // Reclaim ports before spawning
@@ -145,7 +151,7 @@ async function main() {
   const nextBin = path.join(currentDir, 'node_modules', '.bin', 'next');
   const nextExec = fs.existsSync(nextBin) ? nextBin : 'npx';
   const nextArgs = fs.existsSync(nextBin) 
-    ? (isProd ? ['start', '-H', '0.0.0.0', '-p', '3000'] : ['dev', '--turbo', '-H', '0.0.0.0', '-p', '3000'])
+    ? (isProd ? ['start', '-H', '0.0.0.0', '-p', '3000'] : ['dev', '-H', '0.0.0.0', '-p', '3000'])
     : ['next', isProd ? 'start' : 'dev', '-H', '0.0.0.0', '-p', '3000'];
 
   const startFrontendProcess = () => {

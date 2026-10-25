@@ -51,3 +51,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Task 83: font wiring (comment trigger)

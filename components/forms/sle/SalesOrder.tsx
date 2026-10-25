@@ -910,6 +910,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
             label="شماره :"
             required
             value={values.OrderNumber}
+            localizeDigits
             onChange={(val) => handleChange("OrderNumber", val)}
             disabled={disabled || isUsed}
             placeholder="شماره سفارش"
@@ -1084,8 +1085,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       type: "text",
       width: "60px",
       render: (_row, rowIndex) => (
-        <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none">
-          {rowIndex + 1}
+        <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none tabular-nums">
+          {/* Task 83: ردیف با ارقام بومی زبان کاربر (فارسی) و فونت یکسان */}
+          {formatLocalizedNumber(rowIndex + 1, language)}
         </span>
       ),
     },
@@ -1540,6 +1542,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                                       <NumberInput
                                         value={f.Amount ?? 0}
                                         thousandsSeparator={true}
+                                        localizeDigits
                                         onChange={(newVal) => {
                                           const updated = [...(values.factors || [])];
                                           updated[idx] = { ...updated[idx], Amount: Number(newVal) || 0 };
@@ -1648,36 +1651,36 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                         </span>
                       </div>
 
-                      <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[115px]">
+                      <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[125px]">
                         <table className="w-full text-xs text-right border-collapse">
                           <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
                             <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
-                              <th className="p-1 text-right">عنوان</th>
-                              <th className="p-1 text-left w-28">مبلغ</th>
+                              <th className="px-2 py-1 text-right">عنوان</th>
+                              <th className="px-2 py-1 text-left w-36">مبلغ</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="p-1 text-slate-700 dark:text-slate-300 font-medium text-[11px]">جمع</td>
-                              <td className="p-1 text-left font-semibold text-slate-900 dark:text-slate-100 dir-ltr text-[11px]">
+                              <td className="px-2 py-1 text-slate-700 dark:text-slate-300 font-semibold text-xs">جمع</td>
+                              <td className="px-2 py-1 text-left font-bold text-slate-900 dark:text-slate-100 dir-ltr text-base tabular-nums">
                                 {formatLocalizedNumber(totalItemsGross, language)}
                               </td>
                             </tr>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="p-1 text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">اضافات</td>
-                              <td className="p-1 text-left font-semibold text-emerald-600 dark:text-emerald-400 dir-ltr text-[11px]">
+                              <td className="px-2 py-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">اضافات</td>
+                              <td className="px-2 py-1 text-left font-bold text-emerald-600 dark:text-emerald-400 dir-ltr text-base tabular-nums">
                                 {formatLocalizedNumber(displayAdditions, language)}
                               </td>
                             </tr>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="p-1 text-rose-600 dark:text-rose-400 font-medium text-[11px]">کسورات</td>
-                              <td className="p-1 text-left font-semibold text-rose-600 dark:text-rose-400 dir-ltr text-[11px]">
+                              <td className="px-2 py-1 text-rose-600 dark:text-rose-400 font-semibold text-xs">کسورات</td>
+                              <td className="px-2 py-1 text-left font-bold text-rose-600 dark:text-rose-400 dir-ltr text-base tabular-nums">
                                 {formatLocalizedNumber(displayDeductions, language)}
                               </td>
                             </tr>
                             <tr className="bg-indigo-50/60 dark:bg-indigo-950/40">
-                              <td className="p-1 text-indigo-900 dark:text-indigo-200 font-extrabold text-[11px]">جمع کل</td>
-                              <td className="p-1 text-left font-extrabold text-indigo-900 dark:text-indigo-200 text-xs dir-ltr">
+                              <td className="px-2 py-1 text-indigo-900 dark:text-indigo-200 font-extrabold text-base">جمع کل</td>
+                              <td className="px-2 py-1 text-left font-extrabold text-indigo-900 dark:text-indigo-200 text-lg dir-ltr tabular-nums">
                                 {formatLocalizedNumber(finalNetTotal, language)}
                               </td>
                             </tr>
