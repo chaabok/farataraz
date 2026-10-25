@@ -988,13 +988,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       ),
     },
     {
-      name: "Description",
-      label: "توضیحات",
-      type: "textarea",
-      placeholder: "توضیحات تکمیلی سفارش فروش...",
-      rows: 1,
-    },
-    {
+      // Task 81: «وضعیت» کنار «مرکز فروش» — همان سطر گرید دوستونه
       name: "Status",
       type: "custom",
       noWrapper: true,
@@ -1013,6 +1007,15 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
           labelWidth="45px"
         />
       ),
+    },
+    {
+      // Task 81: «توضیحات» در ردیف آخر و تمام‌عرض (col-span-2)
+      name: "Description",
+      label: "توضیحات",
+      type: "textarea",
+      placeholder: "توضیحات تکمیلی سفارش فروش...",
+      rows: 1,
+      colSpan: 2,
     },
   ];
 
