@@ -51,6 +51,10 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
 ], SalesOrderItemDto.prototype, "Description", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderItemDto.prototype, "trackingFactorValues", void 0);
 class CreateSalesOrderDto {
 }
 exports.CreateSalesOrderDto = CreateSalesOrderDto;

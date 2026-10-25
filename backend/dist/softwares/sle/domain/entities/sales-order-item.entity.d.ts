@@ -11,5 +11,6 @@ export declare class SalesOrderItem {
     UnitPrice: number;
     TotalPrice: number;
     Description?: string;
+    TrackingFactorValues?: any;
     salesOrder?: SalesOrder;
 }

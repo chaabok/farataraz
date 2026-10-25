@@ -36,6 +36,10 @@ export class SalesOrderItem {
   @Column({ type: 'varchar', length: 500, nullable: true })
   Description?: string;
 
+  // Task 74: مقادیر عوامل ردیابی هر ردیف (آرایه ردیف‌های مودال عامل ردیابی — مشابه PurchaseInvoiceDetail)
+  @Column({ type: 'jsonb', nullable: true })
+  TrackingFactorValues?: any;
+
   @ManyToOne(() => SalesOrder, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'SalesOrderRef' })
   salesOrder?: SalesOrder;

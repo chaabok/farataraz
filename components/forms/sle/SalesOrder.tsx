@@ -13,6 +13,7 @@ import { StateListInput, DocumentState, DocumentStateLabels } from "@/components
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { SubUnitModal } from "@/components/inputs/SubUnitModal";
+import { TrackingFactorModal } from "@/components/forms/inv/TrackingFactorModal";
 import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
 import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
 import { Plus, Pencil, X } from "lucide-react";
@@ -243,6 +244,60 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     subUnits: [],
   });
 
+  // ---------------------------------------------------------------------------
+  // Task 74: عامل ردیابی — اگر در تنظیمات پایه (تب فروش) گزینه «سفارش فروش» فعال باشد،
+  // ستون «مقدار» همانند فرم حواله انبار رفتار می‌کند: برای کالاهای دارای عامل ردیابی،
+  // مودال «ثبت / انتخاب اطلاعات عوامل ردیابی» باز می‌شود تا کاربر اطلاعات ردیابی را تکمیل کند.
+  // ---------------------------------------------------------------------------
+  const [isTrackingFactorEnabled, setIsTrackingFactorEnabled] = useState(false);
+  const [allTrackingFactors, setAllTrackingFactors] = useState<any[]>([]);
+  const [tfModalState, setTfModalState] = useState<{
+    isOpen: boolean;
+    rowIndex: number | null;
+    itemName: string;
+    itemCode: string;
+    trackingFactors: any[];
+    initialValues: any;
+    initialQuantity: any;
+  }>({
+    isOpen: false,
+    rowIndex: null,
+    itemName: "",
+    itemCode: "",
+    trackingFactors: [],
+    initialValues: {},
+    initialQuantity: "",
+  });
+
+  const getItemRef = (row: any): number | null => {
+    if (!row) return null;
+    const raw = row.ItemRef ?? row.ItemID ?? row.itemRef;
+    if (raw === null || raw === undefined || raw === "") return null;
+    if (typeof raw === "object") {
+      const innerId = raw.ItemID ?? raw.id ?? raw.value;
+      const num = Number(innerId);
+      return !isNaN(num) && num > 0 ? num : null;
+    }
+    const num = Number(raw);
+    return !isNaN(num) && num > 0 ? num : null;
+  };
+
+  const getItemTrackingFactors = (itemRef: any) => {
+    if (!itemRef || !allTrackingFactors || allTrackingFactors.length === 0) return [];
+    const matchedItem = availableItems.find((i) => String(i.ItemID || i.id) === String(itemRef));
+    if (matchedItem && matchedItem.trackingFactors && matchedItem.trackingFactors.length > 0) {
+      return matchedItem.trackingFactors;
+    }
+    return allTrackingFactors
+      .filter((tf: any) => {
+        const related = tf.relatedItems || tf.Items || tf.items || [];
+        return related.some(
+          (rel: any) => Number(rel.ItemRef || rel.item?.ItemID || rel.ItemID || rel.id) === Number(itemRef)
+        );
+      })
+      .sort((a, b) => (a.DisplayPriority || 1) - (b.DisplayPriority || 1));
+  };
+
   const customerColumns: SingleSelectColumn[] = [
     { key: "code", label: "کد", width: 100 },
     { key: "title", label: "عنوان مشتری", width: 260 },
@@ -286,6 +341,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               mainUnit: item.mainUnit || null,
               subUnits: item.subUnits || [],
               allUnits: item.allUnits || [],
+              // Task 74: عوامل ردیابی مرتبط با کالا (در صورت وجود)
+              trackingFactors: item.trackingFactors || [],
             }))
         );
       })
@@ -369,6 +426,60 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         setParametersList(list);
       })
       .catch((err) => console.error("Error fetching purchase sales parameters:", err));
+
+    // ---------------------------------------------------------------------------
+    // Task 74: تنظیمات پایه (تب فروش) — کلید showTrackingFactorInSalesOrder تعیین می‌کند
+    // مودال عامل ردیابی (مشابه حواله انبار) در ستون مقدار فعال باشد یا خیر
+    // ---------------------------------------------------------------------------
+    Promise.all([
+      apiFetch("/api/common/base-settings/tab/4").then((res) => (res.ok ? res.json() : null)).catch(() => null),
+      apiFetch("/api/common/base-settings").then((res) => (res.ok ? res.json() : null)).catch(() => null),
+    ]).then(([tab4Data, baseData]) => {
+      const checkSetting = (data: any, keyName: string) => {
+        if (!data) return false;
+        const target = keyName.toLowerCase();
+        if (Array.isArray(data)) {
+          return data.some(
+            (s: any) =>
+              (s.key?.toLowerCase() === target || s.SettingKey?.toLowerCase() === target) &&
+              (s.value === "true" || s.value === true || s.SettingValue === "true" || s.SettingValue === true)
+          );
+        }
+        if (Array.isArray(data.data)) {
+          return data.data.some(
+            (s: any) =>
+              (s.key?.toLowerCase() === target || s.SettingKey?.toLowerCase() === target) &&
+              (s.value === "true" || s.value === true || s.SettingValue === "true" || s.SettingValue === true)
+          );
+        }
+        const obj = data.data || data;
+        if (typeof obj === "object" && obj !== null) {
+          const matchingKey = Object.keys(obj).find((k) => k.toLowerCase() === target);
+          if (matchingKey) {
+            const val = obj[matchingKey];
+            return val === "true" || val === true || val === 1 || val === "1";
+          }
+        }
+        return false;
+      };
+
+      // فقط تیک «سفارش فروش» — بدون fallback پیش‌فرض true (برخلاف حواله انبار که فعال‌فرض می‌شود)
+      const soActive =
+        checkSetting(tab4Data, "showTrackingFactorInSalesOrder") ||
+        checkSetting(baseData, "showTrackingFactorInSalesOrder");
+      setIsTrackingFactorEnabled(soActive);
+    }).catch(() => {
+      setIsTrackingFactorEnabled(false);
+    });
+
+    // Task 74: فهرست عوامل ردیابی فعال (برای تشخیص کالاهای دارای عامل ردیابی)
+    apiFetch("/api/inv/tracking-factors")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        setAllTrackingFactors(list);
+      })
+      .catch((err) => console.error("Error fetching tracking factors:", err));
   }, []);
 
   // Fetch Next Order Number on new form
@@ -419,6 +530,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                       UnitPrice: d.UnitPrice !== "" && d.UnitPrice !== undefined && d.UnitPrice !== null ? Math.round(Number(d.UnitPrice)) : "",
                       TotalPrice: d.TotalPrice !== "" && d.TotalPrice !== undefined && d.TotalPrice !== null ? Math.round(Number(d.TotalPrice)) : "",
                       Description: d.Description || "",
+                      // Task 74: مقادیر عوامل ردیابی ذخیره‌شده ردیف (برای بازخوانی در مودال)
+                      trackingFactorValues: d.TrackingFactorValues || d.trackingFactorValues || null,
                     }))
                   : [emptyRow()],
             });
@@ -530,6 +643,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
             ? Math.round(Number(item.TotalPrice))
             : Math.round(Number(item.Quantity || 0) * Number(item.UnitPrice || 0)),
         Description: item.Description || "",
+        // Task 74: مقادیر عوامل ردیابی ردیف (ذخیره در ستون TrackingFactorValues)
+        trackingFactorValues: item.trackingFactorValues || null,
       })),
     };
 
@@ -914,6 +1029,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                 SubQuantity: undefined,
                 MainToSubRatio: undefined,
                 IsVariableRatio: false,
+                // Task 74: با تغییر کالا، مقادیر عوامل ردیابی کالای قبلی باطل می‌شود
+                trackingFactorValues: undefined,
               };
 
               for (let i = 1; i < selectedList.length; i++) {
@@ -1031,29 +1148,99 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       },
     },
     {
+      // Task 74: ستون مقدار — برای کالاهای دارای عامل ردیابی (وقتی تنظیم فعال باشد) همانند
+      // حواله انبار: ورود مستقیم مقدار مسدود و مودال «ثبت / انتخاب اطلاعات عوامل ردیابی» باز می‌شود
       name: "Quantity",
       label: "مقدار *",
       type: "custom",
       width: "110px",
-      render: (row, rowIndex) => (
-        <NumberInput
-          value={row?.Quantity || ""}
-          localizeDigits
-          onChange={(newVal) => {
-            const updatedItems = [...(values.items || [])];
-            updatedItems[rowIndex] = {
-              ...updatedItems[rowIndex],
-              Quantity: newVal,
-              TotalPrice:
-                updatedItems[rowIndex].UnitPrice !== "" && updatedItems[rowIndex].UnitPrice !== undefined
-                  ? Math.round(Number(newVal || 0) * Number(updatedItems[rowIndex].UnitPrice))
-                  : updatedItems[rowIndex].TotalPrice,
-            };
-            setValues((prev) => ({ ...prev, items: updatedItems }));
-          }}
-          disabled={isUsed}
-        />
-      ),
+      render: (row, rowIndex) => {
+        const itemRef = getItemRef(row);
+        const itemTfs = getItemTrackingFactors(itemRef);
+        const showPlusBtn = isTrackingFactorEnabled && itemTfs.length > 0;
+        const hasEnteredTf =
+          row?.trackingFactorValues &&
+          (Array.isArray(row.trackingFactorValues)
+            ? row.trackingFactorValues.some((r: any) =>
+                Object.keys(r).some(
+                  (k) =>
+                    k !== "_id" &&
+                    k !== "Quantity" &&
+                    r[k] !== "" &&
+                    r[k] !== null &&
+                    r[k] !== undefined
+                )
+              )
+            : Object.keys(row.trackingFactorValues).some(
+                (k) =>
+                  row.trackingFactorValues[k] !== "" &&
+                  row.trackingFactorValues[k] !== null &&
+                  row.trackingFactorValues[k] !== undefined
+              ));
+
+        const openTfModal = () => {
+          setTfModalState({
+            isOpen: true,
+            rowIndex,
+            itemName: row?.ItemName || "کالا",
+            itemCode: row?.ItemCode || "",
+            trackingFactors: itemTfs,
+            initialValues: row?.trackingFactorValues || {},
+            initialQuantity: row?.Quantity || "",
+          });
+        };
+
+        return (
+          <div className="flex items-center gap-1 w-full">
+            <div
+              className="flex-1"
+              onClick={() => {
+                if (showPlusBtn) {
+                  openTfModal();
+                }
+              }}
+            >
+              <NumberInput
+                value={row?.Quantity || ""}
+                localizeDigits
+                onChange={(newVal) => {
+                  if (showPlusBtn) {
+                    openTfModal();
+                    return;
+                  }
+                  const updatedItems = [...(values.items || [])];
+                  updatedItems[rowIndex] = {
+                    ...updatedItems[rowIndex],
+                    Quantity: newVal,
+                    TotalPrice:
+                      updatedItems[rowIndex].UnitPrice !== "" && updatedItems[rowIndex].UnitPrice !== undefined
+                        ? Math.round(Number(newVal || 0) * Number(updatedItems[rowIndex].UnitPrice))
+                        : updatedItems[rowIndex].TotalPrice,
+                  };
+                  setValues((prev) => ({ ...prev, items: updatedItems }));
+                }}
+                disabled={isUsed}
+                readOnly={showPlusBtn}
+              />
+            </div>
+            {showPlusBtn && (
+              <button
+                type="button"
+                title="ثبت / انتخاب عوامل ردیابی"
+                onClick={openTfModal}
+                disabled={isUsed}
+                className={`p-1 flex items-center justify-center rounded border transition-colors shrink-0 h-[26px] w-[26px] ${
+                  hasEnteredTf
+                    ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700 font-bold"
+                    : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
     {
       name: "UnitPrice",
@@ -1455,6 +1642,44 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
           };
 
           setValues((prev) => ({ ...prev, items: updatedItems }));
+        }}
+      />
+      {/* Task 74: مودال عوامل ردیابی (مشابه حواله انبار) — برای تکمیل اطلاعات ردیابی هر ردیف سفارش */}
+      <TrackingFactorModal
+        isOpen={tfModalState.isOpen}
+        onClose={() => setTfModalState((prev) => ({ ...prev, isOpen: false }))}
+        itemName={tfModalState.itemName}
+        itemCode={tfModalState.itemCode}
+        trackingFactors={tfModalState.trackingFactors}
+        initialValues={tfModalState.initialValues}
+        initialQuantity={tfModalState.initialQuantity}
+        isReadonly={isUsed}
+        isWarehouseIssue={false}
+        itemRef={getItemRef(values.items?.[tfModalState.rowIndex ?? -1])}
+        warehouseRef={defaultWarehouseRef}
+        formName="سفارش فروش"
+        documentId={values.SalesOrderID || activeId}
+        documentDate={values.OrderDate}
+        onSave={(tfValues, totalQty) => {
+          const idx = tfModalState.rowIndex;
+          if (idx !== null && idx >= 0 && idx < (values.items || []).length) {
+            const updatedItems = [...(values.items || [])];
+            const targetRow = updatedItems[idx];
+            const priceVal = Number(targetRow?.UnitPrice) || 0;
+            const newQty = totalQty > 0 ? totalQty : targetRow?.Quantity;
+
+            updatedItems[idx] = {
+              ...targetRow,
+              trackingFactorValues: tfValues,
+              ...(totalQty > 0 ? { Quantity: totalQty } : {}),
+              TotalPrice:
+                targetRow?.UnitPrice !== "" && targetRow?.UnitPrice !== undefined
+                  ? Math.round(Number(newQty || 0) * priceVal)
+                  : targetRow?.TotalPrice,
+            };
+            setValues((prev) => ({ ...prev, items: updatedItems }));
+          }
+          setTfModalState((prev) => ({ ...prev, isOpen: false }));
         }}
       />
     </>

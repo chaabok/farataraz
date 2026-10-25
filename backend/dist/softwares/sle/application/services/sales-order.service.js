@@ -115,6 +115,7 @@ let SalesOrderService = class SalesOrderService {
                     ? Math.round(Number(d.TotalPrice))
                     : Math.round(qty * price),
                 Description: d.Description || null,
+                TrackingFactorValues: d.trackingFactorValues ?? d.TrackingFactorValues ?? d.trackingFactors ?? null,
             });
         });
         await this.itemRepository.save(itemsToSave);

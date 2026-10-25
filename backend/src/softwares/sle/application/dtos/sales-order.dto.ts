@@ -28,6 +28,10 @@ export class SalesOrderItemDto {
 
   @IsOptional()
   Description?: any;
+
+  // Task 74: مقادیر عوامل ردیابی ردیف (خروجی مودال عامل ردیابی)
+  @IsOptional()
+  trackingFactorValues?: any;
 }
 
 export class CreateSalesOrderDto {

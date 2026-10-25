@@ -122,6 +122,8 @@ export class SalesOrderService {
           ? Math.round(Number(d.TotalPrice))
           : Math.round(qty * price),
         Description: d.Description || null,
+        // Task 74: مقادیر عوامل ردیابی (خروجی مودال عامل ردیابی — مشابه PurchaseInvoiceService)
+        TrackingFactorValues: (d as any).trackingFactorValues ?? (d as any).TrackingFactorValues ?? (d as any).trackingFactors ?? null,
       });
     });
     await this.itemRepository.save(itemsToSave);

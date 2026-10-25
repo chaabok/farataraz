@@ -60,6 +60,10 @@ __decorate([
     __metadata("design:type", String)
 ], SalesOrderItem.prototype, "Description", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'jsonb', nullable: true }),
+    __metadata("design:type", Object)
+], SalesOrderItem.prototype, "TrackingFactorValues", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => sales_order_entity_1.SalesOrder, (order) => order.items, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'SalesOrderRef' }),
     __metadata("design:type", sales_order_entity_1.SalesOrder)

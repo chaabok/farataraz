@@ -8,6 +8,7 @@ export declare class SalesOrderItemDto {
     UnitPrice?: any;
     TotalPrice?: any;
     Description?: any;
+    trackingFactorValues?: any;
 }
 export declare class CreateSalesOrderDto {
     OrderNumber?: any;

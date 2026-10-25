@@ -1168,3 +1168,24 @@ Work Log:
 
 Stage Summary:
 - فهرست کامل و مرتب فیلدهای فرم تعریف/ویرایش طرف حساب استخراج شد (فیلدهای اصلی + ۵ تب به ترتیب + گزینه‌های هر لیست + قواعد الزام) و به کاربر در قالب پاسخ فارسی ارائه شد. کد دست‌نخورده ماند؛ بدون نیاز به commit.
+
+---
+Task ID: 74
+Agent: main (Z.ai Code)
+Task: «اگر توی تنظیمات پایه و در تب فروش، نمایش عامل ردیابی برای فرم سفارش فروش فعال بود، باید همانند ستون مقدار در حواله انبار مودال عامل ردیابی به کاربر نمایش داده شود تا کاربر اطلاعات ردیابی را برای فرم سفارش فروش تکمیل نماید»
+
+Work Log:
+- تحقیق: الگوی مرجع در WarehouseIssue.tsx استخراج شد — ستون «مقدار» با showPlusBtn = isTrackingFactorEnabled && itemTfs.length>0، NumberInput readOnly + دکمه پلاس (سبز اگر TF ثبت شده، آبی اگر نه)، کلیک/تغییر → TrackingFactorModal؛ TFها از /api/inv/tracking-factors (relatedItems) match می‌شوند؛ تنظیمات از base-settings tab با checkSetting چندشکلی.
+- Backend (۳ فایل): SalesOrderItem entity ستون jsonb جدید TrackingFactorValues؟: any (مشابه PurchaseInvoiceDetail)؛ SalesOrderItemDto فیلد اختیاری trackingFactorValues؛ sales-order.service.ts saveItems مپ TrackingFactorValues = d.trackingFactorValues ?? d.TrackingFactorValues ?? d.trackingFactors ?? null. کامپایل tsc بدون خطا؛ ستون نیز با ALTER TABLE دستی اضافه و ری‌استارت backend (kill → server.js ری‌استارت خودکار، پورت 3005 بالا).
+- Frontend (SalesOrder.tsx): import TrackingFactorModal؛ stateهای isTrackingFactorEnabled (فقط وقتی کلید showTrackingFactorInSalesOrder در tab/4 یا تنظیمات کامل true باشد — بدون fallback true برخلاف حواله انبار) و allTrackingFactors و tfModalState؛ helperهای getItemRef/getItemTrackingFactors (کپی از WarehouseIssue)؛ واکشی base-settings tab/4 + /api/common/base-settings + /api/inv/tracking-factors در mount؛ مپ کالاهای dropdown با trackingFactors passthrough؛ ستون «مقدار» کامل TF-aware شد (wrapper کلیک + readOnly + دکمه پلاس دو‌رنگ با hasEnteredTf)؛ onChange کالا → trackingFactorValues: undefined (پاکسازی مقادیر کالای قبلی)؛ لود رکورد → trackingFactorValues از d.TrackingFactorValues/trackingFactorValues؛ payload ذخیره → trackingFactorValues: item.trackingFactorValues || null؛ رندر TrackingFactorModal با formName="سفارش فروش"، isWarehouseIssue=false (بدون hasBase — سفارش سند مبنا ندارد)، warehouseRef=defaultWarehouseRef، documentId/date؛ onSave → مقدار Quantity از totalQty مودال + recalc TotalPrice (qty×فی) + trackingFactorValues.
+- eslint SalesOrder.tsx = 0 خطا؛ dev log بدون خطای جدید.
+- E2E (agent-browser، admin/1234 لاگین مجدد):
+  • داده آزمایشی: عامل ردیابی «شماره سریال تست» (نوع 6 رشته‌ای، DisplayPriority=1، relatedItemIds=[6]) با POST /api/inv/tracking-factors ساخته شد (جدول TF خالی بود)؛ کالا=نشاسته (ID=6، تنها کالا نوع 1).
+  • حالت ON (تنظیم=true در DB): فرم سفارش فروش جدید → انتخاب کالا با پنل MultiColumnDropDown (کلیک ردیف + دکمه «تایید انتخاب (1)») → دکمه پلاس «ثبت / انتخاب عوامل ردیابی» کنار مقدار ظاهر شد → مودال باز شد → سریال SN-101 + تعداد 5 → ذخیره مودال → مقدار سلول ۵ شد.
+  • ذخیره سند (دکمه ذخیره با امضای SVG M4 4h13l4 4v12H4V4z) با هدر کامل (علی جهانی/لطلطی/درب نمایندگی/نقدی، فی=50000) → DB: SalesOrderID=13 با TrackingFactorValues=[{"1":"SN-101","_id":"...","Quantity":"5"}] ✓
+  • Round-trip: reload صفحه → بارگذاری سفارش ۳ از پنل فهرست رکوردها (Ellipsis) → مودال → مقادیر SN-101 و تعداد 5 دقیقاً بازخوانی شد ✓ (اسکرین‌شات t74-tf-modal-sales-order.png)
+  • حالت OFF: تنظیمات پایه ← تب فروش ← برداشتن تیک سفارش فروش → ذخیره (دکمه ذخیره لیبل‌دار — دکمه SVG تولبار فرم تنظیمات ذخیره نکرد) → DB=false → فرم جدید سفارش فروش → هیچ دکمه پلاس (count=0) و input مقدار کاملاً عادی ✓
+  • بازگردانی تنظیم به true (حالت خود کاربر) → DB=true → فرم جدید → tf-buttons=1 دوباره ✓
+  • پاک‌سازی: سفارش آزمایشی ID=13 با DELETE API حذف شد (اسناد تمیز)؛ عامل ردیابی «شماره سریال تست» عمداً نگه داشته شد تا کاربر بلافاصله بتواند تست کند؛ page errors = 0؛ تب‌ها بسته شد.
+Stage Summary:
+- اتصال تنظیمات Task 72 به عملیات: با فعال بودن «سفارش فروش» در گروه «نمایش عامل ردیابی در اسناد فروش» (تنظیمات پایه ← تب فروش)، ستون «مقدار» جدول اقلام سفارش فروش دقیقاً مثل حواله انبار رفتار می‌کند — برای کالاهای دارای عامل ردیابی ورود مستقیم مقدار مسدود، دکمه پلاس مودال «ثبت / انتخاب اطلاعات عوامل ردیابی» را باز می‌کند، جمع تعداد مودال به‌عنوان مقدار ردیف ثبت و مبلغ کل مجدد محاسبه می‌شود؛ مقادیر ردیابی در ستون jsonb جدید "Sle"."SalesOrderItems"."TrackingFactorValues" ذخیره و هنگام ویرایش دوباره در مودال بازخوانی می‌شوند. سایر ۶ سند فروش (پیش‌فاکتور، قرارداد، مجوز، فاکتور، برگشتی‌ها) همچنان بدون اتصال‌اند — کار آینده.
