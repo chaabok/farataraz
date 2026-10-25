@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Zap, LayoutDashboard, Loader2, ChevronDown, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useLanguage } from '@/components/Providers';
+import { useTabsStore } from '@/lib/stores/tabsStore';
 import { FlagIcon } from '@/components/icons/Flags';
 import { safeStringify, apiFetch } from '@/lib/utils';
 
@@ -104,6 +105,8 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('token', data.access_token);
+      // بستن تمام تب‌های باز از جلسه قبلی هنگام هر بار ورود به برنامه
+      useTabsStore.getState().removeAllTabs();
       
       // Update currentUser in context
       try {
@@ -150,6 +153,8 @@ export default function LoginPage() {
       const data = await res.json();
       
       localStorage.setItem('token', data.access_token);
+      // بستن تمام تب‌های باز از جلسه قبلی هنگام هر بار ورود به برنامه
+      useTabsStore.getState().removeAllTabs();
       
       try {
         const base64Url = data.access_token.split('.')[1];
