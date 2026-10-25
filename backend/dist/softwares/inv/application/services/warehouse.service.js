@@ -205,10 +205,10 @@ let WarehouseService = class WarehouseService {
             let startId = itemsNeedingId.length > 0 ? await this.idGenerationService.generateNextIdBlock('WarehouseProducts', itemsNeedingId.length) : 0;
             let newIdIdx = 0;
             updatedProducts = products.map((p) => {
-                const id = p.WarehouseProductID || (startId + newIdIdx++);
+                const rowId = p.WarehouseProductID || (startId + newIdIdx++);
                 return {
                     ...p,
-                    WarehouseProductID: id,
+                    WarehouseProductID: rowId,
                     WarehouseRef: id,
                     businessStructureRef: businessStructureRef,
                     companyRef: companyRef,
@@ -224,10 +224,10 @@ let WarehouseService = class WarehouseService {
             let startId = itemsNeedingId.length > 0 ? await this.idGenerationService.generateNextIdBlock('WarehouseUsers', itemsNeedingId.length) : 0;
             let newIdIdx = 0;
             updatedUsers = users.map((u) => {
-                const id = u.WarehouseUserID || (startId + newIdIdx++);
+                const rowId = u.WarehouseUserID || (startId + newIdIdx++);
                 return {
                     ...u,
-                    WarehouseUserID: id,
+                    WarehouseUserID: rowId,
                     WarehouseRef: id,
                     businessStructureRef: businessStructureRef,
                     companyRef: companyRef,
@@ -243,10 +243,10 @@ let WarehouseService = class WarehouseService {
             let startId = itemsNeedingId.length > 0 ? await this.idGenerationService.generateNextIdBlock('WarehouseAddresses', itemsNeedingId.length) : 0;
             let newIdIdx = 0;
             updatedAddresses = addresses.map((a) => {
-                const id = a.WarehouseAddressID || (startId + newIdIdx++);
+                const rowId = a.WarehouseAddressID || (startId + newIdIdx++);
                 return {
                     ...a,
-                    WarehouseAddressID: id,
+                    WarehouseAddressID: rowId,
                     WarehouseRef: id,
                     businessStructureRef: businessStructureRef,
                     companyRef: companyRef,
@@ -262,10 +262,10 @@ let WarehouseService = class WarehouseService {
             let startId = itemsNeedingId.length > 0 ? await this.idGenerationService.generateNextIdBlock('WarehouseKeepers', itemsNeedingId.length) : 0;
             let newIdIdx = 0;
             updatedKeepers = keepers.map((k) => {
-                const id = k.WarehouseKeeperID || (startId + newIdIdx++);
+                const rowId = k.WarehouseKeeperID || (startId + newIdIdx++);
                 return {
                     ...k,
-                    WarehouseKeeperID: id,
+                    WarehouseKeeperID: rowId,
                     WarehouseRef: id,
                     WarehouseKeeperRef: k.WarehouseKeeperRef || (typeof k === 'object' ? k.WarehouseKeeperRef : k),
                     businessStructureRef: businessStructureRef,

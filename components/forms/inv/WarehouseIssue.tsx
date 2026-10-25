@@ -277,8 +277,10 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
         // ۲. تیک فعال داشته باشد (IsActive === true)
         if (w.IsActive === false) return false;
 
-        // ۳. کاربر جاری جزو کاربران مجاز آن انبار در تب کاربران مجاز تعریف شده باشد
+        // ۳. اگر برای انبار هیچ کاربر مجازی تعریف نشده باشد، انبار برای همه قابل دسترسی است؛
+        //    در غیر این صورت کاربر جاری باید جزو کاربران مجاز آن انبار (تب کاربران مجاز) باشد
         const users = Array.isArray(w.WarehouseUsers) ? w.WarehouseUsers : [];
+        if (users.length === 0) return true;
         const isAuthorized = users.some((u: any) => {
           const uRef = Number(u.UserRef || u.userRef || u.User?.id || u.User?.userID || u.User?.UserID);
           const uName = String(u.User?.username || u.username || "").toLowerCase().trim();
