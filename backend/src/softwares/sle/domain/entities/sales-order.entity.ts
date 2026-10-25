@@ -28,6 +28,10 @@ export class SalesOrder extends AppBaseEntity {
   @Column({ type: 'bigint', nullable: true })
   SalesTypeRef?: number;
 
+  // ارجاع به مرکز فروش (Sle.SalesCenters) — اجباری در فرم
+  @Column({ type: 'bigint', nullable: true })
+  SalesCenterRef?: number;
+
   // ارجاع به محل تحویل (Sle.DeliveryLocations) — اجباری در فرم
   @Column({ type: 'bigint', nullable: true })
   DeliveryLocationRef?: number;

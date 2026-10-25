@@ -195,6 +195,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     CustomerRef: "",
     CustomerName: "",
     SalesTypeRef: "",
+    SalesCenterRef: "",
     DeliveryLocationRef: "",
     SettlementMethodRef: "",
     Status: DocumentState.InitialRegistration,
@@ -206,6 +207,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const [availableItems, setAvailableItems] = useState<any[]>([]);
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [salesTypeOptions, setSalesTypeOptions] = useState<any[]>([]);
+  const [salesCenterOptions, setSalesCenterOptions] = useState<any[]>([]);
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -387,6 +389,21 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       })
       .catch((err) => console.error("Error fetching sales types:", err));
 
+    // مراکز فروش (از فرم مرکز فروش جدید)
+    apiFetch("/api/sle/sales-centers")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        setSalesCenterOptions(
+          list.map((s: any) => ({
+            id: s.SalesCenterID || s.id,
+            code: s.Code || s.code || "",
+            title: s.Title || s.title || "",
+          }))
+        );
+      })
+      .catch((err) => console.error("Error fetching sales centers:", err));
+
     // مکان های تحویل (از فرم مکان های تحویل): دراپ‌داون با listApiUrl هر بار هنگام باز شدن
     // داده‌ها را تازه واکشی می‌کند تا مکان‌های تحویل فعالِ جدید (حتی اگر بعد از باز شدن
     // این فرم ثبت شده باشند) هم نمایش داده شوند؛ فقط رکوردهای IsActive=true.
@@ -512,6 +529,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               CustomerRef: data.CustomerRef ? Number(data.CustomerRef) : "",
               CustomerName: data.CustomerName || "",
               SalesTypeRef: data.SalesTypeRef ? Number(data.SalesTypeRef) : "",
+              SalesCenterRef: data.SalesCenterRef ? Number(data.SalesCenterRef) : "",
               DeliveryLocationRef: data.DeliveryLocationRef ? Number(data.DeliveryLocationRef) : "",
               SettlementMethodRef: data.SettlementMethodRef ? Number(data.SettlementMethodRef) : "",
               Status: data.Status || DocumentState.InitialRegistration,
@@ -561,6 +579,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       CustomerRef: "",
       CustomerName: "",
       SalesTypeRef: "",
+      SalesCenterRef: "",
       DeliveryLocationRef: "",
       SettlementMethodRef: "",
       Status: DocumentState.InitialRegistration,
@@ -597,6 +616,10 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       showToast("لطفاً نوع فروش را انتخاب کنید *", "error");
       return false;
     }
+    if (!values.SalesCenterRef) {
+      showToast("لطفاً مرکز فروش را انتخاب کنید *", "error");
+      return false;
+    }
     if (!values.DeliveryLocationRef) {
       showToast("لطفاً محل تحویل را انتخاب کنید *", "error");
       return false;
@@ -626,6 +649,7 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       CustomerRef: Number(values.CustomerRef),
       CustomerName: customerName,
       SalesTypeRef: Number(values.SalesTypeRef),
+      SalesCenterRef: Number(values.SalesCenterRef),
       DeliveryLocationRef: Number(values.DeliveryLocationRef),
       SettlementMethodRef: Number(values.SettlementMethodRef),
       Status: values.Status || DocumentState.InitialRegistration,
@@ -935,6 +959,32 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
             disabled={disabled || isUsed}
           />
         </div>
+      ),
+    },
+    {
+      // Task 80: «مرکز فروش» در هدر — همانند «نوع فروش»: دراپ‌داون تک‌انتخابی با اعتبارسنجی اجباری
+      name: "SalesCenter",
+      label: "مرکز فروش *",
+      type: "custom",
+      required: true,
+      render: ({ disabled }) => (
+        <SingleSelectDropDown
+          options={salesCenterOptions}
+          columns={refColumns}
+          value={values.SalesCenterRef || ""}
+          valueKey="id"
+          displayKey="title"
+          onChange={(sel: any) => {
+            if (!sel) {
+              setValues((prev) => ({ ...prev, SalesCenterRef: "" }));
+              return;
+            }
+            const refId = typeof sel === "object" ? sel.id : sel;
+            setValues((prev) => ({ ...prev, SalesCenterRef: refId ? Number(refId) : "" }));
+          }}
+          placeholder="انتخاب مرکز فروش..."
+          disabled={disabled || isUsed}
+        />
       ),
     },
     {

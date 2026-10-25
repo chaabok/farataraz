@@ -54,6 +54,9 @@ export class CreateSalesOrderDto {
   SalesTypeRef?: any;
 
   @IsOptional()
+  SalesCenterRef?: any;
+
+  @IsOptional()
   DeliveryLocationRef?: any;
 
   @IsOptional()

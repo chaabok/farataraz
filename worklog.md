@@ -1282,3 +1282,27 @@ Work Log:
   • شبکه: فقط GET (sales-document-settings/by-type/1، sales-centers، ...) — هیچ POST/PUT/DELETE؛ page errors = 0.
 Stage Summary:
 - فیلد «نمایش مرکز فروش» + دراپ‌دان «مرکز فروش پیش فرض» از قبل به‌طور کامل (فرم + بک‌اند + DB + داده) موجود بود و با E2E تازه صحت رندر، هم‌ترازی برچسب (176px)، فعال‌سازی مشروط با تیک، انتخاب «فروش زاهدان» و رفتار GET-only مجدداً تأیید شد. تنها تغییر کد: تکمیل DEFAULT_FORM_VALUES با دو کلید جاافتاده Task 78 (سازگاری الگو). اسکرین‌شات: .zscreenshots/t79-sales-center-field.png
+
+---
+Task ID: 80
+Agent: main (Z.ai Code)
+Task: «توی فرم سفارش فروش، فیلدهای مرکز فروش و روش تسویه را همانند فیلد نوع فروش در هدر فرم اضافه کنید»
+
+Work Log:
+- بررسی اولیه: «روش تسویه» از قبل در هدر فرم سفارش فروش موجود بود (سلول ترکیبی «محل تحویل + روش تسویه»، دراپ‌داون اجباری با /api/sle/settlement-methods، ذخیره SettlementMethodRef و بازخوانی) — دقیقاً با الگوی «نوع فروش». کار اصلی = افزودن «مرکز فروش» که وجود نداشت.
+- Backend (۳ فایل):
+  • sales-order.entity.ts: ستون جدید SalesCenterRef (bigint nullable) بعد از SalesTypeRef با کامنت «ارجاع به مرکز فروش (Sle.SalesCenters) — اجباری در فرم».
+  • sales-order.dto.ts: فیلد اختیاری SalesCenterRef در CreateSalesOrderDto (Update همان را ارث می‌برد).
+  • sales-order.service.ts: validateRequiredRefs حالا «مرکز فروش» را هم اجباری می‌کند (پیام «لطفاً مرکز فروش را انتخاب کنید»)؛ مپ SalesCenterRef در هر دو شاخه create و update (مشروط null). tsc = 0 خطا.
+- DB: DB_SYNCHRONIZE=false است؛ ستون با ALTER TABLE "Sle"."SalesOrders" ADD COLUMN IF NOT EXISTS "SalesCenterRef" bigint اضافه و با information_schema تأیید شد.
+- Frontend (SalesOrder.tsx — ۸ نقطه): state اولیه + handleNew (SalesCenterRef: "")، salesCenterOptions + fetch /api/sle/sales-centers (مپ SalesCenterID/Code/Title)، بازخوانی از data.SalesCenterRef، اعتبارسنجی اجباری (توست «لطفاً مرکز فروش را انتخاب کنید *»)، payload (SalesCenterRef: Number)، و سلول هدر جدید «مرکز فروش *» (FieldConfig با label + render SingleSelectDropDown با refColumns، placeholder «انتخاب مرکز فروش...»، disabled با isUsed) بین سلول «محل تحویل+روش تسویه» و «توضیحات». eslint = 0.
+- زیرساخت: سرور یکپارچه (server.js) ناخواسته kill شده بود؛ با دیباگ OOM (cgroup 4GB — chrome+compile همزمان باعث oom-kill می‌شد) و launch دو-فورکی (subshell + setsid → PPID=1) دوباره بالا آمد؛ هر دو پورت 200.
+- E2E (agent-browser، admin/1234):
+  • فرم جدید: هر ۹ برچسب هدر رندر می‌شوند از جمله «مرکز فروش * :» (اجباری) کنار «روش تسویه :*» و «نوع فروش :*»؛ شماره ۴ خودکار.
+  • پرم کردن: مشتری «علی جهانی»، نوع فروش «لطلطی»، مرکز فروش «فروش زاهدان» (از پنل دراپ‌داون)، محل تحویل «درب نمایندگی»، روش تسویه «نقدی»، کالا «نشاسته» (دابل‌کلیک روی ردیف پنل).
+  • ذخیره (دکمه M4 4h13l4 4v12) → DB: SalesOrderID=15 با SalesCenterRef=1 و SettlementMethodRef=4 و SalesTypeRef=2 و DeliveryLocationRef=2 ✓
+  • Round-trip: reload صفحه → لیست اطلاعات (آیکون List اکشن‌بار) → سفارش ۴ → فرم دقیقاً «فروش زاهدان» در مرکز فروش و «نقدی» در روش تسویه را بازخوانی کرد ✓
+  • پاک‌سازی: سفارش تست با DELETE /api/sle/sales-orders/15 حذف شد؛ DB بررسی شد: رکورد و آیتم‌های یتیم = 0؛ سفارش‌های کاربر (۱،۲،۳) دست‌نخورده.
+  • page errors = 0. اسکرین‌شات‌ها: t80-form-filled.png، t80-form-reloaded.png، t80-loaded-roundtrip.png.
+Stage Summary:
+- هدر فرم سفارش فروش اکنون «مرکز فروش» را دقیقاً همانند «نوع فروش» دارد: دراپ‌داون اجباری با داده /api/sle/sales-centers، ذخیره در ستون جدید "Sle"."SalesOrders"."SalesCenterRef" (entity/DTO/service + اعتبارسنجی اجباری سمت سرور) و بازخوانی کامل. «روش تسویه» از قبل با همین الگو موجود بود و صحت آن در E2E (انتخاب نقدی، ذخیره SettlementMethodRef=4، round-trip) مجدداً تأیید شد. داده کاربر پس از تست به حالت اولیه برگشت.
