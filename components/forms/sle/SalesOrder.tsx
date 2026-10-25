@@ -25,6 +25,7 @@ import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
 import {
   getCachedSalesDocumentSettings,
   fetchSalesDocumentSettings,
+  SalesDocumentSettingsData,
 } from "@/lib/salesDocumentSettingsCache";
 import momentJalaali from "moment-jalaali";
 
@@ -53,6 +54,39 @@ const emptyRow = () => ({
   TotalPrice: "",
   Description: "",
 });
+
+// ---------------------------------------------------------------------------
+// Task 82: پیش‌فرض‌های هدر فرم سفارش فروش از تنظیمات اسناد فروش (SalesDocumentType = 1)
+// فقط فیلدهایی که در فرم تنظیمات تیک خورده‌اند و مقدار پیش‌فرض دارند تکمیل می‌شوند:
+// نوع فروش / محل تحویل / روش تسویه / مرکز فروش
+// ---------------------------------------------------------------------------
+const extractHeaderDefaults = (data: SalesDocumentSettingsData | null) => ({
+  SalesTypeRef:
+    data?.ShowSalesType && data?.DefaultSalesTypeRef != null && data.DefaultSalesTypeRef !== ""
+      ? Number(data.DefaultSalesTypeRef)
+      : ("" as "" | number),
+  DeliveryLocationRef:
+    data?.ShowDeliveryLocations && data?.DefaultDeliveryLocationRef != null && data.DefaultDeliveryLocationRef !== ""
+      ? Number(data.DefaultDeliveryLocationRef)
+      : ("" as "" | number),
+  SettlementMethodRef:
+    data?.ShowSettlementMethod && data?.DefaultSettlementMethodRef != null && data.DefaultSettlementMethodRef !== ""
+      ? Number(data.DefaultSettlementMethodRef)
+      : ("" as "" | number),
+  SalesCenterRef:
+    data?.ShowSalesCenter && data?.DefaultSalesCenterRef != null && data.DefaultSalesCenterRef !== ""
+      ? Number(data.DefaultSalesCenterRef)
+      : ("" as "" | number),
+});
+
+/** فرم «جدیدِ» دست‌نخورده: بدون رکورد لودشده و بدون انتخاب کاربر — فقط در این حالت پیش‌فرض‌ها اعمال می‌شوند */
+const isPristineNewOrder = (prev: Record<string, any>): boolean =>
+  !prev.SalesOrderID &&
+  !prev.CustomerRef &&
+  !prev.SalesTypeRef &&
+  !prev.SalesCenterRef &&
+  !prev.DeliveryLocationRef &&
+  !prev.SettlementMethodRef;
 
 // ---------------------------------------------------------------------------
 // Task 67: کمک‌تابع‌های پارامترهای خرید و فروش (همانند فرم رسید انبار)
@@ -431,6 +465,11 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         if (data.DefaultWarehouseRef != null && data.DefaultWarehouseRef !== "") {
           setDefaultWarehouseRef(Number(data.DefaultWarehouseRef));
         }
+        // Task 82: پیش‌فرض‌گذاری فیلدهای هدر (نوع فروش/محل تحویل/روش تسویه/مرکز فروش)
+        // فقط روی فرم جدیدِ دست‌نخورده — رکورد لودشده یا انتخاب کاربر بازنویسی نمی‌شود
+        setValues((prev) =>
+          isPristineNewOrder(prev) ? { ...prev, ...extractHeaderDefaults(data) } : prev
+        );
       }
       setSettingsReady(true);
     });
@@ -571,6 +610,10 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
 
   const handleNew = () => {
     setActiveId(undefined);
+    // Task 82: فیلدهای نوع فروش/محل تحویل/روش تسویه/مرکز فروش بر اساس تنظیمات پیش‌فرض
+    // ثبت‌شده در فرم تنظیمات اسناد فروش (برای نوع سفارش فروش) تکمیل می‌شوند
+    const settings = getCachedSalesDocumentSettings(1);
+    const defaults = extractHeaderDefaults(settings);
     setValues({
       SalesOrderID: "",
       OrderNumber: "",
@@ -578,16 +621,24 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       DeliveryDate: "",
       CustomerRef: "",
       CustomerName: "",
-      SalesTypeRef: "",
-      SalesCenterRef: "",
-      DeliveryLocationRef: "",
-      SettlementMethodRef: "",
+      SalesTypeRef: defaults.SalesTypeRef,
+      SalesCenterRef: defaults.SalesCenterRef,
+      DeliveryLocationRef: defaults.DeliveryLocationRef,
+      SettlementMethodRef: defaults.SettlementMethodRef,
       Status: DocumentState.InitialRegistration,
       Description: "",
       items: [emptyRow()],
       factors: [],
     });
     fetchNextNumber();
+    // Task 82: اگر کش تنظیمات هنوز خالی است، پس از واکشی (در صورت دست‌نخورده ماندن فرم جدید) اعمال شود
+    if (!settings) {
+      fetchSalesDocumentSettings(1).then((data) => {
+        setValues((prev) =>
+          data && isPristineNewOrder(prev) ? { ...prev, ...extractHeaderDefaults(data) } : prev
+        );
+      });
+    }
   };
 
   const handleSave = async (): Promise<boolean> => {

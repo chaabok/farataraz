@@ -1326,3 +1326,23 @@ Work Log:
   • شبکه: فقط GET به sales-orders — هیچ POST/PUT/DELETE؛ page errors = 0 (فقط وارنینگ قدیمی chart width در داشبورد).
 Stage Summary:
 - در هدر فرم سفارش فروش فیلد «وضعیت» اکنون دقیقاً کنار «مرکز فروش» (سطر۳، ستون چپ) و «توضیحات» در ردیف آخر به‌صورت تمام‌عرض (col-span-2) است. تغییر صرفاً چیدمانی بود: جابجایی ترتیب فیلدها در آرایه + colSpan:2؛ منطق ذخیره/لود/اعتبارسنجی و داده‌ها بدون تغییر و با round-trip واقعی از DB صحت‌سنجی شد. اسکرین‌شات‌ها: .zscreenshots/t81-status-besides-salescenter.png، t81-order2-roundtrip.png
+
+---
+Task ID: 82
+Agent: main (Z.ai Code)
+Task: «اگر کاربر در تنظیمات اسناد فروش برای فرم سفارش فروش تنظیمات نوع فروش، محل تحویل، روش تسویه و مرکز فروش پیش فرض را تنظیم کرده بود، وقتی کاربر در فرم سفارش فروش جدید روی دکمه ایجاد کلیک کرد باید فیلدهای نوع فروش، محل تحویل، روش تسویه و مرکز فروش بر اساس تنظیمات پیش فرض تعیین شده در فرم تنظیمات اسناد فروش تکمیل شود»
+
+Work Log:
+- بررسی: تنظیمات اسناد فروش (SalesDocumentType=1) قبلاً هر ۴ جفت فیلد را دارد: ShowSalesType/DefaultSalesTypeRef، ShowDeliveryLocations/DefaultDeliveryLocationRef، ShowSettlementMethod/DefaultSettlementMethodRef (Task 78)، ShowSalesCenter/DefaultSalesCenterRef (Task 79). رکورد واقعی کاربر هر ۴ تیک + مقدار دارد (لطلطی=2، درب نمایندگی=2، نقدی=4، فروش زاهدان=1). کش مشترک salesDocumentSettingsCache (Task 71) از قبل در SalesOrder.tsx wired بود ولی فقط برای ShowPurchaseSalesParameters/DefaultWarehouseRef استفاده می‌شد.
+- Frontend (۲ فایل):
+  • lib/salesDocumentSettingsCache.ts: افزودن ShowSettlementMethod/DefaultSettlementMethodRef به interface (کامل‌سازی تایپ).
+  • SalesOrder.tsx: تابع ماژول‌سطح extractHeaderDefaults(data) — فقط فیلدهای تیک‌خوردهِ دارای مقدار را برمی‌گرداند (Number() برای bigint→string)؛ گارد isPristineNewOrder(prev) — فقط فرم «جدیدِ» دست‌نخورده (بدون SalesOrderID و بدون هر ۵ انتخاب کاربر) پیش‌فرض می‌گیرد؛ mount useEffect → پس از fetchSalesDocumentSettings(1) با setValues فانکشنال پیش‌فرض‌ها اعمال می‌شوند (رکورد لودشده/انتخاب کاربر بازنویسی نمی‌شود)؛ handleNew (پوشش دهنده دکمه ایجاد و «ذخیره و جدید») → مقداردهی همزمان ۴ فیلد از کش + fallback واکشی اگر کش خالی باشد. منطق ذخیره/اعتبارسنجی/round-trip دست‌نخورده.
+- eslint = 0 خطا (هر دو فایل).
+- E2E (agent-browser، admin/1234، روی داده واقعی — بدون هیچ تغییری در DB و بدون ذخیره):
+  • باز شدن فرم «سفارش فروش جدید» (mount جدید = کش خالی): نوع فروش=لطلطی، محل تحویل=درب نمایندگی، روش تسویه=نقدی، مرکز فروش=فروش زاهدان — هر ۴ فیلد از تنظیمات تکمیل شدند؛ مشتری خالی (پیش‌فرض ندارد)، شماره=4، وضعیت=ثبت اولیه ✓
+  • دکمه ایجاد (New اکشن‌بار): پیش‌فرض‌ها مجدداً اعمال شدند ✓
+  • گارد حالت ویرایش: رکورد شماره ۱ (که SalesCenterRef=null دارد) لود شد → مرکز فروش «خالی» ماند و با پیش‌فرض بازنویسی نشد؛ بقیه فیلدها = مقادیر رکورد ✓
+  • ایجاد دوباره → فرم جدید با ۴ پیش‌فرض ✓
+  • شبکه: فقط GET (شامل sales-document-settings/by-type/1 یک‌بار 200) — هیچ POST/PUT/DELETE؛ page errors = 0.
+Stage Summary:
+- فرم سفارش فروش جدید (هم mount اولیه و هم دکمه ایجاد/ذخیره-و-جدید) اکنون فیلدهای نوع فروش، محل تحویل، روش تسویه و مرکز فروش را از پیش‌فرض‌های تیک‌خورده فرم تنظیمات اسناد فروش (نوع سفارش فروش) تکمیل می‌کند؛ رکوردهای لودشده و انتخاب‌های قبلی کاربر هرگز بازنویسی نمی‌شوند و اگر فیلدی تیک/مقدار پیش‌فرض نداشته باشد خالی می‌ماند. تغییر صرفاً frontend است (کش مشترک موجود)؛ اسکرین‌شات: .zscreenshots/t82-new-form-defaults.png

@@ -23,6 +23,8 @@ export interface SalesDocumentSettingsData {
   DefaultSalesTypeRef?: number | string | null;
   ShowDeliveryLocations?: boolean;
   DefaultDeliveryLocationRef?: number | string | null;
+  ShowSettlementMethod?: boolean;
+  DefaultSettlementMethodRef?: number | string | null;
   ShowPurchaseSalesParameters?: boolean;
   HasAccountingDocument?: boolean;
   IsActive?: boolean;
