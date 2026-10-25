@@ -1131,3 +1131,25 @@ Work Log:
 
 Stage Summary:
 - باکس «عوامل سفارش» در فرم سفارش فروش دیگر با تاخیر ظاهر نمی‌شود: فوتر (هر ۳ باکس) همیشه یکجا و هماهنگ با بقیه اجزای فرم رندر می‌شود — در باز شدن‌های معمول (کش گرم) بلافاصله همزمان با خود فرم و در اولین باز شدن پس از لود صفحه، یکجا پس از پاسخ سریع endpoint تنظیمات. مکانیزم کش مشترک (lib/salesDocumentSettingsCache.ts) به فرم تنظیمات اسناد فروش هم وصل شد تا تغییر تنظیمات فوراً به فرم‌های جدید برسد؛ رفتار ذخیره/بارگذاری تنظیمات و سایر فرم‌ها تغییر نکرد.
+
+---
+Task ID: 72
+Agent: main (Z.ai Code)
+Task: «در پیکربندی نرم افزار و در تب فروش با استفاده از GroupField.tsx فیلد جدیدی اضافه کنید بنام نمایش عامل ردیابی در اسناد فروش و در این گروپ فیلد آیتم های زیر را با CheckBoxRightLabel.tsx اضافه کنید: ۱-سفارش فروش ۲-پیش فاکتور فروش ۳-قرارداد فروش ۴-مجوز فروش ۵-فاکتور فروش ۶-مجوز برگشت از فروش ۷-فاکتور برگشت از فروش»
+
+Work Log:
+- شناسایی فرم: «پیکربندی نرم افزار» کاربر همان فرم تنظیمات پایه (components/forms/common/BaseSettings.tsx) است که تب‌های عمومی/حسابداری/انبار/فروش/حقوق و دستمزد/دریافت و پرداخت دارد؛ تب «فروش» = id 'sales'، tabRef 4.
+- BaseSettings.tsx — tabsConfig تب فروش: گروه جدید showTrackingFactorInSalesDocumentsGroup با label «نمایش عامل ردیابی در اسناد فروش» و type 'group' (رندر با GroupField موجود) اضافه شد؛ ۷ زیرفیلد با type 'checkbox-right-label' (رندر با CheckBoxRightLabel موجود): showTrackingFactorInSalesOrder (سفارش فروش)، showTrackingFactorInSalesProforma (پیش فاکتور فروش)، showTrackingFactorInSalesContract (قرارداد فروش)، showTrackingFactorInSalesPermission (مجوز فروش)، showTrackingFactorInSalesInvoice (فاکتور فروش)، showTrackingFactorInSalesReturnPermission (مجوز برگشت از فروش)، showTrackingFactorInSalesReturnInvoice (فاکتور برگشت از فروش) — همه defaultValue 'false'.
+- handleSave: کلید گروه به groupKeyNames اضافه شد تا کلید خودِ گروه در payload ذخیره نشود (فقط ۷ کلید تخت ذخیره می‌شوند — الگوی موجود سایر گروه‌ها).
+- ذخیره‌سازی از PUT /api/common/base-settings/tab/4 (سطرهای key/value در "Gnr"."BaseSettings" به ازای CompanyRef=2، TabRef=4)؛ بک‌اند whitelist ندارد و تغییر backend لازم نبود؛ رندر گروه در تب غیر عمومی خودکار md:col-span-2 (تمام عرض) و گرید ۲ ستونه شد.
+- eslint = 0 خطا.
+- E2E کامل (agent-browser، admin/1234 — نشست منقضی شده بود و دوباره لاگین شد):
+  • تب فروش: گروه «نمایش عامل ردیابی در اسناد فروش» با هر ۷ چک‌باکس رندر شد (اسکرین‌شات t72-sales-tab-group.png) — همه پیش‌فرض خاموش.
+  • نکته تست: کلیک روی div بیرونی چک‌باکس اثر ندارد (onClick روی div داخلی CheckBoxRightLabel است) — کلیک مستقیم input.
+  • تیک سفارش فروش + فاکتور فروش + مجوز برگشت از فروش → ذخیره → DB دقیقاً ۳ ردیف true و ۴ ردیف false ✓.
+  • round-trip: بستن/باز کردن تب → هر ۳ تیک از دیتابیس لود شد ✓.
+  • بازگردانی: همه تیک‌ها برداشته و ذخیره شد → هیچ ردیف true باقی نماند (حالت پیش‌فرض تمیز) ✓.
+  • page errors = 0؛ اسکرین‌شات نهایی t72-final-state.png.
+
+Stage Summary:
+- در فرم تنظیمات پایه (پیکربندی نرم افزار) ← تب فروش، گروه جدید «نمایش عامل ردیابی در اسناد فروش» با کامپوننت GroupField و ۷ گزینه با کامپوننت CheckBoxRightLabel (سفارش فروش، پیش فاکتور فروش، قرارداد فروش، مجوز فروش، فاکتور فروش، مجوز برگشت از فروش، فاکتور برگشت از فروش) اضافه شد. هر گزینه یک setting مستقل (کلید showTrackingFactorInSales*، پیش‌فرض false) در تنظیمات پایه تب 4 ذخیره می‌کند و پس از بستن/باز کردن فرم درست لود می‌شود. هنوز هیچ فرمی از این کلیدها استفاده نمی‌کند (فقط پیکربندی) — اتصال به اسناد فروش (نمایش ستون/فیلد عامل ردیابی) کار آینده‌ای است مگر کاربر بخواهد.

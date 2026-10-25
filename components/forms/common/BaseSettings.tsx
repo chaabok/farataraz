@@ -319,6 +319,20 @@ const tabsConfig: TabConfig[] = [
         label: 'کیف پول فعال باشد',
         type: 'checkbox-right-label',
         defaultValue: 'true'
+      },
+      {
+        key: 'showTrackingFactorInSalesDocumentsGroup',
+        label: 'نمایش عامل ردیابی در اسناد فروش',
+        type: 'group',
+        fields: [
+          { key: 'showTrackingFactorInSalesOrder', label: 'سفارش فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesProforma', label: 'پیش فاکتور فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesContract', label: 'قرارداد فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesPermission', label: 'مجوز فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesInvoice', label: 'فاکتور فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesReturnPermission', label: 'مجوز برگشت از فروش', type: 'checkbox-right-label', defaultValue: 'false' },
+          { key: 'showTrackingFactorInSalesReturnInvoice', label: 'فاکتور برگشت از فروش', type: 'checkbox-right-label', defaultValue: 'false' }
+        ]
       }
     ]
   },
@@ -878,7 +892,7 @@ export function BaseSettings() {
 
     setSaving(true);
     try {
-      const groupKeyNames = ['accountCodeLengthsGroup', 'productServiceCategoryGroup', 'autoVoucherGroup', 'activeTabsInReceiptNotificationGroup', 'activeTabsInPaymentNotificationGroup', 'itemCodingMethodGroup', 'itemCodeSettingsGroup', 'warehouseTrackingSettingsGroup'];
+      const groupKeyNames = ['accountCodeLengthsGroup', 'productServiceCategoryGroup', 'autoVoucherGroup', 'activeTabsInReceiptNotificationGroup', 'activeTabsInPaymentNotificationGroup', 'itemCodingMethodGroup', 'itemCodeSettingsGroup', 'warehouseTrackingSettingsGroup', 'showTrackingFactorInSalesDocumentsGroup'];
       const settingsArray = Object.entries(currentValues)
         .filter(([key]) => key && !groupKeyNames.includes(key))
         .map(([key, value]) => ({ 
