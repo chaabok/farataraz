@@ -52,6 +52,8 @@ const DEFAULT_FORM_VALUES = {
   defaultSalesTypeRef: null as number | null,
   showDeliveryLocations: false,
   defaultDeliveryLocationRef: null as number | null,
+  showSettlementMethod: false,
+  defaultSettlementMethodRef: null as number | null,
   hasAccountingDocument: false,
   showPurchaseSalesParameters: false,
   isActive: true,

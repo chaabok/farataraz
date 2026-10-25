@@ -1261,3 +1261,24 @@ Work Log:
   • page errors = 0؛ هر دو سرور 200؛ EADDRINUSE موجود در dev.log متعلق به سیکل بوت قدیمی است (در زمان تست هر دو سرویس سالم بودند).
 Stage Summary:
 - فرم تنظیمات اسناد فروش اکنون فیلد «نمایش روش تسویه» + دراپ‌دان «روش تسویه پیش فرض» را دقیقاً با الگوی «نمایش نوع فروش» دارد: تیک نمایش، دراپ‌دان روش تسویه پیش‌فرض را فعال می‌کند، انتخاب در ستون‌های جدید "Sle"."SalesDocumentSettings"."ShowSettlementMethod"/"DefaultSettlementMethodRef" ذخیره می‌شود، مقدار مشروط (تیک خاموش → ref خالی) هم در فرانت و هم در service اعمال است و در لیست رکوردها هم ستون نمایش داده می‌شود. داده کاربر پس از تست به حالت اولیه برگردانده شد؛ عامل ردیابی/سایر تنظیمات دست نخورد.
+
+---
+Task ID: 79
+Agent: main (Z.ai Code)
+Task: «توی تنظیمات اسناد فروش، فیلد نمایش مرکز فروش و دراپ دان مرکز فروش پیش فرض را همانند فیلدهای نمایش نوع فروش اضافه کنید»
+
+Work Log:
+- بررسی وضعیت موجود: فیلد ترکیبی «نمایش مرکز فروش» + دراپ‌دان «مرکز فروش پیش فرض» از قبل به‌طور کامل در فرم وجود داشت (فیلد چهارم، بین «نمایش انبار» و «نمایش نوع فروش») و دقیقاً با الگوی «نمایش نوع فروش» پیاده شده بود:
+  • Frontend: FieldConfig با label «نمایش مرکز فروش» (شرکت‌کننده در هم‌ترازی Form-Widest-Label) + CheckBoxRightLabel بدون label + SingleSelectDropDown (ستون کد/عنوان مرکز فروش، valueKey=SalesCenterID، displayKey=Title، disabled تا تیک شدن، onRefresh=loadSalesCenters از /api/sle/sales-centers).
+  • State: DEFAULT_FORM_VALUES/showSalesCenter+defaultSalesCenterRef، mapEntityToForm از ShowSalesCenter/DefaultSalesCenterRef، پاک‌سازی مشروط در handleFormChange (تیک خاموش → ref خالی)، payload مشروط در handleSave.
+  • Backend: entity دو ستون ShowSalesCenter (boolean default false) و DefaultSalesCenterRef (bigint nullable)؛ DTO فیلدهای اختیاری؛ service.upsert مقدار مشروط (defaultSalesCenterRef = ShowSalesCenter ? ref : null) در هر دو شاخه update/create؛ کنترلر /api/sle/sales-centers فعال.
+  • DB (بررسی مستقیم با pg): هر دو ستون در "Sle"."SalesDocumentSettings" موجود؛ جدول "Sle"."SalesCenters" شامل رکورد «فروش زاهدان» (ID=1، Code=1، IsActive=true).
+- اصلاح سازگاری (تنها تغییر کد): دو کلید showSettlementMethod/defaultSettlementMethodRef به DEFAULT_FORM_VALUES اضافه شد (در Task 78 جا مانده بود؛ رفتار runtime از قبل صحیح بود — فقط صریح‌سازی الگو). eslint = 0 خطا.
+- E2E (agent-browser، بدون هیچ ذخیره‌ای — داده کاربر دست نخورده):
+  • فرم: 10 برچسب فرم واقعی، همگی 176px؛ «نمایش مرکز فروش :» چهارمین برچسب ✓
+  • حالت اولیه: چک‌باکس false و دراپ‌دان «انتخاب مرکز فروش پیش فرض...» disabled ✓
+  • انتخاب «سفارش فروش» → رکورد از DB لود شد: چک‌باکس مرکز فروش true و دراپ‌دان enabled با مقدار ذخیره‌شده «فروش زاهدان»؛ در مقابل «نمایش انبار» (false) دراپ‌دانش disabled ماند — رفتار مشروط درست ✓
+  • پنل دراپ‌دان باز شد و «فروش زاهدان» (کد ۱) فهرست شد؛ Escape بسته شد بدون انتخاب.
+  • شبکه: فقط GET (sales-document-settings/by-type/1، sales-centers، ...) — هیچ POST/PUT/DELETE؛ page errors = 0.
+Stage Summary:
+- فیلد «نمایش مرکز فروش» + دراپ‌دان «مرکز فروش پیش فرض» از قبل به‌طور کامل (فرم + بک‌اند + DB + داده) موجود بود و با E2E تازه صحت رندر، هم‌ترازی برچسب (176px)، فعال‌سازی مشروط با تیک، انتخاب «فروش زاهدان» و رفتار GET-only مجدداً تأیید شد. تنها تغییر کد: تکمیل DEFAULT_FORM_VALUES با دو کلید جاافتاده Task 78 (سازگاری الگو). اسکرین‌شات: .zscreenshots/t79-sales-center-field.png
