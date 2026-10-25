@@ -252,6 +252,12 @@ interface SingleSelectDropDownProps<T> {
   noWrapper?: boolean;
   className?: string;
   notFoundMessage?: string;
+  /**
+   * Task 70: اختیاری — در حالت data-mode (بدون listApiUrl) والد با این کال‌بک
+   * فهرست خود را دوباره واکشی می‌کند. هر بار پنل باز شود و همچنین با کلیک روی
+   * دکمه بروزرسانی پنل فراخوانی می‌شود تا بدون بستن فرم، لیست تازه شود.
+   */
+  onRefresh?: () => void | Promise<void>;
 }
 
 const EMPTY_ARRAY: any[] = [];
@@ -299,7 +305,8 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
   noWrapper,
   className,
   prefetch = false,
-  notFoundMessage
+  notFoundMessage,
+  onRefresh
 }: SingleSelectDropDownProps<T>, ref: React.ForwardedRef<SingleSelectDropDownRef>) {
   const { addTab, activeTabId } = useTabs();
   const [isOpen, setIsOpen] = useState(false);
@@ -503,8 +510,49 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
     }
   };
 
+  // Task 70: رفرش خودکار لیست هر بار پنل باز می‌شود (بدون نیاز به بستن فرم).
+  // حالت API: صفحه اول دوباره واکشی می‌شود؛ حالت data-mode: onRefresh والد صدا زده می‌شود.
+  const wasOpenRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const listApiUrlRef = useRef(listApiUrl);
+  const isOpenRef = useRef(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+
+  // همگام‌سازی refها در effect (نه حین رندر)
   useEffect(() => {
-    if ((isOpen || prefetch || (value !== undefined && value !== null && value !== '')) && listApiUrl && !hasFetched) {
+    onRefreshRef.current = onRefresh;
+    listApiUrlRef.current = listApiUrl;
+  });
+
+  const runDataRefresh = async () => {
+    const fn = onRefreshRef.current;
+    if (!fn) return;
+    setIsRefreshingData(true);
+    try {
+      await fn();
+    } catch (err) {
+      console.error('onRefresh failed:', err);
+    } finally {
+      setIsRefreshingData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      if (listApiUrlRef.current) {
+        fetchPage(1, true);
+      } else {
+        runDataRefresh();
+      }
+    }
+    wasOpenRef.current = isOpen;
+    isOpenRef.current = isOpen;
+  }, [isOpen, listApiUrl]);
+
+  // واکشی اولیه فقط وقتی پنل بسته است (prefetch / رفع ابهام متن ورودی).
+  // وقتی پنل باز است، effect بالا مسئول واکشی تازه است تا دوباره‌کاری نشود.
+  useEffect(() => {
+    if (!isOpen && (prefetch || (value !== undefined && value !== null && value !== '')) && listApiUrl && !hasFetched) {
       fetchPage(1, true);
     }
   }, [isOpen, prefetch, value, listApiUrl, hasFetched]);
@@ -767,14 +815,16 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
     setVisibleCount(pageSize);
   }, [searchQuery, sortConfig, pageSize]);
 
-  // Debounced server-side fetching when search/sort/filters change
+  // Debounced server-side fetching when search/sort/filters change.
+  // Task 70: «isOpen» از وابستگی‌ها حذف شد (با isOpenRef کنترل می‌شود) تا با
+  // باز شدن پنل دوبار درخواست زده نشود — رفرشِ باز شدن را effect اختصاصی بالا انجام می‌دهد.
   useEffect(() => {
-    if (!listApiUrl || !isOpen) return;
+    if (!listApiUrl || !isOpenRef.current) return;
     const timer = setTimeout(() => {
       fetchPage(1, true);
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, columnFilters, sortConfig, listApiUrl, isOpen]);
+  }, [searchQuery, columnFilters, sortConfig, listApiUrl]);
 
   // Filtering
   const filteredData = useMemo(() => {
@@ -1260,9 +1310,12 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
     if (listApiUrl) {
       fetchPage(1, true, { searchQuery: '', columnFilters: {}, sortConfig: { key: '', direction: null } });
     } else {
+      // Task 70: در حالت data-mode بازسازی از props قدیمی کافی نیست —
+      // onRefresh والد صدا زده می‌شود تا داده واقعاً از سرور تازه شود.
       const sourceList = (Array.isArray(data) && data.length > 0) ? data : (Array.isArray(options) ? options : []);
       setInternalData(sourceList);
       setVisibleCount(pageSize);
+      runDataRefresh();
     }
   };
 
@@ -1766,11 +1819,14 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
             <div className="p-1.5 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 rounded-b-xl flex items-center gap-1 shrink-0 overflow-visible flex-wrap [&_button]:!p-0.5 [&_button]:!h-6 [&_button]:!w-6 [&_button_svg]:!w-[13px] [&_button_svg]:!h-[13px]">
               <ActionButton 
                 onClick={handleReset} 
-                icon={RotateCcw} 
-                variant="outline" 
-                hideLabel 
-                tooltip={'بازنشانی'}
+                icon={RotateCcw}
+                variant="outline"
+                hideLabel
+                tooltip={dir === 'rtl' ? 'بروزرسانی لیست' : 'Refresh list'}
                 tooltipPosition="top"
+                className={cn(
+                  (isLoadingApi || isRefreshingData) && 'animate-pulse opacity-70 pointer-events-none'
+                )}
               />
               <ActionButton 
                 onClick={() => setShowColumnFilters(!showColumnFilters)}

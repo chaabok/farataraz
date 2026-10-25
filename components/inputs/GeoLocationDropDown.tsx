@@ -35,6 +35,8 @@ export interface GeoLocationDropDownProps {
   notFoundMessage?: string;
   onAdd?: () => void;
   addFormOptions?: AddFormOption | AddFormOption[];
+  /** Task 70: بروزرسانی دستی/خودکار فهرست توسط والد (به SingleSelectDropDown پاس داده می‌شود) */
+  onRefresh?: () => void | Promise<void>;
 }
 
 const DEFAULT_GEO_ADD_OPTIONS: AddFormOption[] = [
@@ -71,7 +73,8 @@ export const GeoLocationDropDown = forwardRef<SingleSelectDropDownRef, GeoLocati
       trigger,
       notFoundMessage = "اطلاعاتی یافت نشد",
       onAdd,
-      addFormOptions = DEFAULT_GEO_ADD_OPTIONS
+      addFormOptions = DEFAULT_GEO_ADD_OPTIONS,
+      onRefresh
     },
     ref
   ) {
@@ -100,6 +103,7 @@ export const GeoLocationDropDown = forwardRef<SingleSelectDropDownRef, GeoLocati
         notFoundMessage={notFoundMessage}
         onAdd={onAdd}
         addFormOptions={addFormOptions}
+        onRefresh={onRefresh}
       />
     );
   }

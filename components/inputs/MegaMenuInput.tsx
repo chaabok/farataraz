@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, Search, X, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface MegaMenuOption {
@@ -50,6 +50,11 @@ export interface MegaMenuInputProps {
   required?: boolean;
   error?: string;
   closeOnSelect?: boolean;
+  /**
+   * Task 70: اختیاری — والد با این کال‌بک فهرست بخش‌ها را دوباره واکشی می‌کند؛
+   * هر بار پاپ‌اور باز شود و با کلیک روی دکمه بروزرسانی هدر فراخوانی می‌شود.
+   */
+  onRefresh?: () => void | Promise<void>;
 }
 
 export const MegaMenuInput: React.FC<MegaMenuInputProps> = ({
@@ -75,17 +80,49 @@ export const MegaMenuInput: React.FC<MegaMenuInputProps> = ({
   required = false,
   error,
   closeOnSelect = true,
+  onRefresh,
 }) => {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mounted, setMounted] = useState(false);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
+  // Task 70: رفرش خودکار لیست هر بار پاپ‌اور باز می‌شود + دکمه بروزرسانی هدر
+  const wasOpenRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // همگام‌سازی ref در effect (نه حین رندر)
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  });
+
+  const handleRefresh = useCallback(async () => {
+    const fn = onRefreshRef.current;
+    if (!fn) return;
+    setIsRefreshing(true);
+    try {
+      await fn();
+    } catch (err) {
+      console.error('onRefresh failed:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isOpened = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+
+  // Task 70: رفرش خودکار لیست هر بار پاپ‌اور باز می‌شود (حالت کنترل‌شده و داخلی هر دو)
+  useEffect(() => {
+    if (isOpened && !wasOpenRef.current) {
+      handleRefresh();
+    }
+    wasOpenRef.current = isOpened;
+  }, [isOpened, handleRefresh]);
 
   useEffect(() => {
     setMounted(true);
@@ -229,14 +266,28 @@ export const MegaMenuInput: React.FC<MegaMenuInputProps> = ({
             {title}
           </span>
         </div>
-        <button
-          id={`${id}-btn-close`}
-          type="button"
-          onClick={handleClose}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 transition-colors"
-        >
-          بستن ✕
-        </button>
+        <div className="flex items-center gap-1">
+          {onRefresh && (
+            <button
+              id={`${id}-btn-refresh`}
+              type="button"
+              onClick={handleRefresh}
+              title="بروزرسانی لیست"
+              aria-label="بروزرسانی لیست"
+              className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <RotateCcw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin text-indigo-500')} />
+            </button>
+          )}
+          <button
+            id={`${id}-btn-close`}
+            type="button"
+            onClick={handleClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 transition-colors"
+          >
+            بستن ✕
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}

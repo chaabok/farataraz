@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SimpleFormTwoRow, FieldConfig } from '../SimpleFormTwoRow';
 import { CheckBoxRightLabel } from '@/components/inputs/CheckBoxRightLabel';
 import { SingleSelectDropDown } from '@/components/inputs/SingleSelectDropDown';
@@ -73,44 +73,59 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     return Array.isArray(arr) ? arr : [];
   };
 
+  // Task 70: واکشی‌ها به کال‌بک‌های پایدار منتقل شدند تا به‌عنوان onRefresh به
+  // دراپ‌دان‌ها پاس داده شوند؛ با هر بار باز شدن پنل (یا دکمه بروزرسانی پنل)
+  // فهرست‌ها بدون بستن فرم از سرور تازه می‌شوند.
+  const loadDocumentTypes = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/sle/sales-document-settings/document-types');
+      const json = await res.json();
+      const list = parseList(json);
+      if (list.length > 0) setDocTypes(list);
+    } catch (err) {
+      console.error('Failed to load sales document types:', err);
+    }
+  }, []);
+
+  const loadBaseDocumentTypes = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/sle/sales-document-settings/base-document-types');
+      const json = await res.json();
+      const list = parseList(json);
+      if (list.length > 0) setBaseDocTypes(list);
+    } catch (err) {
+      console.error('Failed to load base document types:', err);
+    }
+  }, []);
+
+  const loadList = useCallback(async (url: string, setter: (v: any[]) => void) => {
+    try {
+      const res = await apiFetch(url);
+      const json = await res.json();
+      setter(parseList(json));
+    } catch (err) {
+      console.error(`Failed to load ${url}:`, err);
+    }
+  }, []);
+
+  const loadWarehouses = useCallback(() => loadList('/api/inv/warehouses', setWarehouses), [loadList]);
+  const loadSalesCenters = useCallback(() => loadList('/api/sle/sales-centers', setSalesCenters), [loadList]);
+  const loadSalesTypes = useCallback(() => loadList('/api/sle/sales-types', setSalesTypes), [loadList]);
+  const loadDeliveryLocations = useCallback(() => loadList('/api/sle/delivery-locations', setDeliveryLocations), [loadList]);
+
   // Load enum list from backend (single source of truth) + dropdown sources
   useEffect(() => {
     (async () => {
-      try {
-        const res = await apiFetch('/api/sle/sales-document-settings/document-types');
-        const json = await res.json();
-        const list = parseList(json);
-        if (list.length > 0) setDocTypes(list);
-      } catch (err) {
-        console.error('Failed to load sales document types:', err);
-      }
-
-      try {
-        const res = await apiFetch('/api/sle/sales-document-settings/base-document-types');
-        const json = await res.json();
-        const list = parseList(json);
-        if (list.length > 0) setBaseDocTypes(list);
-      } catch (err) {
-        console.error('Failed to load base document types:', err);
-      }
-
-      const load = async (url: string, setter: (v: any[]) => void) => {
-        try {
-          const res = await apiFetch(url);
-          const json = await res.json();
-          setter(parseList(json));
-        } catch (err) {
-          console.error(`Failed to load ${url}:`, err);
-        }
-      };
       await Promise.all([
-        load('/api/inv/warehouses', setWarehouses),
-        load('/api/sle/sales-centers', setSalesCenters),
-        load('/api/sle/sales-types', setSalesTypes),
-        load('/api/sle/delivery-locations', setDeliveryLocations),
+        loadDocumentTypes(),
+        loadBaseDocumentTypes(),
+        loadWarehouses(),
+        loadSalesCenters(),
+        loadSalesTypes(),
+        loadDeliveryLocations(),
       ]);
     })();
-  }, []);
+  }, [loadDocumentTypes, loadBaseDocumentTypes, loadWarehouses, loadSalesCenters, loadSalesTypes, loadDeliveryLocations]);
 
   const mapEntityToForm = (data: any): Record<string, any> => ({
     salesDocumentType: Number(data.SalesDocumentType),
@@ -274,6 +289,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
           value={selectedTypeOption}
           onChange={handleTypeChange}
           placeholder="انتخاب نوع سند فروش..."
+          onRefresh={loadDocumentTypes}
         />
       ),
     },
@@ -306,6 +322,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
               enableMultiSelection
               disabled={!formValues.hasBaseDocument}
               placeholder="انتخاب اسناد مبنا..."
+              onRefresh={loadBaseDocumentTypes}
             />
           </div>
         </div>
@@ -341,6 +358,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
               }
               disabled={!formValues.showWarehouse}
               placeholder="انتخاب انبار پیش فرض..."
+              onRefresh={loadWarehouses}
             />
           </div>
         </div>
@@ -377,6 +395,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
               }
               disabled={!formValues.showSalesCenter}
               placeholder="انتخاب مرکز فروش پیش فرض..."
+              onRefresh={loadSalesCenters}
             />
           </div>
         </div>
@@ -412,6 +431,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
               }
               disabled={!formValues.showSalesType}
               placeholder="انتخاب نوع فروش پیش فرض..."
+              onRefresh={loadSalesTypes}
             />
           </div>
         </div>
@@ -449,6 +469,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
               }
               disabled={!formValues.showDeliveryLocations}
               placeholder="انتخاب مکان تحویل پیش فرض..."
+              onRefresh={loadDeliveryLocations}
             />
           </div>
         </div>

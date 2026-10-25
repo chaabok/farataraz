@@ -156,6 +156,12 @@ interface MultiColumnDropdownProps<T> {
   filterItem?: (item: T) => boolean;
   defaultShowGlobalSearch?: boolean;
   defaultShowColumnFilters?: boolean;
+  /**
+   * Task 70: اختیاری — در حالت data-mode (بدون listApiUrl) والد با این کال‌بک
+   * فهرست خود را دوباره واکشی می‌کند. هر بار پنل باز شود و همچنین با کلیک روی
+   * دکمه بروزرسانی پنل فراخوانی می‌شود تا بدون بستن فرم، لیست تازه شود.
+   */
+  onRefresh?: () => void | Promise<void>;
 }
 
 const EMPTY_ARRAY: any[] = [];
@@ -197,7 +203,8 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
   onKeyDown,
   filterItem,
   defaultShowGlobalSearch = false,
-  defaultShowColumnFilters = true
+  defaultShowColumnFilters = true,
+  onRefresh
 }: MultiColumnDropdownProps<T>, ref: React.ForwardedRef<MultiColumnDropdownRef>) {
   const { addTab, activeTabId } = useTabs();
   const listApiUrl = listApiUrlProp || apiEndpoint;
@@ -478,9 +485,50 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
     }
   };
 
+  // Task 70: رفرش خودکار لیست هر بار پنل باز می‌شود (بدون نیاز به بستن فرم).
+  // حالت API: صفحه اول دوباره واکشی می‌شود؛ حالت data-mode: onRefresh والد صدا زده می‌شود.
+  const wasOpenRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const listApiUrlRef = useRef(listApiUrl);
+  const isOpenRef = useRef(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+
+  // همگام‌سازی refها در effect (نه حین رندر)
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+    listApiUrlRef.current = listApiUrl;
+  });
+
+  const runDataRefresh = async () => {
+    const fn = onRefreshRef.current;
+    if (!fn) return;
+    setIsRefreshingData(true);
+    try {
+      await fn();
+    } catch (err) {
+      console.error('onRefresh failed:', err);
+    } finally {
+      setIsRefreshingData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      if (listApiUrlRef.current) {
+        fetchPage(1, true);
+      } else {
+        runDataRefresh();
+      }
+    }
+    wasOpenRef.current = isOpen;
+    isOpenRef.current = isOpen;
+  }, [isOpen, listApiUrl]);
+
+  // واکشی اولیه فقط وقتی پنل بسته است (رفع ابهام متن ورودی از روی داده‌ها).
+  // وقتی پنل باز است، effect بالا مسئول واکشی تازه است تا دوباره‌کاری نشود.
   useEffect(() => {
     const hasValue = Array.isArray(value) ? value.length > 0 : (value !== undefined && value !== null && (value as any) !== '');
-    if ((isOpen || hasValue) && listApiUrl && !hasFetched) {
+    if (!isOpen && hasValue && listApiUrl && !hasFetched) {
       fetchPage(1, true);
     }
   }, [isOpen, value, listApiUrl, hasFetched]);
@@ -749,14 +797,16 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
     setVisibleCount(pageSize);
   }, [searchQuery, sortConfig, pageSize]);
 
-  // Debounced server-side fetching when search/sort/filters change
+  // Debounced server-side fetching when search/sort/filters change.
+  // Task 70: «isOpen» از وابستگی‌ها حذف شد (با isOpenRef کنترل می‌شود) تا با
+  // باز شدن پنل دوبار درخواست زده نشود — رفرشِ باز شدن را effect اختصاصی بالا انجام می‌دهد.
   useEffect(() => {
-    if (!listApiUrl || !isOpen) return;
+    if (!listApiUrl || !isOpenRef.current) return;
     const timer = setTimeout(() => {
       fetchPage(1, true);
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, columnFilters, sortConfig, listApiUrl, isOpen]);
+  }, [searchQuery, columnFilters, sortConfig, listApiUrl]);
 
   // Filtering
   const filteredData = useMemo(() => {
@@ -1253,8 +1303,11 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
     if (listApiUrl) {
       fetchPage(1, true, { searchQuery: '', columnFilters: {}, sortConfig: { key: '', direction: null } });
     } else {
+      // Task 70: در حالت data-mode بازسازی از props قدیمی کافی نیست —
+      // onRefresh والد صدا زده می‌شود تا داده واقعاً از سرور تازه شود.
       setInternalData(Array.isArray(data) ? data : []);
       setVisibleCount(pageSize);
+      runDataRefresh();
     }
   };
 
@@ -1787,8 +1840,11 @@ export const MultiColumnDropdown = React.forwardRef(function MultiColumnDropdown
                 icon={RotateCcw} 
                 variant="outline" 
                 hideLabel 
-                tooltip={'بازنشانی'}
+                tooltip={dir === 'rtl' ? 'بروزرسانی لیست' : 'Refresh list'}
                 tooltipPosition="top"
+                className={cn(
+                  (isLoadingApi || isRefreshingData) && 'animate-pulse opacity-70 pointer-events-none'
+                )}
               />
               <ActionButton 
                 onClick={() => setShowColumnFilters(!showColumnFilters)}

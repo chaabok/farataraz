@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SingleSelectDropDown, SingleSelectColumn, AddFormOption } from '@/components/inputs/SingleSelectDropDown';
 import { useLookupStore } from '@/lib/stores/lookupStore';
 import { useLanguage } from '@/components/Providers';
@@ -71,45 +71,48 @@ export function ReasonSingleDropDown({
   const { direction } = useLanguage();
   const { fetchLookup } = useLookupStore();
 
-  useEffect(() => {
-    // Fetch tree and flatten it, mapping parent info
-    const fetchData = async () => {
-      try {
-        const tree = await fetchLookup('rap-reasons-tree', '/api/rap/reasons/tree');
-        if (tree && Array.isArray(tree)) {
-          const flatList: ReasonItem[] = [];
+  // Task 70: واکشی/بروزرسانی فهرست بابت‌ها. با maxAgeMs = 0 کش lookupStore
+  // دور زده می‌شود تا هر بار پنل دراپ‌دان باز شود (یا دکمه بروزرسانی پنل
+  // کلیک شود) داده واقعاً از سرور تازه شود — بدون نیاز به بستن فرم.
+  const loadReasons = useCallback(async () => {
+    try {
+      const tree = await fetchLookup('rap-reasons-tree', '/api/rap/reasons/tree', 0);
+      if (tree && Array.isArray(tree)) {
+        const flatList: ReasonItem[] = [];
 
-          const flatten = (nodes: ReasonItem[], parentNode?: ReasonItem) => {
-            for (const node of nodes) {
-              const mappedNature = node.Nature === RAP_REASON_NATURE_ENUM.SOURCE ? 'منابع' : node.Nature === RAP_REASON_NATURE_ENUM.USE ? 'مصارف' : node.Nature === RAP_REASON_NATURE_ENUM.NEUTRAL ? 'خنثی' : '';
-              
-              const item = {
-                ...node,
-                id: node.RapReasonID.toString(),
-                ParentCode: parentNode?.Code || '',
-                ParentTitle: parentNode?.Title || '',
-                NatureLabel: mappedNature || '',
-              };
-              flatList.push(item);
-              if (node.children && node.children.length > 0) {
-                flatten(node.children, node);
-              }
+        const flatten = (nodes: ReasonItem[], parentNode?: ReasonItem) => {
+          for (const node of nodes) {
+            const mappedNature = node.Nature === RAP_REASON_NATURE_ENUM.SOURCE ? 'منابع' : node.Nature === RAP_REASON_NATURE_ENUM.USE ? 'مصارف' : node.Nature === RAP_REASON_NATURE_ENUM.NEUTRAL ? 'خنثی' : '';
+            
+            const item = {
+              ...node,
+              id: node.RapReasonID.toString(),
+              ParentCode: parentNode?.Code || '',
+              ParentTitle: parentNode?.Title || '',
+              NatureLabel: mappedNature || '',
+            };
+            flatList.push(item);
+            if (node.children && node.children.length > 0) {
+              flatten(node.children, node);
             }
-          };
-
-          flatten(tree);
-          if (filter) {
-            setData(flatList.filter(filter));
-          } else {
-            setData(flatList);
           }
+        };
+
+        flatten(tree);
+        if (filter) {
+          setData(flatList.filter(filter));
+        } else {
+          setData(flatList);
         }
-      } catch (err) {
-        console.error('Failed to fetch reasons:', err);
       }
-    };
-    fetchData();
+    } catch (err) {
+      console.error('Failed to fetch reasons:', err);
+    }
   }, [fetchLookup, filter]);
+
+  useEffect(() => {
+    loadReasons();
+  }, [loadReasons]);
 
   const columns: SingleSelectColumn[] = [
     { key: 'Code', label: 'کد', width: 80 },
@@ -137,6 +140,7 @@ export function ReasonSingleDropDown({
       disabled={disabled}
       onAdd={onAdd}
       addFormOptions={addFormOptions}
+      onRefresh={loadReasons}
     />
   );
 }

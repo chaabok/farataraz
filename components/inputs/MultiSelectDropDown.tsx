@@ -37,6 +37,11 @@ export interface MultiSelectDropDownProps<T = any> {
   alignVertical?: boolean;
   labelWidth?: string;
   onChange: (selected: T | T[] | null) => void;
+  /**
+   * Task 70: اختیاری — والد با این کال‌بک فهرست را دوباره واکشی می‌کند؛
+   * هر بار پنل باز شود و با کلیک روی دکمه بروزرسانی پنل فراخوانی می‌شود.
+   */
+  onRefresh?: () => void | Promise<void>;
 }
 
 export function MultiSelectDropDown<T extends Record<string, any>>({
@@ -54,11 +59,42 @@ export function MultiSelectDropDown<T extends Record<string, any>>({
   alignVertical = false,
   labelWidth,
   onChange,
+  onRefresh
 }: MultiSelectDropDownProps<T>) {
   const items = useMemo(() => data || options || [], [data, options]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState<T[]>([]);
+
+  // Task 70: رفرش خودکار لیست هر بار پنل باز می‌شود + دکمه بروزرسانی هدر پنل
+  const wasOpenRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // همگام‌سازی ref در effect (نه حین رندر) تا آخرین کال‌بک والد خوانده شود
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  });
+
+  const handleRefresh = async () => {
+    const fn = onRefreshRef.current;
+    if (!fn || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await fn();
+    } catch (err) {
+      console.error('onRefresh failed:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      handleRefresh();
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -293,6 +329,18 @@ export function MultiSelectDropDown<T extends Record<string, any>>({
                 <CheckSquare className="w-3.5 h-3.5 text-blue-500" />
                 <span>همه</span>
               </button>
+
+              {onRefresh && (
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+                  title="بروزرسانی لیست"
+                  aria-label="بروزرسانی لیست"
+                >
+                  <RotateCcw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin text-indigo-500")} />
+                </button>
+              )}
 
               <button
                 type="button"

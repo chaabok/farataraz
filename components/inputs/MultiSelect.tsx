@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, X, Check } from "lucide-react";
+import { ChevronDown, X, Check, RotateCcw } from "lucide-react";
 import { FormFieldWrapper } from "./FormFieldWrapper";
 import { cn } from "@/lib/utils";
 
@@ -20,11 +20,46 @@ interface MultiSelectProps {
   placeholder?: string;
   labelWidth?: string;
   alignVertical?: boolean;
+  /**
+   * Task 70: اختیاری — والد با این کال‌بک فهرست را دوباره واکشی می‌کند؛
+   * هر بار پنل باز شود و با کلیک روی دکمه بروزرسانی فراخوانی می‌شود.
+   */
+  onRefresh?: () => void | Promise<void>;
 }
 
-export function MultiSelect({ label, values, onChange, options, required, error, placeholder, labelWidth, alignVertical }: MultiSelectProps) {
+export function MultiSelect({ label, values, onChange, options, required, error, placeholder, labelWidth, alignVertical, onRefresh }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Task 70: رفرش خودکار لیست هر بار پنل باز می‌شود + دکمه بروزرسانی پنل
+  const wasOpenRef = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // همگام‌سازی ref در effect (نه حین رندر)
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  });
+
+  const handleRefresh = async () => {
+    const fn = onRefreshRef.current;
+    if (!fn || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await fn();
+    } catch (err) {
+      console.error('onRefresh failed:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      handleRefresh();
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,6 +111,19 @@ export function MultiSelect({ label, values, onChange, options, required, error,
 
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-800 rounded-lg shadow-xl py-1 animate-in fade-in zoom-in duration-200">
+            {onRefresh && (
+              <div className="flex justify-end px-2 pt-1 pb-1 border-b border-gray-100 dark:border-slate-700/60 mb-1">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors"
+                  title="بروزرسانی لیست"
+                  aria-label="بروزرسانی لیست"
+                >
+                  <RotateCcw className={cn("w-3.5 h-3.5", isRefreshing && "animate-spin text-indigo-500")} />
+                </button>
+              </div>
+            )}
             {options.map(opt => {
               const checked = values.includes(opt.value);
               return (

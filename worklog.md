@@ -1081,3 +1081,31 @@ Work Log:
 
 Stage Summary:
 - فرم تنظیمات اسناد فروش بازطراحی شد: «سند مبنا» حالا همیشه در ردیف اول کنار «دارای سند مبنا» است (سلول ترکیبی چک‌باکس+دراپ‌دان) و با کامپوننت MultiColumnDropdown رندر می‌شود (پنل چندستونه با فیلتر/جستجو و commit خودکار انتخاب چندگانه هنگام بستن). هر چهار جفت «چک‌باکس نمایش + دراپ‌دان پیش‌فرض» (انبار، مرکز فروش، نوع فروش، مکان‌های تحویل) کنار هم و همیشه قابل مشاهده‌اند؛ دراپ‌دان تا زمانی که چک‌باکس تیک نشده غیرفعال است و با برداشتن تیک مقدارش پاک می‌شود. رفتار ذخیره‌سازی و payload تغییر نکرد.
+
+---
+Task ID: 70
+Agent: main (Z.ai Code)
+Task: «در کامپوننت‌های GeoLocationDropDown/MegaMenuInput/MultiColumnDropdown/MultiColumnDropdownNewButton/MultiSelect/MultiSelectDropDown/ReasonSingleDropDown — ۱) با باز کردن دراپ‌دان (بدون بستن فرم) لیست بروزرسانی شود ۲) دکمه بروزرسانی که هیچ اکشنی ندارد درست شود تا کاربر بصورت دستی هم لیست را بروزرسانی کند»
+
+Work Log:
+- ریشه‌یابی: دو موتور پنل (SingleSelectDropDown و MultiColumnDropdown) فقط بار اول واکشی می‌کردند (شرط hasFetched) و در باز شدن‌های بعدی لیست کهنه می‌ماند؛ در حالت data-mode (والد با props.data بدون listApiUrl — مثل هر ۶ دراپ‌دان فرم تنظیمات اسناد فروش) هیچ سازوکار رفرشی وجود نداشت و دکمه RotateCcw پنل («بازنشانی») در این حالت فقط همان props قدیمی را دوباره کپی می‌کرد = عملاً بدون اثر. ReasonSingleDropDown هم به کش ۵ دقیقه‌ای lookupStore وابسته بود.
+- الگوی واحد جدید — prop اختیاری onRefresh: (() => void|Promise<void>) در هر ۷ کامپوننت؛ رفرش خودکار: effect ترنزیشن isOpen (با wasOpenRef) هر بار پنل باز شود → حالت API: fetchPage(1, true) فوری، حالت data-mode: اجرای onRefresh والد. دکمه بروزرسانی: همان دکمه RotateCcw پنل (tooltip از «بازنشانی» به «بروزرسانی لیست» تغییر کرد) در handleReset حالت data-mode هم onRefresh را صدا می‌زند؛ هنگام بارگذاری کلاس animate-pulse می‌گیرد.
+- حذف درخواست دوباره هنگام باز شدن: effect debounced جستجو (که قبلاً با isOpen در deps بعد از هر باز شدن ۴۰۰ms بعد دوباره fetch می‌کرد) isOpen از deps حذف و با isOpenRef کنترل می‌شود؛ effect واکشی اولیه به «فقط وقتی پنل بسته است» (prefetch/رفع ابهام متن) محدود شد — نتیجه: دقیقاً یک درخواست تازه به ازای هر باز شدن. sync refها در effect انجام می‌شود (نه حین رندر) برای رعایت rule جدید react-hooks/refs.
+- SingleSelectDropDown و MultiColumnDropdown: هر سه تغییر بالا + onRefresh در handleReset.
+- MultiSelectDropDown: دکمه بروزرسانی جدید (RotateCcw با اسپین isRefreshing) در هدر پنل کنار «همه/تایید» (فقط وقتی onRefresh پاس داده شده باشد) + رفرش خودکار روی باز شدن.
+- MultiSelect: دکمه بروزرسانی کوچک در بالای پنل + رفرش خودکار روی باز شدن.
+- MegaMenuInput: دکمه بروزرسانی در هدر پاپ‌اور کنار «بستن» + رفرش خودکار روی باز شدن (حالت controlled و داخلی هر دو، از طریق effect روی isOpened).
+- ReasonSingleDropDown: منطق واکشی به loadReasons (useCallback) منتقل شد؛ fetchLookup با maxAgeMs=0 کش lookupStore را دور می‌زند؛ به‌عنوان onRefresh به SingleSelectDropDown داخلی پاس شد → رفرش خودکار روی باز شدن + دکمه پنل.
+- GeoLocationDropDown: passthrough prop onRefresh به SingleSelectDropDown (حالت پیش‌فرض API آن قبلاً با موتور جدید رفرش می‌شود).
+- MultiColumnDropdownNewButton: تغییر کد لازم نداشت — جریان «تعریف جدید (+) → ذخیره در تب جدید → بازگشت به فرم بدون بستن → باز کردن دراپ‌دان» اکنون توسط رفرش خودکارِ روی باز شدنِ دراپ‌دان میزبان پوشش داده می‌شود.
+- SalesDocumentSettings.tsx (فرم اسکرین‌شات کاربر): واکشی‌ها به کال‌بک‌های پایدار useCallback تبدیل شد (loadDocumentTypes/loadBaseDocumentTypes/loadWarehouses/loadSalesCenters/loadSalesTypes/loadDeliveryLocations) و به هر ۶ دراپ‌دان به‌عنوان onRefresh پاس داده شد.
+- eslint روی هر ۸ فایل = 0 خطا؛ tsc کل پروژه قبل/بعد از تغییرات = همان ۳۹۴۲ خطای قدیمی (صفر خطای جدید)؛ بک‌اند دست نخورد.
+- E2E کامل (agent-browser، admin/1234):
+  • data-mode (تنظیمات اسناد فروش ← نمایش مرکز فروش): پنل «مرکز فروش پیش فرض» = «۱ مورد (فروش زاهدان)»؛ با API مرکز فروش تستی ساخته شد (بدون بستن فرم) → بستن/باز کردن پنل → «۲ مورد» و ردیف «تست مرکز موقت T70» visible (اسکرین‌شات t70-panel-2rows.png) = رفرش خودکار ✓؛ رکورد تستی با API حذف شد → کلیک دکمه RotateCcw پنل (بدون بستن پنل/فرم) → «۱ مورد» = رفرش دستی ✓.
+  • API-mode (فرم مشتری ← کانال‌های فروش، MultiColumnDropDown با listApiUrl): باز شدن مجدد پنل → GET جدید /api/sle/sales-channels (شمارش شبکه ۳→۴) و کانال تازه ایجادشده بلافاصله در پنل ✓؛ حذف via API → کلیک rotate-ccw فوتر → GET جدید (۴→۷ شامل دوباره‌fetch ناشی از reset جستجو) و پنل باز ماند با داده تازه ✓.
+  • data-mode «نوع سند فروش» با onRefresh اختصاصی: باز شدن → GET جدید document-types (۴→۵) و ۷ ردیف ✓.
+  • page errors = 0 (فقط warning قدیمی عرض ۰ داشبورد).
+- پاک‌سازی: مرکز فروش و کانال فروش تستی از DB حذف شدند (COUNT هر دو = ۱)، تیک نمایش مرکز فروش برداشته شد، تب مشتری بسته شد. /tmp/t70token.txt وابستگی تست.
+
+Stage Summary:
+- همه دراپ‌دان‌های خانواده (SingleSelectDropDown، MultiColumnDropdown، MultiSelectDropDown، MultiSelect، MegaMenuInput، ReasonSingleDropDown، GeoLocationDropDown) اکنون هر بار که پنل‌شان باز می‌شود فهرست را از سرور تازه می‌کنند — بدون نیاز به بستن فرم؛ حالت API با واکشی مجدد صفحه اول و حالت data-mode با کال‌بک onRefresh والد (در فرم تنظیمات اسناد فروش هر ۶ فهرست سیم‌کشی شد). دکمه گرد پنل هم که قبلاً در حالت data-mode بی‌اثر بود، حالا واقعاً لیست را بروزرسانی می‌کند (tooltip: «بروزرسانی لیست») و هنگام درخواست pulse می‌زند. برای کامپوننت‌های جدید هم prop onRefresh آماده است (MultiSelectDropDown فعلاً جایی استفاده نمی‌شود، MultiSelect و MegaMenuInput فعلاً فقط داده ثابت می‌گیرند).
