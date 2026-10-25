@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SimpleFormTwoRow, FieldConfig } from '../SimpleFormTwoRow';
 import { CheckBoxRightLabel } from '@/components/inputs/CheckBoxRightLabel';
 import { SingleSelectDropDown } from '@/components/inputs/SingleSelectDropDown';
-import { MultiSelectDropDown } from '@/components/inputs/MultiSelectDropDown';
+import { MultiColumnDropDown } from '@/components/inputs/MultiColumnDropdown';
 import { useToast } from '../../ToastProvider';
 import { apiFetch } from '@/lib/utils';
 import { FileText } from 'lucide-react';
@@ -278,207 +278,182 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
       ),
     },
     {
+      // «دارای سند مبنا» + «سند مبنا» کنار هم — همیشه در ردیف اول؛ دراپ‌دان تا تیک شدن غیرفعال است
       name: 'hasBaseDocument',
       type: 'custom',
       colSpan: 1,
       customComponent: (
-        <CheckBoxRightLabel
-          label="دارای سند مبنا"
-          checked={!!formValues.hasBaseDocument}
-          onChange={(checked) => handleFormChange('hasBaseDocument', checked)}
-        />
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            label="دارای سند مبنا"
+            checked={!!formValues.hasBaseDocument}
+            onChange={(checked) => handleFormChange('hasBaseDocument', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <MultiColumnDropDown
+              data={baseDocTypes}
+              columns={[
+                { key: 'id', label: 'کد', width: 60 },
+                { key: 'title', label: 'عنوان', width: 160 },
+              ]}
+              displayKey="title"
+              value={selectedBaseDocOptions}
+              onChange={(selected: any) => {
+                const arr = Array.isArray(selected) ? selected : selected ? [selected] : [];
+                handleFormChange('baseDocumentTypes', arr.map((d: any) => Number(d.id)));
+              }}
+              enableMultiSelection
+              disabled={!formValues.hasBaseDocument}
+              placeholder="انتخاب اسناد مبنا..."
+            />
+          </div>
+        </div>
       ),
     },
-    ...(formValues.hasBaseDocument
-      ? [
-          {
-            name: 'baseDocumentTypes',
-            label: 'سند مبنا',
-            type: 'custom' as const,
-            colSpan: 1,
-            customComponent: (
-              <MultiSelectDropDown
-                data={baseDocTypes}
-                columns={[
-                  { key: 'id', label: 'کد', width: 60 },
-                  { key: 'title', label: 'عنوان', width: 160 },
-                ]}
-                valueKey="id"
-                displayKey="title"
-                value={selectedBaseDocOptions}
-                onChange={(selected: any) => {
-                  const arr = Array.isArray(selected) ? selected : selected ? [selected] : [];
-                  handleFormChange('baseDocumentTypes', arr.map((d: any) => Number(d.id)));
-                }}
-                placeholder="انتخاب اسناد مبنا..."
-              />
-            ),
-          },
-        ]
-      : []),
     {
+      // «نمایش انبار» + «انبار پیش فرض» کنار هم — دراپ‌دان تا تیک شدن غیرفعال است
       name: 'showWarehouse',
       type: 'custom',
       colSpan: 1,
       customComponent: (
-        <CheckBoxRightLabel
-          label="نمایش انبار"
-          checked={!!formValues.showWarehouse}
-          onChange={(checked) => handleFormChange('showWarehouse', checked)}
-        />
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            label="نمایش انبار"
+            checked={!!formValues.showWarehouse}
+            onChange={(checked) => handleFormChange('showWarehouse', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <SingleSelectDropDown
+              data={warehouses}
+              columns={[
+                { key: 'WarehouseCode', label: 'کد', width: 70 },
+                { key: 'WarehouseTitle', label: 'عنوان انبار', width: 170 },
+              ]}
+              valueKey="WarehouseID"
+              displayKey="WarehouseTitle"
+              value={
+                warehouses.find((w) => Number(w.WarehouseID) === Number(formValues.defaultWarehouseRef)) || null
+              }
+              onChange={(item: any) =>
+                handleFormChange('defaultWarehouseRef', item ? Number(item.WarehouseID) : null)
+              }
+              disabled={!formValues.showWarehouse}
+              placeholder="انتخاب انبار پیش فرض..."
+            />
+          </div>
+        </div>
       ),
     },
-    ...(formValues.showWarehouse
-      ? [
-          {
-            name: 'defaultWarehouseRef',
-            label: 'انبار پیش فرض',
-            type: 'custom' as const,
-            colSpan: 1,
-            customComponent: (
-              <SingleSelectDropDown
-                data={warehouses}
-                columns={[
-                  { key: 'WarehouseCode', label: 'کد', width: 70 },
-                  { key: 'WarehouseTitle', label: 'عنوان انبار', width: 170 },
-                ]}
-                valueKey="WarehouseID"
-                displayKey="WarehouseTitle"
-                value={
-                  warehouses.find((w) => Number(w.WarehouseID) === Number(formValues.defaultWarehouseRef)) || null
-                }
-                onChange={(item: any) =>
-                  handleFormChange('defaultWarehouseRef', item ? Number(item.WarehouseID) : null)
-                }
-                placeholder="انتخاب انبار پیش فرض..."
-              />
-            ),
-          },
-        ]
-      : []),
     {
+      // «نمایش مرکز فروش» + «مرکز فروش پیش فرض» کنار هم
       name: 'showSalesCenter',
       type: 'custom',
       colSpan: 1,
       customComponent: (
-        <CheckBoxRightLabel
-          label="نمایش مرکز فروش"
-          checked={!!formValues.showSalesCenter}
-          onChange={(checked) => handleFormChange('showSalesCenter', checked)}
-        />
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            label="نمایش مرکز فروش"
+            checked={!!formValues.showSalesCenter}
+            onChange={(checked) => handleFormChange('showSalesCenter', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <SingleSelectDropDown
+              data={salesCenters}
+              columns={[
+                { key: 'Code', label: 'کد', width: 70 },
+                { key: 'Title', label: 'عنوان مرکز فروش', width: 170 },
+              ]}
+              valueKey="SalesCenterID"
+              displayKey="Title"
+              value={
+                salesCenters.find((c) => Number(c.SalesCenterID) === Number(formValues.defaultSalesCenterRef)) ||
+                null
+              }
+              onChange={(item: any) =>
+                handleFormChange('defaultSalesCenterRef', item ? Number(item.SalesCenterID) : null)
+              }
+              disabled={!formValues.showSalesCenter}
+              placeholder="انتخاب مرکز فروش پیش فرض..."
+            />
+          </div>
+        </div>
       ),
     },
-    ...(formValues.showSalesCenter
-      ? [
-          {
-            name: 'defaultSalesCenterRef',
-            label: 'مرکز فروش پیش فرض',
-            type: 'custom' as const,
-            colSpan: 1,
-            customComponent: (
-              <SingleSelectDropDown
-                data={salesCenters}
-                columns={[
-                  { key: 'Code', label: 'کد', width: 70 },
-                  { key: 'Title', label: 'عنوان مرکز فروش', width: 170 },
-                ]}
-                valueKey="SalesCenterID"
-                displayKey="Title"
-                value={
-                  salesCenters.find((c) => Number(c.SalesCenterID) === Number(formValues.defaultSalesCenterRef)) ||
-                  null
-                }
-                onChange={(item: any) =>
-                  handleFormChange('defaultSalesCenterRef', item ? Number(item.SalesCenterID) : null)
-                }
-                placeholder="انتخاب مرکز فروش پیش فرض..."
-              />
-            ),
-          },
-        ]
-      : []),
     {
+      // «نمایش نوع فروش» + «نوع فروش پیش فرض» کنار هم
       name: 'showSalesType',
       type: 'custom',
       colSpan: 1,
       customComponent: (
-        <CheckBoxRightLabel
-          label="نمایش نوع فروش"
-          checked={!!formValues.showSalesType}
-          onChange={(checked) => handleFormChange('showSalesType', checked)}
-        />
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            label="نمایش نوع فروش"
+            checked={!!formValues.showSalesType}
+            onChange={(checked) => handleFormChange('showSalesType', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <SingleSelectDropDown
+              data={salesTypes}
+              columns={[
+                { key: 'Code', label: 'کد', width: 70 },
+                { key: 'Title', label: 'عنوان نوع فروش', width: 170 },
+              ]}
+              valueKey="SalesTypeID"
+              displayKey="Title"
+              value={
+                salesTypes.find((t) => Number(t.SalesTypeID) === Number(formValues.defaultSalesTypeRef)) || null
+              }
+              onChange={(item: any) =>
+                handleFormChange('defaultSalesTypeRef', item ? Number(item.SalesTypeID) : null)
+              }
+              disabled={!formValues.showSalesType}
+              placeholder="انتخاب نوع فروش پیش فرض..."
+            />
+          </div>
+        </div>
       ),
     },
-    ...(formValues.showSalesType
-      ? [
-          {
-            name: 'defaultSalesTypeRef',
-            label: 'نوع فروش پیش فرض',
-            type: 'custom' as const,
-            colSpan: 1,
-            customComponent: (
-              <SingleSelectDropDown
-                data={salesTypes}
-                columns={[
-                  { key: 'Code', label: 'کد', width: 70 },
-                  { key: 'Title', label: 'عنوان نوع فروش', width: 170 },
-                ]}
-                valueKey="SalesTypeID"
-                displayKey="Title"
-                value={
-                  salesTypes.find((t) => Number(t.SalesTypeID) === Number(formValues.defaultSalesTypeRef)) || null
-                }
-                onChange={(item: any) =>
-                  handleFormChange('defaultSalesTypeRef', item ? Number(item.SalesTypeID) : null)
-                }
-                placeholder="انتخاب نوع فروش پیش فرض..."
-              />
-            ),
-          },
-        ]
-      : []),
     {
+      // «نمایش مکان های تحویل» + «مکان تحویل پیش فرض» کنار هم
       name: 'showDeliveryLocations',
       type: 'custom',
       colSpan: 1,
       customComponent: (
-        <CheckBoxRightLabel
-          label="نمایش مکان های تحویل"
-          checked={!!formValues.showDeliveryLocations}
-          onChange={(checked) => handleFormChange('showDeliveryLocations', checked)}
-        />
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            label="نمایش مکان های تحویل"
+            checked={!!formValues.showDeliveryLocations}
+            onChange={(checked) => handleFormChange('showDeliveryLocations', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <SingleSelectDropDown
+              data={deliveryLocations}
+              columns={[
+                { key: 'Code', label: 'کد', width: 70 },
+                { key: 'Title', label: 'عنوان مکان تحویل', width: 170 },
+              ]}
+              valueKey="DeliveryLocationID"
+              displayKey="Title"
+              value={
+                deliveryLocations.find(
+                  (d) => Number(d.DeliveryLocationID) === Number(formValues.defaultDeliveryLocationRef)
+                ) || null
+              }
+              onChange={(item: any) =>
+                handleFormChange('defaultDeliveryLocationRef', item ? Number(item.DeliveryLocationID) : null)
+              }
+              disabled={!formValues.showDeliveryLocations}
+              placeholder="انتخاب مکان تحویل پیش فرض..."
+            />
+          </div>
+        </div>
       ),
     },
-    ...(formValues.showDeliveryLocations
-      ? [
-          {
-            name: 'defaultDeliveryLocationRef',
-            label: 'مکان تحویل پیش فرض',
-            type: 'custom' as const,
-            colSpan: 1,
-            customComponent: (
-              <SingleSelectDropDown
-                data={deliveryLocations}
-                columns={[
-                  { key: 'Code', label: 'کد', width: 70 },
-                  { key: 'Title', label: 'عنوان مکان تحویل', width: 170 },
-                ]}
-                valueKey="DeliveryLocationID"
-                displayKey="Title"
-                value={
-                  deliveryLocations.find(
-                    (d) => Number(d.DeliveryLocationID) === Number(formValues.defaultDeliveryLocationRef)
-                  ) || null
-                }
-                onChange={(item: any) =>
-                  handleFormChange('defaultDeliveryLocationRef', item ? Number(item.DeliveryLocationID) : null)
-                }
-                placeholder="انتخاب مکان تحویل پیش فرض..."
-              />
-            ),
-          },
-        ]
-      : []),
     {
       name: 'hasAccountingDocument',
       type: 'custom',
