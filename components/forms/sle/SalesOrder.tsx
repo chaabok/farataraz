@@ -21,6 +21,10 @@ import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
+import {
+  getCachedSalesDocumentSettings,
+  fetchSalesDocumentSettings,
+} from "@/lib/salesDocumentSettingsCache";
 import momentJalaali from "moment-jalaali";
 
 interface SalesOrderProps {
@@ -205,8 +209,17 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Task 67: تنظیمات سند فروش — تیک «نمایش پارامترهای خرید و فروش» تعیین می‌کند فوتر سه‌باکسه یا دو‌باکسه باشد
-  const [showPurchaseSales, setShowPurchaseSales] = useState(false);
-  const [defaultWarehouseRef, setDefaultWarehouseRef] = useState<number | null>(null);
+  // Task 71: مقداردهی اولیه همزمان از کش مشترک — تا باکس «عوامل سفارش» هماهنگ با بقیه باکس‌های فوتر
+  // (بدون پرش چیدمان از ۲ ستون به ۳ ستون) باز شود؛ settingsReady فقط وقتی false است که کش خالی باشد
+  // (اولین باز شدن پس از لود صفحه) و در این حالت کل فوتر تا رسیدن پاسخ یکجا رندر می‌شود.
+  const [showPurchaseSales, setShowPurchaseSales] = useState<boolean>(
+    () => !!getCachedSalesDocumentSettings(1)?.ShowPurchaseSalesParameters
+  );
+  const [defaultWarehouseRef, setDefaultWarehouseRef] = useState<number | null>(() => {
+    const ref = getCachedSalesDocumentSettings(1)?.DefaultWarehouseRef;
+    return ref != null && ref !== "" ? Number(ref) : null;
+  });
+  const [settingsReady, setSettingsReady] = useState<boolean>(() => getCachedSalesDocumentSettings(1) != null);
   const [parametersList, setParametersList] = useState<any[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
   const [selectedFactorIndex, setSelectedFactorIndex] = useState<number | null>(null);
@@ -336,19 +349,17 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       })
       .catch((err) => console.error("Error fetching settlement methods:", err));
 
-    // Task 67: تنظیمات سند سفارش فروش (SalesDocumentType = 1) — تیک نمایش پارامترهای خرید و فروش
-    apiFetch("/api/sle/sales-document-settings/by-type/1")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        const data = json?.data;
-        if (json?.success && data) {
-          setShowPurchaseSales(!!data.ShowPurchaseSalesParameters);
-          if (data.DefaultWarehouseRef != null && data.DefaultWarehouseRef !== "") {
-            setDefaultWarehouseRef(Number(data.DefaultWarehouseRef));
-          }
+    // Task 67 + 71: تنظیمات سند سفارش فروش (SalesDocumentType = 1) — تیک نمایش پارامترهای خرید و فروش
+    // واکشی از طریق کش مشترک: نتیجه در کش ذخیره می‌شود تا mountهای بعدی فوراً از کش بخوانند
+    fetchSalesDocumentSettings(1).then((data) => {
+      if (data) {
+        setShowPurchaseSales(!!data.ShowPurchaseSalesParameters);
+        if (data.DefaultWarehouseRef != null && data.DefaultWarehouseRef !== "") {
+          setDefaultWarehouseRef(Number(data.DefaultWarehouseRef));
         }
-      })
-      .catch((err) => console.error("Error fetching sales document settings:", err));
+      }
+      setSettingsReady(true);
+    });
 
     // Task 67: فهرست پارامترهای خرید و فروش (برای محاسبه خودکار مبلغ عوامل)
     apiFetch("/api/inv/purchase-sales-parameters")
@@ -1179,7 +1190,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                 {/* 2. فوتر: باکس‌های زیر جدول اقلام — Task 67
                     با تیک «نمایش پارامترهای خرید و فروش» در تنظیمات اسناد فروش: ۳ باکس (عوامل + گردش + مبالغ)
                     بدون تیک: ۲ باکس (گردش + مبالغ) */}
-                {!isFooterCollapsed && (
+                {/* Task 71: فوتر تا آماده شدن تنظیمات (کش یا پاسخ شبکه) یکجا رندر می‌شود تا هر ۳ باکس
+                    (عوامل سفارش + خلاصه گردش + مبالغ) هماهنگ با هم باز شوند و باکس عوامل دیرتر نپرد */}
+                {!isFooterCollapsed && settingsReady && (
                   <div className={`grid grid-cols-1 ${showPurchaseSales ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-2 w-full shrink-0 transition-all pt-0`}>
                     {/* ستون راست: عوامل سفارش (فقط با تیک نمایش پارامترهای خرید و فروش) */}
                     {showPurchaseSales && (

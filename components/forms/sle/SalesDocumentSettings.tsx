@@ -7,6 +7,10 @@ import { SingleSelectDropDown } from '@/components/inputs/SingleSelectDropDown';
 import { MultiColumnDropDown } from '@/components/inputs/MultiColumnDropdown';
 import { useToast } from '../../ToastProvider';
 import { apiFetch } from '@/lib/utils';
+import {
+  setCachedSalesDocumentSettings,
+  invalidateSalesDocumentSettingsCache,
+} from '@/lib/salesDocumentSettingsCache';
 import { FileText } from 'lucide-react';
 
 /** Fallback mirror of backend enum SalesDocumentType (id + Persian label) */
@@ -226,6 +230,9 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
         if (json.data && json.data.SalesDocumentSettingsID) {
           setCurrentId(json.data.SalesDocumentSettingsID);
         }
+        // Task 71: همگام‌سازی کش مشترک تنظیمات — تا فرم‌هایی مثل سفارش فروش که از کش می‌خوانند
+        // بلافاصله بعد از این ذخیره، مقدار تازه را بدون تاخیر رندر کنند
+        setCachedSalesDocumentSettings(Number(formValues.salesDocumentType), json.data || null);
         return true;
       }
       throw new Error(json.message || 'خطا در ذخیره‌سازی اطلاعات');
@@ -249,6 +256,8 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
       const res = await apiFetch(`/api/sle/sales-document-settings/${currentId}`, { method: 'DELETE' });
       if (res.ok) {
         showToast('تنظیمات سند فروش با موفقیت حذف شد.', 'success');
+        // Task 71: حذف رکورد از کش تا فرم‌های وابسته مقدار کهنه را نخوانند
+        invalidateSalesDocumentSettingsCache(Number(formValues.salesDocumentType));
         handleNew();
       } else {
         const json = await res.json();
