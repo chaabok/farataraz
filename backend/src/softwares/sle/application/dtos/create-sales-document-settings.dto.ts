@@ -51,6 +51,13 @@ export class CreateSalesDocumentSettingsDto {
 
   @IsOptional()
   @IsBoolean()
+  ShowSettlementMethod?: boolean;
+
+  @IsOptional()
+  DefaultSettlementMethodRef?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
   HasAccountingDocument?: boolean;
 
   @IsOptional()

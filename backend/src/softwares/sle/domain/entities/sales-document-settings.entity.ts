@@ -50,6 +50,13 @@ export class SalesDocumentSettings {
   @Column({ type: 'bigint', nullable: true })
   DefaultDeliveryLocationRef?: number;
 
+  // --- نمایش روش تسویه ---
+  @Column({ type: 'boolean', default: false })
+  ShowSettlementMethod!: boolean;
+
+  @Column({ type: 'bigint', nullable: true })
+  DefaultSettlementMethodRef?: number;
+
   // --- دارای سند حسابداری ---
   @Column({ type: 'boolean', default: false })
   HasAccountingDocument!: boolean;

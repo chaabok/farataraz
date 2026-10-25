@@ -71,6 +71,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
   const [salesCenters, setSalesCenters] = useState<any[]>([]);
   const [salesTypes, setSalesTypes] = useState<any[]>([]);
   const [deliveryLocations, setDeliveryLocations] = useState<any[]>([]);
+  const [settlementMethods, setSettlementMethods] = useState<any[]>([]);
 
   const parseList = (json: any): any[] => {
     const arr = json?.data ?? json;
@@ -116,6 +117,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
   const loadSalesCenters = useCallback(() => loadList('/api/sle/sales-centers', setSalesCenters), [loadList]);
   const loadSalesTypes = useCallback(() => loadList('/api/sle/sales-types', setSalesTypes), [loadList]);
   const loadDeliveryLocations = useCallback(() => loadList('/api/sle/delivery-locations', setDeliveryLocations), [loadList]);
+  const loadSettlementMethods = useCallback(() => loadList('/api/sle/settlement-methods', setSettlementMethods), [loadList]);
 
   // Load enum list from backend (single source of truth) + dropdown sources
   useEffect(() => {
@@ -127,9 +129,10 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
         loadSalesCenters(),
         loadSalesTypes(),
         loadDeliveryLocations(),
+        loadSettlementMethods(),
       ]);
     })();
-  }, [loadDocumentTypes, loadBaseDocumentTypes, loadWarehouses, loadSalesCenters, loadSalesTypes, loadDeliveryLocations]);
+  }, [loadDocumentTypes, loadBaseDocumentTypes, loadWarehouses, loadSalesCenters, loadSalesTypes, loadDeliveryLocations, loadSettlementMethods]);
 
   const mapEntityToForm = (data: any): Record<string, any> => ({
     salesDocumentType: Number(data.SalesDocumentType),
@@ -143,6 +146,8 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     defaultSalesTypeRef: data.DefaultSalesTypeRef != null ? Number(data.DefaultSalesTypeRef) : null,
     showDeliveryLocations: !!data.ShowDeliveryLocations,
     defaultDeliveryLocationRef: data.DefaultDeliveryLocationRef != null ? Number(data.DefaultDeliveryLocationRef) : null,
+    showSettlementMethod: !!data.ShowSettlementMethod,
+    defaultSettlementMethodRef: data.DefaultSettlementMethodRef != null ? Number(data.DefaultSettlementMethodRef) : null,
     hasAccountingDocument: !!data.HasAccountingDocument,
     showPurchaseSalesParameters: !!data.ShowPurchaseSalesParameters,
     isActive: data.IsActive !== false,
@@ -182,6 +187,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
       if (name === 'showSalesCenter' && !value) next.defaultSalesCenterRef = null;
       if (name === 'showSalesType' && !value) next.defaultSalesTypeRef = null;
       if (name === 'showDeliveryLocations' && !value) next.defaultDeliveryLocationRef = null;
+      if (name === 'showSettlementMethod' && !value) next.defaultSettlementMethodRef = null;
       return next;
     });
   };
@@ -214,6 +220,8 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
         DefaultSalesTypeRef: formValues.showSalesType ? formValues.defaultSalesTypeRef : null,
         ShowDeliveryLocations: Boolean(formValues.showDeliveryLocations),
         DefaultDeliveryLocationRef: formValues.showDeliveryLocations ? formValues.defaultDeliveryLocationRef : null,
+        ShowSettlementMethod: Boolean(formValues.showSettlementMethod),
+        DefaultSettlementMethodRef: formValues.showSettlementMethod ? formValues.defaultSettlementMethodRef : null,
         HasAccountingDocument: Boolean(formValues.hasAccountingDocument),
         ShowPurchaseSalesParameters: Boolean(formValues.showPurchaseSalesParameters),
         IsActive: Boolean(formValues.isActive),
@@ -486,6 +494,44 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
       ),
     },
     {
+      // «نمایش روش تسویه» + «روش تسویه پیش فرض» کنار هم — همان الگوی «نمایش نوع فروش»
+      name: 'showSettlementMethod',
+      label: 'نمایش روش تسویه',
+      type: 'custom',
+      colSpan: 1,
+      customComponent: (
+        <div className="flex items-center gap-2 w-full min-w-0">
+          <CheckBoxRightLabel
+            checked={!!formValues.showSettlementMethod}
+            onChange={(checked) => handleFormChange('showSettlementMethod', checked)}
+            className="shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <SingleSelectDropDown
+              data={settlementMethods}
+              columns={[
+                { key: 'Code', label: 'کد', width: 70 },
+                { key: 'Title', label: 'عنوان روش تسویه', width: 170 },
+              ]}
+              valueKey="SettlementMethodID"
+              displayKey="Title"
+              value={
+                settlementMethods.find(
+                  (s) => Number(s.SettlementMethodID) === Number(formValues.defaultSettlementMethodRef)
+                ) || null
+              }
+              onChange={(item: any) =>
+                handleFormChange('defaultSettlementMethodRef', item ? Number(item.SettlementMethodID) : null)
+              }
+              disabled={!formValues.showSettlementMethod}
+              placeholder="انتخاب روش تسویه پیش فرض..."
+              onRefresh={loadSettlementMethods}
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
       // چک‌باکس‌های ساده با برچسب فرم — از مسیر type:'checkbox' رندر می‌شوند تا
       // برچسب آن‌ها داخل .form-label-container قرار گیرد و با بقیه برچسب‌ها هم‌تراز شود
       name: 'hasAccountingDocument',
@@ -511,6 +557,7 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     { key: 'SalesDocumentTypeName', label: 'نوع سند فروش', width: 150 },
     { key: 'HasBaseDocument', label: 'دارای سند مبنا', width: 100, render: (item: any) => (item.HasBaseDocument ? 'بله' : 'خیر') },
     { key: 'ShowWarehouse', label: 'نمایش انبار', width: 90, render: (item: any) => (item.ShowWarehouse ? 'بله' : 'خیر') },
+    { key: 'ShowSettlementMethod', label: 'نمایش روش تسویه', width: 100, render: (item: any) => (item.ShowSettlementMethod ? 'بله' : 'خیر') },
     { key: 'HasAccountingDocument', label: 'دارای سند حسابداری', width: 120, render: (item: any) => (item.HasAccountingDocument ? 'بله' : 'خیر') },
     { key: 'IsActive', label: 'فعال', width: 70, render: (item: any) => (item.IsActive ? 'بله' : 'خیر') },
   ];

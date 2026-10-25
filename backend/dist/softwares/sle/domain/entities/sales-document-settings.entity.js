@@ -65,6 +65,14 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: false }),
     __metadata("design:type", Boolean)
+], SalesDocumentSettings.prototype, "ShowSettlementMethod", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
+    __metadata("design:type", Number)
+], SalesDocumentSettings.prototype, "DefaultSettlementMethodRef", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
 ], SalesDocumentSettings.prototype, "HasAccountingDocument", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: false }),

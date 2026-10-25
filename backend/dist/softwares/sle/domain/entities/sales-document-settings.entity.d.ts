@@ -11,6 +11,8 @@ export declare class SalesDocumentSettings {
     DefaultSalesTypeRef?: number;
     ShowDeliveryLocations: boolean;
     DefaultDeliveryLocationRef?: number;
+    ShowSettlementMethod: boolean;
+    DefaultSettlementMethodRef?: number;
     HasAccountingDocument: boolean;
     ShowPurchaseSalesParameters: boolean;
     IsActive: boolean;

@@ -11,6 +11,8 @@ export declare class CreateSalesDocumentSettingsDto {
     DefaultSalesTypeRef?: number | null;
     ShowDeliveryLocations?: boolean;
     DefaultDeliveryLocationRef?: number | null;
+    ShowSettlementMethod?: boolean;
+    DefaultSettlementMethodRef?: number | null;
     HasAccountingDocument?: boolean;
     ShowPurchaseSalesParameters?: boolean;
     IsActive?: boolean;

@@ -81,6 +81,7 @@ let SalesDocumentSettingsService = class SalesDocumentSettingsService {
         const defaultSalesCenterRef = dto.ShowSalesCenter ? dto.DefaultSalesCenterRef ?? null : null;
         const defaultSalesTypeRef = dto.ShowSalesType ? dto.DefaultSalesTypeRef ?? null : null;
         const defaultDeliveryLocationRef = dto.ShowDeliveryLocations ? dto.DefaultDeliveryLocationRef ?? null : null;
+        const defaultSettlementMethodRef = dto.ShowSettlementMethod ? dto.DefaultSettlementMethodRef ?? null : null;
         const existing = await this.repository.findByType(type, bsId);
         if (existing) {
             const updateData = {
@@ -94,6 +95,8 @@ let SalesDocumentSettingsService = class SalesDocumentSettingsService {
                 DefaultSalesTypeRef: defaultSalesTypeRef,
                 ShowDeliveryLocations: dto.ShowDeliveryLocations ?? false,
                 DefaultDeliveryLocationRef: defaultDeliveryLocationRef,
+                ShowSettlementMethod: dto.ShowSettlementMethod ?? false,
+                DefaultSettlementMethodRef: defaultSettlementMethodRef,
                 HasAccountingDocument: dto.HasAccountingDocument ?? false,
                 ShowPurchaseSalesParameters: dto.ShowPurchaseSalesParameters ?? false,
                 IsActive: dto.IsActive ?? true,
@@ -117,6 +120,8 @@ let SalesDocumentSettingsService = class SalesDocumentSettingsService {
             DefaultSalesTypeRef: defaultSalesTypeRef,
             ShowDeliveryLocations: dto.ShowDeliveryLocations ?? false,
             DefaultDeliveryLocationRef: defaultDeliveryLocationRef,
+            ShowSettlementMethod: dto.ShowSettlementMethod ?? false,
+            DefaultSettlementMethodRef: defaultSettlementMethodRef,
             HasAccountingDocument: dto.HasAccountingDocument ?? false,
             ShowPurchaseSalesParameters: dto.ShowPurchaseSalesParameters ?? false,
             IsActive: dto.IsActive ?? true,

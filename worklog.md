@@ -1241,3 +1241,23 @@ Work Log:
   • شبکه: فقط ۹ درخواست GET به sales-document-settings — هیچ POST/PUT/DELETE (بدون تغییر DB) ✓؛ page errors = 0.
 Stage Summary:
 - روش Form-Widest-Label اکنون در فرم تنظیمات اسناد فروش واقعاً اجرا می‌شود: هر ۹ فیلد برچسب فرم واقعی دارند و هوک useFormLabelAlignment (از قبل در SimpleFormTwoRow wired) پهنای پهن‌ترین برچسب (۱۷۶px) را به همه برچسب‌ها اعمال و ستون برچسب/ورودی‌ها را یکدست هم‌تراز می‌کند. رفتار ذخیره/لود/اعتبارسنجی بدون تغییر؛ فقط ساختار رندر برچسب‌ها اصلاح شد. اسکرین‌شات: .zscreenshots/t77-loaded-record.png
+
+---
+Task ID: 78
+Agent: main (Z.ai Code)
+Task: «توی تنظیمات اسناد فروش، فیلد نمایش روش تسویه و دراپ دان روش تسویه پیش فرض را همانند فیلدهای نمایش نوع فروش اضافه کنید»
+
+Work Log:
+- Backend (۳ فایل): SalesDocumentSettings entity دو ستون جدید ShowSettlementMethod (boolean default false) و DefaultSettlementMethodRef (bigint nullable) بعد از بلوک مکان های تحویل؛ CreateSalesDocumentSettingsDto فیلدهای اختیاری ShowSettlementMethod/DefaultSettlementMethodRef؛ service.upsert مقدار مشروط defaultSettlementMethodRef = ShowSettlementMethod ? ref : null و مپ در هر دو شاخه update/create. tsc بدون خطا.
+- DB: ALTER TABLE "Sle"."SalesDocumentSettings" ADD COLUMN IF NOT EXISTS دو ستون — تأیید با information_schema؛ backend با kill PID → server.js respawn خودکار (پورت 3005 بالا، new PID).
+- Frontend (SalesDocumentSettings.tsx): state settlementMethods + loadSettlementMethods callback (loadList '/api/sle/settlement-methods' — داده: SettlementMethodID/Code/Title) + افزودن به Promise.all و deps؛ DEFAULT_FORM_VALUES و mapEntityToForm و پاک‌سازی مشروط در handleFormChange و payload در handleSave؛ فیلد ترکیبی جدید «نمایش روش تسویه» + «روش تسویه پیش فرض» دقیقاً با الگوی «نمایش نوع فروش» (CheckBoxRightLabel بدون label + SingleSelectDropDown با ستون کد/عنوان، valueKey=SettlementMethodID، disabled تا تیک شدن، onRefresh) بعد از showDeliveryLocations؛ ستون «نمایش روش تسویه» در listColumns. eslint = 0.
+- E2E (agent-browser، نشست معتبر):
+  • فرم: 10 برچسب فرم واقعی، همگی 176px (شامل «نمایش روش تسویه :») — هم‌ترازی حفظ شد.
+  • انتخاب سفارش فروش → رکورد لود شد؛ چک‌باکس جدید false و دراپ‌دان «انتخاب روش تسویه پیش فرض...» disabled مطابق DB ✓
+  • تیک → دراپ‌دان فعال؛ کلیک فلش → پنل با «نقدی» (ID=4، تنها روش موجود) → انتخاب شد.
+  • ذخیره (دکمه SVG M4 4h13l4 4v12H4V4z) → DB: ShowSettlementMethod=true و DefaultSettlementMethodRef=4 و همه فیلدهای دیگر دست‌نخورده ✓
+  • Round-trip: reload صفحه → فرم → سفارش فروش → تیک true و مقدار «نقدی» و دراپ‌دان enabled دقیقاً از DB بازخوانی شد ✓
+  • بازگردانی داده کاربر: تیک برداشته → ذخیره → DB دقیقاً حالت اولیه (false/null، BaseDocumentTypes="0" و بقیه بدون تغییر) ✓
+  • page errors = 0؛ هر دو سرور 200؛ EADDRINUSE موجود در dev.log متعلق به سیکل بوت قدیمی است (در زمان تست هر دو سرویس سالم بودند).
+Stage Summary:
+- فرم تنظیمات اسناد فروش اکنون فیلد «نمایش روش تسویه» + دراپ‌دان «روش تسویه پیش فرض» را دقیقاً با الگوی «نمایش نوع فروش» دارد: تیک نمایش، دراپ‌دان روش تسویه پیش‌فرض را فعال می‌کند، انتخاب در ستون‌های جدید "Sle"."SalesDocumentSettings"."ShowSettlementMethod"/"DefaultSettlementMethodRef" ذخیره می‌شود، مقدار مشروط (تیک خاموش → ref خالی) هم در فرانت و هم در service اعمال است و در لیست رکوردها هم ستون نمایش داده می‌شود. داده کاربر پس از تست به حالت اولیه برگردانده شد؛ عامل ردیابی/سایر تنظیمات دست نخورد.

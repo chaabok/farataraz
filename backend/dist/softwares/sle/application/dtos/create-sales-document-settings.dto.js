@@ -77,6 +77,15 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
+], CreateSalesDocumentSettingsDto.prototype, "ShowSettlementMethod", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateSalesDocumentSettingsDto.prototype, "DefaultSettlementMethodRef", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
 ], CreateSalesDocumentSettingsDto.prototype, "HasAccountingDocument", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
