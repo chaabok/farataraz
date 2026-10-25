@@ -304,13 +304,14 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     },
     {
       // «دارای سند مبنا» + «سند مبنا» کنار هم — همیشه در ردیف اول؛ دراپ‌دان تا تیک شدن غیرفعال است
+      // برچسب از FieldConfig.label رندر می‌شود تا در هم‌ترازی Form-Widest-Label فرم شرکت کند
       name: 'hasBaseDocument',
+      label: 'دارای سند مبنا',
       type: 'custom',
       colSpan: 1,
       customComponent: (
         <div className="flex items-center gap-2 w-full min-w-0">
           <CheckBoxRightLabel
-            label="دارای سند مبنا"
             checked={!!formValues.hasBaseDocument}
             onChange={(checked) => handleFormChange('hasBaseDocument', checked)}
             className="shrink-0"
@@ -340,12 +341,12 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     {
       // «نمایش انبار» + «انبار پیش فرض» کنار هم — دراپ‌دان تا تیک شدن غیرفعال است
       name: 'showWarehouse',
+      label: 'نمایش انبار',
       type: 'custom',
       colSpan: 1,
       customComponent: (
         <div className="flex items-center gap-2 w-full min-w-0">
           <CheckBoxRightLabel
-            label="نمایش انبار"
             checked={!!formValues.showWarehouse}
             onChange={(checked) => handleFormChange('showWarehouse', checked)}
             className="shrink-0"
@@ -376,12 +377,12 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     {
       // «نمایش مرکز فروش» + «مرکز فروش پیش فرض» کنار هم
       name: 'showSalesCenter',
+      label: 'نمایش مرکز فروش',
       type: 'custom',
       colSpan: 1,
       customComponent: (
         <div className="flex items-center gap-2 w-full min-w-0">
           <CheckBoxRightLabel
-            label="نمایش مرکز فروش"
             checked={!!formValues.showSalesCenter}
             onChange={(checked) => handleFormChange('showSalesCenter', checked)}
             className="shrink-0"
@@ -413,12 +414,12 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     {
       // «نمایش نوع فروش» + «نوع فروش پیش فرض» کنار هم
       name: 'showSalesType',
+      label: 'نمایش نوع فروش',
       type: 'custom',
       colSpan: 1,
       customComponent: (
         <div className="flex items-center gap-2 w-full min-w-0">
           <CheckBoxRightLabel
-            label="نمایش نوع فروش"
             checked={!!formValues.showSalesType}
             onChange={(checked) => handleFormChange('showSalesType', checked)}
             className="shrink-0"
@@ -449,12 +450,12 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
     {
       // «نمایش مکان های تحویل» + «مکان تحویل پیش فرض» کنار هم
       name: 'showDeliveryLocations',
+      label: 'نمایش مکان های تحویل',
       type: 'custom',
       colSpan: 1,
       customComponent: (
         <div className="flex items-center gap-2 w-full min-w-0">
           <CheckBoxRightLabel
-            label="نمایش مکان های تحویل"
             checked={!!formValues.showDeliveryLocations}
             onChange={(checked) => handleFormChange('showDeliveryLocations', checked)}
             className="shrink-0"
@@ -485,40 +486,24 @@ export default function SalesDocumentSettingsForm({ tabId, recordId }: { tabId?:
       ),
     },
     {
+      // چک‌باکس‌های ساده با برچسب فرم — از مسیر type:'checkbox' رندر می‌شوند تا
+      // برچسب آن‌ها داخل .form-label-container قرار گیرد و با بقیه برچسب‌ها هم‌تراز شود
       name: 'hasAccountingDocument',
-      type: 'custom',
+      label: 'دارای سند حسابداری',
+      type: 'checkbox',
       colSpan: 1,
-      customComponent: (
-        <CheckBoxRightLabel
-          label="دارای سند حسابداری"
-          checked={!!formValues.hasAccountingDocument}
-          onChange={(checked) => handleFormChange('hasAccountingDocument', checked)}
-        />
-      ),
     },
     {
       name: 'showPurchaseSalesParameters',
-      type: 'custom',
+      label: 'نمایش پارامترهای خرید و فروش',
+      type: 'checkbox',
       colSpan: 1,
-      customComponent: (
-        <CheckBoxRightLabel
-          label="نمایش پارامترهای خرید و فروش"
-          checked={!!formValues.showPurchaseSalesParameters}
-          onChange={(checked) => handleFormChange('showPurchaseSalesParameters', checked)}
-        />
-      ),
     },
     {
       name: 'isActive',
-      type: 'custom',
+      label: 'فعال',
+      type: 'checkbox',
       colSpan: 1,
-      customComponent: (
-        <CheckBoxRightLabel
-          label="فعال"
-          checked={formValues.isActive !== false}
-          onChange={(checked) => handleFormChange('isActive', checked)}
-        />
-      ),
     },
   ];
 

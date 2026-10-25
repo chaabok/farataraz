@@ -1222,3 +1222,22 @@ Work Log:
 
 Stage Summary:
 - متد چیدمان/هم‌ترازی برچسب‌ها = «روش Form-Widest-Label» در هوک useFormLabelAlignment همراه ساختار سطر flex در FormFieldWrapper و تعریف declarative فیلدها در FieldConfig به‌طور کامل برای کاربر تشریح شد. کد دست‌نخورده ماند؛ بدون نیاز به commit.
+
+---
+Task ID: 77
+Agent: main (Z.ai Code)
+Task: «متد useFormLabelAlignment را در فرم تنظیم اسناد فروش اجرا کنید» — فعال‌سازی واقعی هم‌ترازی برچسب‌ها (Form-Widest-Label) در فرم تنظیمات اسناد فروش
+
+Work Log:
+- کشف مشکل: SalesDocumentSettings.tsx از SimpleFormTwoRow استفاده می‌کند که خودش در خط 222 useFormLabelAlignment را صدا می‌زند؛ اما چون تقریباً همه فیلدها type:'custom' و بدون FieldConfig.label بودند (برچسب‌ها داخل CheckBoxRightLabel رندر می‌شدند)، فقط ۱ عنصر .form-label-container در کل فرم وجود داشت و هوک عملاً چیزی برای هم‌ترازی نداشت.
+- راه‌حل: انتقال برچسب‌ها به FieldConfig.label تا وارد سیستم .form-label-container شوند:
+  • فیلدهای ترکیبی (دارای سند مبنا، نمایش انبار، نمایش مرکز فروش، نمایش نوع فروش، نمایش مکان های تحویل): label اضافه شد و CheckBoxRightLabel داخل customComponent بدون label (فقط چک‌باکس) + دراپ‌دان حفظ شد.
+  • چک‌باکس‌های ساده (دارای سند حسابداری، نمایش پارامترهای خرید و فروش، فعال): از type:'custom' به type:'checkbox' تبدیل شدند (مسیر Checkbox → FormFieldWrapper با برچسب فرم).
+- منطق handleFormChange/ذخیره/حذف/لود رکورد دست نخورد؛ eslint = 0 خطا.
+- E2E (agent-browser، admin/1234):
+  • فرم از جستجوی منو باز شد؛ count('.form-container .form-label-container') = 9 ✓
+  • هوک فعال: هر ۹ برچسب دقیقاً width=176px و minWidth=176px (پهن‌ترین برچسب «نمایش پارامترهای خرید و فروش :») — ستون برچسب یکنواخت و ورودی‌ها هم‌تراز عمودی (اسکرین‌شات t77-loaded-record.png).
+  • تعامل: تیک «نمایش انبار» → دراپ‌دان انبار پیش‌فرض از disabled به enabled ✓؛ کلیک فلش دراپ‌دان نوع سند → «سفارش فروش» انتخاب و رکورد واقعی از سرور لود شد (چک‌باکس‌ها از DB: hasBaseDocument/showSalesCenter/showSalesType/showDeliveryLocations/showPurchaseSalesParameters/isActive = true، بقیه false) ✓.
+  • شبکه: فقط ۹ درخواست GET به sales-document-settings — هیچ POST/PUT/DELETE (بدون تغییر DB) ✓؛ page errors = 0.
+Stage Summary:
+- روش Form-Widest-Label اکنون در فرم تنظیمات اسناد فروش واقعاً اجرا می‌شود: هر ۹ فیلد برچسب فرم واقعی دارند و هوک useFormLabelAlignment (از قبل در SimpleFormTwoRow wired) پهنای پهن‌ترین برچسب (۱۷۶px) را به همه برچسب‌ها اعمال و ستون برچسب/ورودی‌ها را یکدست هم‌تراز می‌کند. رفتار ذخیره/لود/اعتبارسنجی بدون تغییر؛ فقط ساختار رندر برچسب‌ها اصلاح شد. اسکرین‌شات: .zscreenshots/t77-loaded-record.png
