@@ -67,6 +67,7 @@ const settlement_method_repository_1 = require("./infrastructure/repositories/se
 const settlement_method_repository_interface_1 = require("./domain/repositories/settlement-method.repository.interface");
 const sales_order_entity_1 = require("./domain/entities/sales-order.entity");
 const sales_order_item_entity_1 = require("./domain/entities/sales-order-item.entity");
+const sales_order_factor_entity_1 = require("./domain/entities/sales-order-factor.entity");
 const sales_order_controller_1 = require("./presentation/controllers/sales-order.controller");
 const sales_order_service_1 = require("./application/services/sales-order.service");
 const core_module_1 = require("../../core/core.module");
@@ -92,6 +93,7 @@ exports.SleModule = SleModule = __decorate([
                 settlement_method_entity_1.SettlementMethod,
                 sales_order_entity_1.SalesOrder,
                 sales_order_item_entity_1.SalesOrderItem,
+                sales_order_factor_entity_1.SalesOrderFactor,
             ]),
             core_module_1.CoreModule,
             common_module_1.CommonModule,

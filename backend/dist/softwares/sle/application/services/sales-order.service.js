@@ -18,13 +18,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const sales_order_entity_1 = require("../../domain/entities/sales-order.entity");
 const sales_order_item_entity_1 = require("../../domain/entities/sales-order-item.entity");
+const sales_order_factor_entity_1 = require("../../domain/entities/sales-order-factor.entity");
 const id_generation_service_1 = require("../../../../core/services/id-generation.service");
 const request_context_service_1 = require("../../../../core/services/request-context.service");
 const typeorm_query_builder_1 = require("../../../../core/utils/typeorm-query-builder");
 let SalesOrderService = class SalesOrderService {
-    constructor(repository, itemRepository, idGenerationService, requestContextService) {
+    constructor(repository, itemRepository, factorRepository, idGenerationService, requestContextService) {
         this.repository = repository;
         this.itemRepository = itemRepository;
+        this.factorRepository = factorRepository;
         this.idGenerationService = idGenerationService;
         this.requestContextService = requestContextService;
     }
@@ -97,6 +99,10 @@ let SalesOrderService = class SalesOrderService {
         if (validItems.length > 0) {
             await this.saveItems(salesOrderId, validItems);
         }
+        const validFactors = (Array.isArray(dto.factors) ? dto.factors : []).filter((f) => f.FactorTitle && Number(f.Amount || 0) > 0);
+        if (validFactors.length > 0) {
+            await this.saveFactors(salesOrderId, validFactors);
+        }
         return this.findOne(salesOrderId);
     }
     async saveItems(salesOrderId, items) {
@@ -123,6 +129,19 @@ let SalesOrderService = class SalesOrderService {
         });
         await this.itemRepository.save(itemsToSave);
     }
+    async saveFactors(salesOrderId, factors) {
+        const startFactorId = await this.idGenerationService.generateNextIdBlock('SalesOrderFactors', factors.length);
+        const factorsToSave = factors.map((f, idx) => this.factorRepository.create({
+            SalesOrderFactorID: startFactorId + idx,
+            SalesOrderRef: salesOrderId,
+            RowNo: idx + 1,
+            FactorTitle: f.FactorTitle || null,
+            FactorType: Number(f.FactorType || 1),
+            Amount: Number(f.Amount || 0),
+            Description: f.Description || null,
+        }));
+        await this.factorRepository.save(factorsToSave);
+    }
     async findAll(query) {
         const { bsId, compId, fiscalYearId } = this.getScope();
         const qb = this.repository
@@ -147,7 +166,7 @@ let SalesOrderService = class SalesOrderService {
     async findOne(id) {
         const order = await this.repository.findOne({
             where: { SalesOrderID: id },
-            relations: ['items'],
+            relations: ['items', 'factors'],
         });
         if (!order) {
             throw new common_1.NotFoundException(`سفارش فروش با شناسه ${id} یافت نشد`);
@@ -178,11 +197,17 @@ let SalesOrderService = class SalesOrderService {
         if (validItems.length > 0) {
             await this.saveItems(id, validItems);
         }
+        await this.factorRepository.delete({ SalesOrderRef: id });
+        const validFactors = (Array.isArray(dto.factors) ? dto.factors : []).filter((f) => f.FactorTitle && Number(f.Amount || 0) > 0);
+        if (validFactors.length > 0) {
+            await this.saveFactors(id, validFactors);
+        }
         return this.findOne(id);
     }
     async remove(id) {
         const order = await this.findOne(id);
         await this.itemRepository.delete({ SalesOrderRef: id });
+        await this.factorRepository.delete({ SalesOrderRef: id });
         await this.repository.remove(order);
         return { success: true };
     }
@@ -192,7 +217,9 @@ exports.SalesOrderService = SalesOrderService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(sales_order_entity_1.SalesOrder)),
     __param(1, (0, typeorm_1.InjectRepository)(sales_order_item_entity_1.SalesOrderItem)),
+    __param(2, (0, typeorm_1.InjectRepository)(sales_order_factor_entity_1.SalesOrderFactor)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         id_generation_service_1.IdGenerationService,
         request_context_service_1.RequestContextService])

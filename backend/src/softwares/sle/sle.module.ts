@@ -58,6 +58,7 @@ import { SettlementMethodRepository } from './infrastructure/repositories/settle
 import { ISettlementMethodRepositoryToken } from './domain/repositories/settlement-method.repository.interface';
 import { SalesOrder } from './domain/entities/sales-order.entity';
 import { SalesOrderItem } from './domain/entities/sales-order-item.entity';
+import { SalesOrderFactor } from './domain/entities/sales-order-factor.entity';
 import { SalesOrderController } from './presentation/controllers/sales-order.controller';
 import { SalesOrderService } from './application/services/sales-order.service';
 import { CoreModule } from '../../core/core.module';
@@ -80,6 +81,7 @@ import { CommonModule } from '../common/common.module';
       SettlementMethod,
       SalesOrder,
       SalesOrderItem,
+      SalesOrderFactor,
     ]),
     CoreModule,
     CommonModule,

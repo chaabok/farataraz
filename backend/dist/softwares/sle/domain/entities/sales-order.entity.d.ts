@@ -1,5 +1,6 @@
 import { AppBaseEntity } from '../../../../core/entities/app-base.entity';
 import { SalesOrderItem } from './sales-order-item.entity';
+import { SalesOrderFactor } from './sales-order-factor.entity';
 export declare class SalesOrder extends AppBaseEntity {
     SalesOrderID: number;
     OrderNumber: number;
@@ -15,4 +16,5 @@ export declare class SalesOrder extends AppBaseEntity {
     Description?: string;
     FiscalYearRef?: number;
     items?: SalesOrderItem[];
+    factors?: SalesOrderFactor[];
 }

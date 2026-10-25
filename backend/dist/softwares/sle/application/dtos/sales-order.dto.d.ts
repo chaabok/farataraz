@@ -10,6 +10,13 @@ export declare class SalesOrderItemDto {
     Description?: any;
     trackingFactorValues?: any;
 }
+export declare class SalesOrderFactorDto {
+    RowNo?: any;
+    FactorTitle?: any;
+    FactorType?: any;
+    Amount?: any;
+    Description?: any;
+}
 export declare class CreateSalesOrderDto {
     OrderNumber?: any;
     OrderDate?: any;
@@ -23,6 +30,7 @@ export declare class CreateSalesOrderDto {
     Status?: any;
     Description?: any;
     items?: SalesOrderItemDto[];
+    factors?: SalesOrderFactorDto[];
 }
 export declare class UpdateSalesOrderDto extends CreateSalesOrderDto {
 }

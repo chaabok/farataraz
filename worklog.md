@@ -1390,3 +1390,27 @@ Work Log:
   • اسکرین‌شات: .zscreenshots/t84-order16-boxes.png، t84-new-form.png
 Stage Summary:
 - باکس خلاصه گردش فرم سفارش فروش اکنون بجای حواله‌های انبار، «آخرین سفارش فروش» و «آخرین سفارش فروش به مشتری» را در سطح سفارش نشان می‌دهد: تاریخ آخرین سفارش قبل از سند جاری، مقدار کالای انتخابی در آن و مبلغ کل آخرین سفارش؛ خود سند جاری مستثناست و با تغییر مشتری/کالا/تاریخ و ذخیره، باکس خودکار به‌روز می‌شود (حتی قبل از انتخاب کالا). باکس مبالغ بدون اسکرول و هر ۴ ردیف (جمع، اضافات، کسورات، جمع کل) همزمان قابل مشاهده است. سرور frontend نیز self-heal شد.
+
+---
+Task ID: 85
+Agent: main (Z.ai Code)
+Task: «همانند فرم رسید انبار در فرم سفارش فروش، تب های عوامل سفارش، خلاصه مبالغ و محاسبات و سایر اطلاعات را هم اضافه کنید. همان منطق را بررسی کنید و برای فرم سفارش فروش پیاده سازی کنید.»
+
+Work Log:
+- بررسی منطق رسید انبار: رسید ۴ تب پایینی دارد (اقلام / عوامل رسید با TabCellRow کامل / خلاصه مبالغ و محاسبات با کارت‌های محاسباتی / سایر اطلاعات با نشانگر «!») و عوامل در جدول Inv.WarehouseVouchersFactors ذخیره می‌شوند (فیلد در payload + relations در لود + delete/insert مجدد در آپدیت). سفارش فروش فقط تب اقلام داشت و values.factors آن فقط UI بود (در payload ذخیره نمی‌شد و در لود بارگذاری نمی‌شد).
+- Backend (۴ فایل):
+  • entity جدید sales-order-factor.entity.ts: جدول Sle.SalesOrderFactors (SalesOrderFactorID bigint PK، SalesOrderRef FK→SalesOrders CASCADE، RowNo، FactorTitle varchar200، FactorType int default 1، Amount numeric(18,4) default 0، Description varchar500) — کاملاً مشابه WarehouseReceiptFactor.
+  • sales-order.entity.ts: relation factors@OneToMany؛ sle.module.ts: ثبت SalesOrderFactor در forFeature.
+  • sales-order.dto.ts: SalesOrderFactorDto + فیلد factors در Create/Update DTO.
+  • sales-order.service.ts: saveFactors() با generateNextIdBlock('SalesOrderFactors')؛ create → ذخیره عوامل معتبر (FactorTitle && Amount>0 — همان فیلتر رسید)؛ update → delete+insert مجدد؛ findOne → relations ['items','factors']؛ remove → حذف عوامل.
+- مهاجرت اسکیما: DB_SYNCHRONIZE=false در .env است — جدول Sle.SalesOrderFactors با SQL مستقیم (pg) ساخته شد (بازسازی idempotent: CREATE TABLE IF NOT EXISTS + PK + FK ON DELETE CASCADE + ردیف Gnr.IDGeneration)؛ دقیقاً مطابق ساختار Inv.WarehouseVouchersFactors مرجع.
+- Frontend SalesOrder.tsx:
+  • factorsTabConfig: جدول کامل عوامل (ردیف بومی‌زبان / عنوان عامل با PurchaseSalesParameterDropDown + handleFactorParamSelect / نوع با رنگ سبز-اضافه و رز-کسر / مبلغ با NumberInput localizeDigits / توضیحات) + defaultValue: 1 برای FactorType و 0 برای Amount (رفع باگ: TabCellRow ردیف جدید را با FactorType='' می‌سازد و Number('')===1 نیست → جمع اضافات شمرده نمی‌شد).
+  • سه bottomTab جدید: «عوامل سفارش» (فقط با تیک نمایش پارامترهای خرید و فروش — فیلتر مشابه رسید)، «خلاصه مبالغ و محاسبات» (کارت‌های جمع کل اقلام / جمع اضافات عوامل / جمع کسورات عوامل / مبلغ خالص سفارش فروش + پنل وضعیت سند و ارزش نهایی کل — همه با formatLocalizedNumber و tabular-nums ادامه سیاست Task 83)، «سایر اطلاعات» (TextArea توضیحات + نشانگر «!» کهربایی و tabClassName وقتی توضیحات وارد شده باشد — hasOtherInfo).
+  • handleSave: factors در payload (فیلتر عنوان+مبلغ>0)؛ لود رکورد: mapping data.factors → values.factors؛ سایر اطلاعات همان values.Description را با هدر به اشتراک می‌گذارد (مانند رسید).
+- eslint = 0 خطا؛ tsc بک‌اند = موفق؛ backend بازسازی و ری‌استارت شد (dist/main.js).
+- API round-trip (روی سفارش آزمایشی خودم که بعداً DELETE شد — رکوردهای کاربر 8:1، 11:2، 14:3، 16:4 دست‌نخورده): POST با ۲ عامل → ذخیره ✓؛ GET → هر ۲ عامل برگشت ✓؛ PUT با ۱ عامل → جایگزینی کامل ✓؛ DELETE → CASCADE جدول عوامل خالی شد (COUNT=0) ✓؛ GET سفارش ۱۱ کاربر → factors:[] و آیتم‌ها سالم ✓.
+- E2E مرورگر (admin/1234، فقط GET — بدون ذخیره): فرم جدید = هر ۴ تب (اقلام سفارش فروش | عوامل سفارش | خلاصه مبالغ و محاسبات | سایر اطلاعات)؛ تب عوامل: افزودن ردیف، مبلغ ۵۰٬۰۰۰ (ارقام بومی)، تب خلاصه = جمع اضافات «+ ۵۰٬۰۰۰ ریال» و مبلغ خالص «۵۰٬۰۰۰ ریال» به‌روز شد ✓؛ لود رکورد شماره ۲ → نشانگر «!» تب سایر اطلاعات VISIBLE و توضیحات «باید سریع تحویل گردد» در هر دو textarea (هدر+تب) ✓؛ errors=0، console errors=0، شبکه فقط GET.
+- نکته داده: جدول پارامترهای خرید و فروش کاربر خالی است (پیش‌موجود؛ درپ‌داون عنوان عامل «اطلاعاتی یافت نشد» می‌دهد — در رسید انبار هم همین‌طور)؛ با تعریف پارامتر از دکمه «تعریف پارامترهای خرید و فروش جدید» پر می‌شود. ChunkLoadErrorهای اولیه نشست قبلی = artifact recompile بود؛ در نشست تازه صفر شد.
+Stage Summary:
+- فرم سفارش فروش اکنون ۴ تب پایینی دارد دقیقاً همانند رسید انبار: اقلام سفارش فروش (با فوتر سه‌باکسه قبلی)، عوامل سفارش (جدول کامل CRUD عوامل با انتخاب پارامتر و محاسبه خودکار مبلغ)، خلاصه مبالغ و محاسبات (کارت‌های مالی + وضعیت سند) و سایر اطلاعات (توضیحات با نشانگر هوشمند «!»). عوامل اکنون ماندگار شدند: جدول Sle.SalesOrderFactors + ذخیره در POST/PUT، بارگذاری در GET و حذف CASCADE — منطق عیناً مطابق عوامل رسید انبار. اسکرین‌شات‌ها: .zscreenshots/t85-factors-tab.png، t85-summary-tab.png، t85-other-info-tab.png، t85-summary-with-factor.png

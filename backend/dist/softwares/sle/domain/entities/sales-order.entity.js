@@ -13,6 +13,7 @@ exports.SalesOrder = void 0;
 const typeorm_1 = require("typeorm");
 const app_base_entity_1 = require("../../../../core/entities/app-base.entity");
 const sales_order_item_entity_1 = require("./sales-order-item.entity");
+const sales_order_factor_entity_1 = require("./sales-order-factor.entity");
 let SalesOrder = class SalesOrder extends app_base_entity_1.AppBaseEntity {
 };
 exports.SalesOrder = SalesOrder;
@@ -72,6 +73,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => sales_order_item_entity_1.SalesOrderItem, (item) => item.salesOrder, { cascade: true }),
     __metadata("design:type", Array)
 ], SalesOrder.prototype, "items", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => sales_order_factor_entity_1.SalesOrderFactor, (factor) => factor.salesOrder, { cascade: true }),
+    __metadata("design:type", Array)
+], SalesOrder.prototype, "factors", void 0);
 exports.SalesOrder = SalesOrder = __decorate([
     (0, typeorm_1.Entity)({ schema: 'Sle', name: 'SalesOrders' })
 ], SalesOrder);

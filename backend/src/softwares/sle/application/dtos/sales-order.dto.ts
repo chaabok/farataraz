@@ -34,6 +34,24 @@ export class SalesOrderItemDto {
   trackingFactorValues?: any;
 }
 
+// Task 85: ردیف عامل سفارش فروش (اضافات/کسورات) — همانند رسید انبار
+export class SalesOrderFactorDto {
+  @IsOptional()
+  RowNo?: any;
+
+  @IsOptional()
+  FactorTitle?: any;
+
+  @IsOptional()
+  FactorType?: any;
+
+  @IsOptional()
+  Amount?: any;
+
+  @IsOptional()
+  Description?: any;
+}
+
 export class CreateSalesOrderDto {
   @IsOptional()
   OrderNumber?: any;
@@ -73,6 +91,13 @@ export class CreateSalesOrderDto {
   @ValidateNested({ each: true })
   @Type(() => SalesOrderItemDto)
   items?: SalesOrderItemDto[];
+
+  // Task 85: عوامل سفارش فروش (اضافات/کسورات)
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SalesOrderFactorDto)
+  factors?: SalesOrderFactorDto[];
 }
 
 export class UpdateSalesOrderDto extends CreateSalesOrderDto {}

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { SalesOrder } from '../../domain/entities/sales-order.entity';
 import { SalesOrderItem } from '../../domain/entities/sales-order-item.entity';
+import { SalesOrderFactor } from '../../domain/entities/sales-order-factor.entity';
 import { CreateSalesOrderDto, UpdateSalesOrderDto } from '../dtos/sales-order.dto';
 import { IdGenerationService } from '../../../../core/services/id-generation.service';
 import { RequestContextService } from '../../../../core/services/request-context.service';
@@ -15,6 +16,9 @@ export class SalesOrderService {
     private readonly repository: Repository<SalesOrder>,
     @InjectRepository(SalesOrderItem)
     private readonly itemRepository: Repository<SalesOrderItem>,
+    // Task 85: عوامل سفارش فروش (اضافات/کسورات)
+    @InjectRepository(SalesOrderFactor)
+    private readonly factorRepository: Repository<SalesOrderFactor>,
     private readonly idGenerationService: IdGenerationService,
     private readonly requestContextService: RequestContextService,
   ) {}
@@ -101,6 +105,14 @@ export class SalesOrderService {
       await this.saveItems(salesOrderId, validItems);
     }
 
+    // Task 85: ذخیره عوامل سفارش فروش (اضافات/کسورات) — همانند رسید انبار
+    const validFactors = (Array.isArray(dto.factors) ? dto.factors : []).filter(
+      (f: any) => f.FactorTitle && Number(f.Amount || 0) > 0,
+    );
+    if (validFactors.length > 0) {
+      await this.saveFactors(salesOrderId, validFactors);
+    }
+
     return this.findOne(salesOrderId);
   }
 
@@ -129,6 +141,25 @@ export class SalesOrderService {
       });
     });
     await this.itemRepository.save(itemsToSave);
+  }
+
+  /**
+   * Task 85: ذخیره عوامل سفارش فروش — همانند رسید انبار (WarehouseVouchersFactors)
+   */
+  private async saveFactors(salesOrderId: number, factors: any[]): Promise<void> {
+    const startFactorId = await this.idGenerationService.generateNextIdBlock('SalesOrderFactors', factors.length);
+    const factorsToSave: SalesOrderFactor[] = factors.map((f, idx) =>
+      this.factorRepository.create({
+        SalesOrderFactorID: startFactorId + idx,
+        SalesOrderRef: salesOrderId,
+        RowNo: idx + 1,
+        FactorTitle: f.FactorTitle || null,
+        FactorType: Number(f.FactorType || 1),
+        Amount: Number(f.Amount || 0),
+        Description: f.Description || null,
+      }),
+    );
+    await this.factorRepository.save(factorsToSave);
   }
 
   /**
@@ -170,7 +201,8 @@ export class SalesOrderService {
   async findOne(id: number): Promise<SalesOrder> {
     const order = await this.repository.findOne({
       where: { SalesOrderID: id },
-      relations: ['items'],
+      // Task 85: relations عوامل نیز بارگذاری شوند (همانند رسید انبار)
+      relations: ['items', 'factors'],
     });
 
     if (!order) {
@@ -212,12 +244,23 @@ export class SalesOrderService {
       await this.saveItems(id, validItems);
     }
 
+    // Task 85: جایگزینی عوامل سفارش (حذف قبلی‌ها و درج دوباره) — همانند رسید انبار
+    await this.factorRepository.delete({ SalesOrderRef: id });
+    const validFactors = (Array.isArray(dto.factors) ? dto.factors : []).filter(
+      (f: any) => f.FactorTitle && Number(f.Amount || 0) > 0,
+    );
+    if (validFactors.length > 0) {
+      await this.saveFactors(id, validFactors);
+    }
+
     return this.findOne(id);
   }
 
   async remove(id: number): Promise<{ success: boolean }> {
     const order = await this.findOne(id);
     await this.itemRepository.delete({ SalesOrderRef: id });
+    // Task 85: حذف عوامل سفارش نیز هنگام حذف سند
+    await this.factorRepository.delete({ SalesOrderRef: id });
     await this.repository.remove(order);
     return { success: true };
   }

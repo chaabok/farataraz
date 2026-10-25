@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateSalesOrderDto = exports.CreateSalesOrderDto = exports.SalesOrderItemDto = void 0;
+exports.UpdateSalesOrderDto = exports.CreateSalesOrderDto = exports.SalesOrderFactorDto = exports.SalesOrderItemDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 class SalesOrderItemDto {
@@ -55,6 +55,29 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
 ], SalesOrderItemDto.prototype, "trackingFactorValues", void 0);
+class SalesOrderFactorDto {
+}
+exports.SalesOrderFactorDto = SalesOrderFactorDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderFactorDto.prototype, "RowNo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderFactorDto.prototype, "FactorTitle", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderFactorDto.prototype, "FactorType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderFactorDto.prototype, "Amount", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], SalesOrderFactorDto.prototype, "Description", void 0);
 class CreateSalesOrderDto {
 }
 exports.CreateSalesOrderDto = CreateSalesOrderDto;
@@ -109,6 +132,13 @@ __decorate([
     (0, class_transformer_1.Type)(() => SalesOrderItemDto),
     __metadata("design:type", Array)
 ], CreateSalesOrderDto.prototype, "items", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SalesOrderFactorDto),
+    __metadata("design:type", Array)
+], CreateSalesOrderDto.prototype, "factors", void 0);
 class UpdateSalesOrderDto extends CreateSalesOrderDto {
 }
 exports.UpdateSalesOrderDto = UpdateSalesOrderDto;

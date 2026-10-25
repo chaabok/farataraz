@@ -8,6 +8,7 @@ import { SingleSelectDropDown, SingleSelectColumn } from "@/components/inputs/Si
 import { MultiColumnDropDown, Column } from "@/components/inputs/MultiColumnDropdown";
 import { NumberInput } from "@/components/inputs/NumberInput";
 import { TextInput } from "@/components/inputs/TextInput";
+import { TextArea } from "@/components/inputs/TextArea";
 import { DateInput } from "@/components/inputs/DateInput";
 import { StateListInput, DocumentState, DocumentStateLabels } from "@/components/inputs/StateListInput";
 import { useTabs } from "@/components/TabsProvider";
@@ -16,7 +17,7 @@ import { SubUnitModal } from "@/components/inputs/SubUnitModal";
 import { TrackingFactorModal } from "@/components/forms/inv/TrackingFactorModal";
 import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
 import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
-import { Plus, Pencil, X } from "lucide-react";
+import { Calculator, Plus, Pencil, X } from "lucide-react";
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
@@ -573,6 +574,18 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               SettlementMethodRef: data.SettlementMethodRef ? Number(data.SettlementMethodRef) : "",
               Status: data.Status || DocumentState.InitialRegistration,
               Description: data.Description || "",
+              // Task 85: بارگذاری عوامل سفارش ذخیره‌شده (همانند رسید انبار)
+              factors:
+                Array.isArray(data.factors) && data.factors.length > 0
+                  ? data.factors.map((f: any, idx: number) => ({
+                      id: String(f.SalesOrderFactorID || idx + 1),
+                      RowNo: f.RowNo || idx + 1,
+                      FactorTitle: f.FactorTitle || "",
+                      FactorType: Number(f.FactorType || 1),
+                      Amount: Number(f.Amount || 0),
+                      Description: f.Description || "",
+                    }))
+                  : [],
               items:
                 Array.isArray(data.items) && data.items.length > 0
                   ? data.items.map((d: any, idx: number) => ({
@@ -705,6 +718,16 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       SettlementMethodRef: Number(values.SettlementMethodRef),
       Status: values.Status || DocumentState.InitialRegistration,
       Description: values.Description || "",
+      // Task 85: ذخیره عوامل سفارش فروش (اضافات/کسورات) — همانند رسید انبار فقط ردیف‌های دارای عنوان و مبلغ
+      factors: (values.factors || [])
+        .filter((f: any) => f.FactorTitle && Number(f.Amount || 0) > 0)
+        .map((f: any, idx: number) => ({
+          RowNo: idx + 1,
+          FactorTitle: f.FactorTitle,
+          FactorType: Number(f.FactorType || 1),
+          Amount: Number(f.Amount || 0),
+          Description: f.Description || "",
+        })),
       items: validItems.map((item: any, idx: number) => ({
         RowNo: idx + 1,
         ItemRef: Number(item.ItemRef),
@@ -1408,6 +1431,102 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
   ];
 
+  // ---------------------------------------------------------------------------
+  // Task 85: تب عوامل سفارش — جدول کامل عوامل (اضافات/کسورات) همانند «عوامل رسید»
+  // در فرم رسید انبار: ردیف / عنوان عامل / مبلغ (ریال) / توضیحات
+  // ---------------------------------------------------------------------------
+  const factorsTabConfig: TabCellConfig[] = [
+    {
+      name: "RowNo",
+      label: "ردیف",
+      type: "text",
+      width: "60px",
+      render: (_row, rowIndex) => (
+        <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400 tabular-nums">
+          {/* Task 83: ردیف با ارقام بومی زبان کاربر */}
+          {formatLocalizedNumber(rowIndex + 1, language)}
+        </span>
+      ),
+    },
+    {
+      name: "FactorTitle",
+      label: "عنوان عامل *",
+      type: "custom",
+      width: "300px",
+      render: (row, rowIndex) => (
+        <PurchaseSalesParameterDropDown
+          value={row?.FactorTitle || ""}
+          onChange={(selectedParam) => handleFactorParamSelect(selectedParam, rowIndex)}
+          placeholder="انتخاب عنوان عامل..."
+          disabled={isUsed}
+          noWrapper
+        />
+      ),
+    },
+    {
+      name: "FactorType",
+      label: "نوع",
+      type: "custom",
+      width: "110px",
+      // Task 85: ردیف جدید TabCellRow با FactorType خالی ساخته می‌شود — پیش‌فرض ۱ (اضافه)
+      // تا محاسبه جمع اضافات/کسورات درست کار کند (Number('')===1 نیست)
+      defaultValue: 1,
+      render: (row) => (
+        <span
+          className={`flex items-center justify-center w-full h-[25px] px-2 text-xs font-bold select-none ${
+            Number(row?.FactorType) === 2
+              ? "text-rose-600 dark:text-rose-400"
+              : "text-emerald-600 dark:text-emerald-400"
+          }`}
+        >
+          {Number(row?.FactorType) === 2 ? "کسر" : "اضافه"}
+        </span>
+      ),
+    },
+    {
+      name: "Amount",
+      label: "مبلغ (ریال) *",
+      type: "custom",
+      width: "187px",
+      defaultValue: 0,
+      render: (row, rowIndex) => (
+        <NumberInput
+          value={row?.Amount ?? 0}
+          thousandsSeparator={true}
+          localizeDigits
+          onChange={(newVal) => {
+            const updatedFactors = [...(values.factors || [])];
+            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
+            setValues((prev) => ({ ...prev, factors: updatedFactors }));
+          }}
+          disabled={isUsed}
+        />
+      ),
+    },
+    {
+      name: "Description",
+      label: "توضیحات",
+      type: "custom",
+      width: "250px",
+      render: (row, rowIndex) => (
+        <TextInput
+          value={row?.Description || ""}
+          onChange={(e: any) => {
+            const newVal = e?.target?.value !== undefined ? e.target.value : e;
+            const updatedFactors = [...(values.factors || [])];
+            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Description: newVal };
+            setValues((prev) => ({ ...prev, factors: updatedFactors }));
+          }}
+          placeholder="توضیحات عامل..."
+          disabled={isUsed}
+        />
+      ),
+    },
+  ];
+
+  // Task 85: نشانگر تب «سایر اطلاعات» — وقتی توضیحات وارد شده باشد علامت «!» نمایش داده می‌شود
+  const hasOtherInfo = Boolean(values.Description && String(values.Description).trim() !== "");
+
   return (
     <>
       <SimpleFormTwoRowTabbed
@@ -1696,7 +1815,153 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               </div>
             ),
           },
-        ]}
+          {
+            // -----------------------------------------------------------------
+            // Task 85: تب «عوامل سفارش» — جدول کامل عوامل همانند «عوامل رسید» فرم رسید انبار
+            // فقط وقتی تیک «نمایش پارامترهای خرید و فروش» در تنظیمات اسناد فروش فعال باشد
+            // -----------------------------------------------------------------
+            id: "factors_tab",
+            label: "عوامل سفارش",
+            content: (
+              <TabCellRow
+                tabs={factorsTabConfig}
+                value={values.factors || []}
+                onChange={(newFactors) =>
+                  setValues((prev) => ({
+                    ...prev,
+                    factors: newFactors.map((f: any, idx: number) => ({ ...f, RowNo: idx + 1 })),
+                  }))
+                }
+                hideHeader={false}
+                hideAddButton={isUsed}
+                disableAddButton={isUsed}
+                hideDeleteButton={isUsed}
+                isReadonly={isUsed}
+              />
+            ),
+          },
+          {
+            // -----------------------------------------------------------------
+            // Task 85: تب «خلاصه مبالغ و محاسبات» — کارت‌های محاسباتی همانند فرم رسید انبار
+            // (جمع کل اقلام / اضافات و کسورات عوامل / مبلغ خالص سفارش فروش + وضعیت سند)
+            // -----------------------------------------------------------------
+            id: "summary_tab",
+            label: "خلاصه مبالغ و محاسبات",
+            content: (
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 min-h-[220px] overflow-auto">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs p-4">
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">
+                      <Calculator className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">
+                        خلاصه محاسبات مالی سفارش فروش
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-md border border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium block">
+                          جمع کل اقلام
+                        </span>
+                        <span className="text-slate-900 dark:text-slate-100 font-bold text-sm dir-ltr block text-left mt-1 tabular-nums">
+                          {formatLocalizedNumber(totalItemsGross, language)} <span className="text-[10px] text-slate-500 font-normal">ریال</span>
+                        </span>
+                      </div>
+
+                      <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-md border border-emerald-100 dark:border-emerald-900/30">
+                        <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium block">
+                          جمع اضافات عوامل
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-300 font-bold text-sm dir-ltr block text-left mt-1 tabular-nums">
+                          + {formatLocalizedNumber(totalFactorAdditions, language)} <span className="text-[10px] font-normal">ریال</span>
+                        </span>
+                      </div>
+
+                      <div className="bg-rose-50/50 dark:bg-rose-950/20 p-3 rounded-md border border-rose-100 dark:border-rose-900/30">
+                        <span className="text-rose-600 dark:text-rose-400 text-[11px] font-medium block">
+                          جمع کسورات عوامل
+                        </span>
+                        <span className="text-rose-700 dark:text-rose-300 font-bold text-sm dir-ltr block text-left mt-1 tabular-nums">
+                          - {formatLocalizedNumber(totalFactorDeductions, language)} <span className="text-[10px] font-normal">ریال</span>
+                        </span>
+                      </div>
+
+                      <div className="bg-blue-50 dark:bg-blue-950/40 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                        <span className="text-blue-700 dark:text-blue-300 text-[11px] font-semibold block">
+                          مبلغ خالص سفارش فروش
+                        </span>
+                        <span className="text-blue-800 dark:text-blue-200 font-extrabold text-base dir-ltr block text-left mt-1 tabular-nums">
+                          {formatLocalizedNumber(finalNetTotal, language)} <span className="text-[11px] font-normal">ریال</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs p-4 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-700 dark:text-slate-200 mb-2">
+                        وضعیت سند
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                        این سفارش فروش به عنوان درخواست خرید کالا توسط مشتری ثبت می‌گردد و پس از تایید، مبنای صدور حواله انبار به تحویل‌دهنده خواهد بود.
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded border border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                        ارزش نهایی کل
+                      </span>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100 dir-ltr tabular-nums">
+                        {formatLocalizedNumber(finalNetTotal, language)} ریال
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            // -----------------------------------------------------------------
+            // Task 85: تب «سایر اطلاعات» — توضیحات کامل سند با نشانگر «!» وقتی مقدار دارد
+            // -----------------------------------------------------------------
+            id: "other_info_tab",
+            label: (
+              <span className="relative inline-flex items-center gap-1.5">
+                <span>سایر اطلاعات</span>
+                {hasOtherInfo && (
+                  <span
+                    className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-black shadow-xs border border-white dark:border-slate-800"
+                    title="اطلاعات وارد شده است"
+                  >
+                    !
+                  </span>
+                )}
+              </span>
+            ),
+            tabClassName: hasOtherInfo
+              ? "bg-amber-100/90 text-amber-950 font-semibold border-amber-300 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-700 hover:bg-amber-200/80"
+              : undefined,
+            activeTabClassName: hasOtherInfo
+              ? "bg-amber-600 text-white font-bold border-amber-800 dark:border-amber-500 shadow-sm"
+              : undefined,
+            content: (
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 min-h-[220px] h-full flex flex-col w-full overflow-auto">
+                <div className="w-full h-full flex-1 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs p-4 flex flex-col">
+                  <TextArea
+                    label="توضیحات :"
+                    value={values.Description || ""}
+                    onChange={(val) => setValues((prev) => ({ ...prev, Description: val }))}
+                    disabled={isUsed}
+                    placeholder="توضیحات سفارش فروش..."
+                    rows={6}
+                    labelWidth="80px"
+                    className="w-full flex-1 h-full min-h-[140px] text-xs"
+                  />
+                </div>
+              </div>
+            ),
+          },
+        ].filter((tab) => showPurchaseSales || tab.id !== "factors_tab")}
       />
       {/* Task 61: مودال واحدهای سنجش فرعی (مشابه فرم رسید انبار) */}
       <SubUnitModal

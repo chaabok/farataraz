@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryColumn, OneToMany } from 'typeorm';
 import { AppBaseEntity } from '../../../../core/entities/app-base.entity';
 import { SalesOrderItem } from './sales-order-item.entity';
+import { SalesOrderFactor } from './sales-order-factor.entity';
 
 @Entity({ schema: 'Sle', name: 'SalesOrders' })
 export class SalesOrder extends AppBaseEntity {
@@ -51,4 +52,8 @@ export class SalesOrder extends AppBaseEntity {
 
   @OneToMany(() => SalesOrderItem, (item) => item.salesOrder, { cascade: true })
   items?: SalesOrderItem[];
+
+  // Task 85: عوامل سفارش فروش (اضافات/کسورات) — همانند فرم رسید انبار
+  @OneToMany(() => SalesOrderFactor, (factor) => factor.salesOrder, { cascade: true })
+  factors?: SalesOrderFactor[];
 }
