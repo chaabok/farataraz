@@ -1207,3 +1207,18 @@ Work Log:
 
 Stage Summary:
 - گزارش کامل فیلدهای فرم تعریف کاربر (۸ فیلد اصلی + پنل درخت دسترسی‌ها + قواعد الزام + رفتارهای خاص + ساختار ذخیره‌سازی) به زبان فارسی به کاربر ارائه شد. کد دست‌نخورده ماند؛ بدون نیاز به commit.
+
+---
+Task ID: 76
+Agent: main (Z.ai Code)
+Task: «متدی که بر اساس آن فیلدها بر اساس برچسب و لیبل چیدمان می شود چیست» — تشریح مکانیزم چیدمان/هم‌ترازی برچسب‌ها در فرم‌ها
+
+Work Log:
+- بررسی شد: SimpleForm.tsx (renderField + FieldConfig + bands + فراخوانی useFormLabelAlignment در خط 234)، hooks/useFormLabelAlignment.ts (روش Form-Widest-Label)، components/inputs/FormFieldWrapper.tsx (ساختار سطر flex برچسب+ورودی با کلاس form-label-container).
+- مکانیزم شناسایی شد: هر فیلد declarative در آرایه fields: FieldConfig[] تعریف می‌شود (name/label/type/required/labelWidth/className/...)؛ renderField برچسب را با پسوند « :» رندر و در FormFieldWrapper داخل سطر flex-row (RTL) با برچسب shrink-0 و ورودی flex-1 قرار می‌دهد.
+- هم‌ترازی توسط هوک useFormLabelAlignment انجام می‌شود: اندازه‌گیری پهن‌ترین برچسب افقی کل فرم (فیلدها + bands + تب‌ها) و اعمال همان عرض واحد به همه .form-label-container (width+minWidth inline)؛ برچسب‌های عمودی (توضیحات/شرح) مستثنی؛ برچسب‌های مخفی (تب‌های بسته) با canvas 2D اندازه‌گیری می‌شوند؛ عرض هرگز کوچک نمی‌شود (WeakMap formMaxLabelWidths)؛ اجرای مجدد روی mount/DOM mutation (MutationObserver با فیلتر نوشت‌های خودش)/resize/بارگذاری فونت‌ها.
+- چیدمان کلی فیلدها: کانتینر flex flex-wrap با gap؛ گروه‌بندی اختیاری با BandConfig (عرض/حاشیه/حاشیه‌بندی/عنوان) و bandId هر فیلد؛ عرض برچسب پیش‌فرض 80px و قابل override per-field.
+- هیچ تغییری در کد داده نشد — فقط بررسی و گزارش.
+
+Stage Summary:
+- متد چیدمان/هم‌ترازی برچسب‌ها = «روش Form-Widest-Label» در هوک useFormLabelAlignment همراه ساختار سطر flex در FormFieldWrapper و تعریف declarative فیلدها در FieldConfig به‌طور کامل برای کاربر تشریح شد. کد دست‌نخورده ماند؛ بدون نیاز به commit.
