@@ -47,6 +47,10 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
     __metadata("design:type", Number)
+], SalesOrder.prototype, "SalesCenterRef", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
+    __metadata("design:type", Number)
 ], SalesOrder.prototype, "DeliveryLocationRef", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),

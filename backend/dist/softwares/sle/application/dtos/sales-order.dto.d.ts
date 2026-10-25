@@ -17,6 +17,7 @@ export declare class CreateSalesOrderDto {
     CustomerRef?: any;
     CustomerName?: any;
     SalesTypeRef?: any;
+    SalesCenterRef?: any;
     DeliveryLocationRef?: any;
     SettlementMethodRef?: any;
     Status?: any;

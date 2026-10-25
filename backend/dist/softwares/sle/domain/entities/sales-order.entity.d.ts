@@ -8,6 +8,7 @@ export declare class SalesOrder extends AppBaseEntity {
     CustomerRef?: number;
     CustomerName?: string;
     SalesTypeRef?: number;
+    SalesCenterRef?: number;
     DeliveryLocationRef?: number;
     SettlementMethodRef?: number;
     Status: number;

@@ -54,6 +54,8 @@ let SalesOrderService = class SalesOrderService {
         const missing = [];
         if (!dto.SalesTypeRef || !Number(dto.SalesTypeRef))
             missing.push('نوع فروش');
+        if (!dto.SalesCenterRef || !Number(dto.SalesCenterRef))
+            missing.push('مرکز فروش');
         if (!dto.DeliveryLocationRef || !Number(dto.DeliveryLocationRef))
             missing.push('محل تحویل');
         if (!dto.SettlementMethodRef || !Number(dto.SettlementMethodRef))
@@ -80,6 +82,7 @@ let SalesOrderService = class SalesOrderService {
             CustomerRef: dto.CustomerRef ? Number(dto.CustomerRef) : null,
             CustomerName: dto.CustomerName || null,
             SalesTypeRef: dto.SalesTypeRef ? Number(dto.SalesTypeRef) : null,
+            SalesCenterRef: dto.SalesCenterRef ? Number(dto.SalesCenterRef) : null,
             DeliveryLocationRef: dto.DeliveryLocationRef ? Number(dto.DeliveryLocationRef) : null,
             SettlementMethodRef: dto.SettlementMethodRef ? Number(dto.SettlementMethodRef) : null,
             Status: Number(dto.Status || 1),
@@ -163,6 +166,7 @@ let SalesOrderService = class SalesOrderService {
         order.CustomerRef = dto.CustomerRef !== undefined ? (dto.CustomerRef ? Number(dto.CustomerRef) : null) : order.CustomerRef;
         order.CustomerName = dto.CustomerName !== undefined ? dto.CustomerName : order.CustomerName;
         order.SalesTypeRef = dto.SalesTypeRef !== undefined ? (dto.SalesTypeRef ? Number(dto.SalesTypeRef) : null) : order.SalesTypeRef;
+        order.SalesCenterRef = dto.SalesCenterRef !== undefined ? (dto.SalesCenterRef ? Number(dto.SalesCenterRef) : null) : order.SalesCenterRef;
         order.DeliveryLocationRef = dto.DeliveryLocationRef !== undefined ? (dto.DeliveryLocationRef ? Number(dto.DeliveryLocationRef) : null) : order.DeliveryLocationRef;
         order.SettlementMethodRef = dto.SettlementMethodRef !== undefined ? (dto.SettlementMethodRef ? Number(dto.SettlementMethodRef) : null) : order.SettlementMethodRef;
         order.Status = dto.Status !== undefined ? Number(dto.Status || 1) : order.Status;

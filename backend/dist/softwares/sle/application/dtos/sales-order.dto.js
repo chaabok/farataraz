@@ -85,6 +85,10 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
+], CreateSalesOrderDto.prototype, "SalesCenterRef", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
 ], CreateSalesOrderDto.prototype, "DeliveryLocationRef", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
