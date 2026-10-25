@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { apiFetch } from "@/lib/utils";
 import { Package, Warehouse, Building2, Boxes, RefreshCw, X, Tag, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useLanguage } from "@/lib/stores/languageStore";
-import { formatLocalizedNumber } from "@/lib/digitLocale";
+import { formatLocalizedNumber, latinizeDigits, localizeNumericString } from "@/lib/digitLocale";
 
 interface StockSummaryModalProps {
   isOpen: boolean;
@@ -48,7 +48,7 @@ export function StockSummaryBox({
   lastMovements?: LastMovementItem[];
   className?: string;
   pendingQuantity?: number;
-  documentType?: "receipt" | "issue" | "temporary_receipt" | "return_temporary_receipt" | "purchase_invoice" | "neutral";
+  documentType?: "receipt" | "issue" | "temporary_receipt" | "return_temporary_receipt" | "purchase_invoice" | "neutral" | "sales_order";
   excludeVoucherId?: number | string | null;
   partyId?: number | string | null;
   documentDate?: string | null;
@@ -61,13 +61,14 @@ export function StockSummaryBox({
   const { language } = useLanguage();
 
   const fetchStockSummary = async () => {
-    if (!itemId) {
+    // Task 84: در فرم سفارش فروش حتی قبل از انتخاب کالا هم «آخرین سفارش فروش به مشتری» باید واکشی شود
+    if (!itemId && documentType !== "sales_order") {
       setData(null);
       return;
     }
     setLoading(true);
     try {
-      let url = `/api/inv/items/${itemId}/stock-summary`;
+      let url = `/api/inv/items/${itemId ?? 0}/stock-summary`;
       const queryParams: string[] = [];
       const parsedWhId = warehouseId ? Number(warehouseId) : 0;
       if (parsedWhId > 0) {
@@ -131,7 +132,8 @@ export function StockSummaryBox({
 
   const effectiveMainUnitName = data?.mainUnit?.unitName || mainUnitName || "واحد";
 
-  const isIssue = documentType === "issue";
+  // Task 84: سفارش فروش موجی انبار را کم نمی‌کند ولی رفتار نمایش «تغییرات این سند» مثل قبل (مثل حواله) حفظ می‌شود
+  const isIssue = documentType === "issue" || documentType === "sales_order";
   const pending = Number(pendingQuantity || 0);
   const sign = isIssue ? -1 : 1;
   const changeQty = pending * sign;
@@ -319,7 +321,7 @@ export function StockSummaryBox({
                 {effectiveLastMovements.map((mov, idx) => (
                   <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/80 hover:bg-slate-50/60 dark:hover:bg-slate-800/60">
                     <td className="p-1 font-medium text-slate-800 dark:text-slate-200 text-[10px]">{mov.title}</td>
-                    <td className="p-1 text-center text-slate-500 dark:text-slate-400 text-[10px]">{mov.date || "-"}</td>
+                    <td className="p-1 text-center text-slate-500 dark:text-slate-400 text-[10px]">{mov.date ? localizeNumericString(latinizeDigits(String(mov.date)), language) : "-"}</td>
                     <td className="p-1 text-center text-slate-700 dark:text-slate-300 text-[10px] tabular-nums">{formatQty(mov.quantity)}</td>
                     <td className="p-1 text-left font-semibold text-slate-800 dark:text-slate-200 dir-ltr text-[10px] tabular-nums">
                       {formatPrice(mov.price)}

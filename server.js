@@ -145,6 +145,11 @@ async function main() {
   killPort(3000);
   killPort(3005);
 
+  // Task 84: در این sandbox پروسه next dev گاهی حتی با کد ۰ خارج می‌شود (OOM/نوسان محیط)
+  // و frontend دیگر بالا نمی‌آمد. پرچم shuttingDown باعث می‌شود فقط هنگام خاموشی عمدی
+  // ری‌استارت نشود و در هر خروج دیگر (حتی کد ۰) سرویس دوباره بالا بیاید.
+  let shuttingDown = false;
+
   // 1. Start Next.js Frontend
   let frontend = null;
   const isProd = process.env.NODE_ENV === 'production';
@@ -165,7 +170,7 @@ async function main() {
 
     frontend.on('exit', (code) => {
       console.log(`Frontend process exited with code ${code}`);
-      if (code !== 0) {
+      if (!shuttingDown) {
         console.log('Restarting Next.js frontend in 3 seconds...');
         setTimeout(startFrontendProcess, 3000);
       }
@@ -203,7 +208,7 @@ async function main() {
 
     backend.on('exit', (code) => {
       console.log(`NestJS Backend process exited with code ${code}`);
-      if (code !== 0) {
+      if (!shuttingDown) {
         console.log('Restarting NestJS backend in 3 seconds...');
         setTimeout(startBackendProcess, 3000);
       }
@@ -236,6 +241,7 @@ async function main() {
 
   const cleanup = () => {
     console.log('Shutting down servers...');
+    shuttingDown = true;
     try { if (backend) backend.kill(); } catch (e) {}
     try { if (frontend) frontend.kill(); } catch (e) {}
     // Release the single-instance lock so the next boot starts instantly.

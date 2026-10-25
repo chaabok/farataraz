@@ -1051,11 +1051,17 @@ let ItemService = class ItemService {
        FROM "Inv"."Items" i
        LEFT JOIN "Inv"."MeasurementUnits" mu ON mu."MeasurementUnitID" = i."MeasurementUnitRef"
        WHERE i."ItemID" = $1 OR i."ItemCode"::text = $1::text`, [itemId]);
-        if (!itemRows || itemRows.length === 0) {
-            throw new common_1.NotFoundException(`کالا با شناسه یا کد ${itemId} یافت نشد.`);
+        let itemInfo = itemRows && itemRows.length > 0 ? itemRows[0] : null;
+        let actualItemId = itemInfo ? Number(itemInfo.ItemID) : 0;
+        if (!itemInfo) {
+            if (docType === 'sales_order') {
+                itemInfo = { ItemID: 0, ItemCode: null, ItemName: null, MeasurementUnitRef: null, MainUnitName: null };
+                actualItemId = 0;
+            }
+            else {
+                throw new common_1.NotFoundException(`کالا با شناسه یا کد ${itemId} یافت نشد.`);
+            }
         }
-        const itemInfo = itemRows[0];
-        const actualItemId = Number(itemInfo.ItemID);
         const subUnitRows = await this.repository.manager.connection.query(`SELECT 
         isu."SubUnitRef",
         isu."MainToSubRatio",
@@ -1331,11 +1337,16 @@ let ItemService = class ItemService {
             title2 = 'آخرین فاکتور خرید از تامین کننده';
             priceLabel = 'مبلغ فاکتور';
         }
+        else if (docType === 'sales_order') {
+            title1 = 'آخرین سفارش فروش';
+            title2 = 'آخرین سفارش فروش به مشتری';
+            priceLabel = 'مبلغ سفارش';
+        }
         const formatJalaliDate = (val) => {
             if (!val)
                 return '-';
             try {
-                const m = (0, moment_jalaali_1.default)(val);
+                const m = (0, moment_jalaali_1.default)(String(val).replace(/\//g, '-'));
                 if (m.isValid())
                     return m.format('jYYYY/jMM/jDD');
             }
@@ -1448,6 +1459,51 @@ let ItemService = class ItemService {
                         q += ` AND (v."SupplierRef"::text = $${params.length - 1} OR v."SupplierRef" = $${params.length})`;
                     }
                     q += ` ORDER BY v."InvoiceDate" DESC, v."PurchaseInvoiceID" DESC LIMIT 1`;
+                    const res = await this.repository.manager.connection.query(q, params);
+                    return res && res.length > 0 ? res[0] : null;
+                };
+                row1 = await executeQuery(false);
+                if (partyId) {
+                    row2 = await executeQuery(true);
+                }
+            }
+            else if (docType === 'sales_order') {
+                const executeQuery = async (withParty) => {
+                    const params = [];
+                    const quantitySelect = actualItemId > 0
+                        ? `(
+                SELECT COALESCE(SUM(d2."Quantity"), 0)
+                FROM "Sle"."SalesOrderItems" d2
+                WHERE d2."SalesOrderRef" = v."SalesOrderID"
+                  AND (d2."ItemRef" = ${Number(actualItemId)} OR d2."ItemRef"::text = '${Number(actualItemId)}')
+              )`
+                        : `0`;
+                    let q = `
+            SELECT 
+              v."OrderDate" AS "docDate",
+              ${quantitySelect} AS "quantity",
+              (
+                SELECT COALESCE(SUM(d3."TotalPrice"), 0)
+                FROM "Sle"."SalesOrderItems" d3
+                WHERE d3."SalesOrderRef" = v."SalesOrderID"
+              ) AS "price"
+            FROM "Sle"."SalesOrders" v
+            WHERE ${scopeClause('v')}
+          `;
+                    if (excludeVoucherId && Number(excludeVoucherId) > 0) {
+                        params.push(Number(excludeVoucherId));
+                        q += ` AND v."SalesOrderID" != $${params.length}`;
+                    }
+                    if (targetIsoDate) {
+                        params.push(targetIsoDate);
+                        q += ` AND (NULLIF(REPLACE(v."OrderDate", '/', '-'), ''))::date < ($${params.length}::date + INTERVAL '1 day')`;
+                    }
+                    if (withParty && partyId) {
+                        params.push(String(partyId));
+                        params.push(Number(partyId) || 0);
+                        q += ` AND (v."CustomerRef"::text = $${params.length - 1} OR v."CustomerRef" = $${params.length})`;
+                    }
+                    q += ` ORDER BY v."OrderDate" DESC NULLS LAST, v."SalesOrderID" DESC LIMIT 1`;
                     const res = await this.repository.manager.connection.query(q, params);
                     return res && res.length > 0 ? res[0] : null;
                 };

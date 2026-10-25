@@ -1635,8 +1635,10 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                               warehouseId={defaultWarehouseRef}
                               mainUnitName={selItem?.UnitName}
                               pendingQuantity={pendingQty}
-                              documentType="issue"
+                              documentType="sales_order"
                               documentDate={values.OrderDate}
+                              partyId={values.CustomerRef || undefined}
+                              excludeVoucherId={values.SalesOrderID || undefined}
                             />
                           </div>
                         );
@@ -1651,36 +1653,37 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                         </span>
                       </div>
 
-                      <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[125px]">
+                      {/* Task 84: فاصله ردیف‌ها کم شد تا هر ۴ ردیف (تا جمع کل) بدون اسکرول دیده شوند */}
+                      <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[132px]">
                         <table className="w-full text-xs text-right border-collapse">
                           <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
                             <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
-                              <th className="px-2 py-1 text-right">عنوان</th>
-                              <th className="px-2 py-1 text-left w-36">مبلغ</th>
+                              <th className="px-2 py-0.5 text-right">عنوان</th>
+                              <th className="px-2 py-0.5 text-left w-36">مبلغ</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="px-2 py-1 text-slate-700 dark:text-slate-300 font-semibold text-xs">جمع</td>
-                              <td className="px-2 py-1 text-left font-bold text-slate-900 dark:text-slate-100 dir-ltr text-base tabular-nums">
+                              <td className="px-2 py-0.5 text-slate-700 dark:text-slate-300 font-semibold text-xs">جمع</td>
+                              <td className="px-2 py-0.5 text-left font-bold text-slate-900 dark:text-slate-100 dir-ltr text-base leading-5 tabular-nums">
                                 {formatLocalizedNumber(totalItemsGross, language)}
                               </td>
                             </tr>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="px-2 py-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">اضافات</td>
-                              <td className="px-2 py-1 text-left font-bold text-emerald-600 dark:text-emerald-400 dir-ltr text-base tabular-nums">
+                              <td className="px-2 py-0.5 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">اضافات</td>
+                              <td className="px-2 py-0.5 text-left font-bold text-emerald-600 dark:text-emerald-400 dir-ltr text-base leading-5 tabular-nums">
                                 {formatLocalizedNumber(displayAdditions, language)}
                               </td>
                             </tr>
                             <tr className="border-b border-slate-100 dark:border-slate-800">
-                              <td className="px-2 py-1 text-rose-600 dark:text-rose-400 font-semibold text-xs">کسورات</td>
-                              <td className="px-2 py-1 text-left font-bold text-rose-600 dark:text-rose-400 dir-ltr text-base tabular-nums">
+                              <td className="px-2 py-0.5 text-rose-600 dark:text-rose-400 font-semibold text-xs">کسورات</td>
+                              <td className="px-2 py-0.5 text-left font-bold text-rose-600 dark:text-rose-400 dir-ltr text-base leading-5 tabular-nums">
                                 {formatLocalizedNumber(displayDeductions, language)}
                               </td>
                             </tr>
                             <tr className="bg-indigo-50/60 dark:bg-indigo-950/40">
-                              <td className="px-2 py-1 text-indigo-900 dark:text-indigo-200 font-extrabold text-base">جمع کل</td>
-                              <td className="px-2 py-1 text-left font-extrabold text-indigo-900 dark:text-indigo-200 text-lg dir-ltr tabular-nums">
+                              <td className="px-2 py-0.5 text-indigo-900 dark:text-indigo-200 font-extrabold text-base leading-6">جمع کل</td>
+                              <td className="px-2 py-0.5 text-left font-extrabold text-indigo-900 dark:text-indigo-200 text-lg leading-6 dir-ltr tabular-nums">
                                 {formatLocalizedNumber(finalNetTotal, language)}
                               </td>
                             </tr>
