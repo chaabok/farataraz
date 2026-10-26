@@ -25,10 +25,6 @@ export class SalesProformaInvoice extends AppBaseEntity {
   @Column({ type: 'varchar', length: 10, nullable: true })
   ValidityDate?: string;
 
-  // تاریخ تحویل به‌صورت رشته میلادی ISO (YYYY-MM-DD) ذخیره می‌شود — اختیاری
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  DeliveryDate?: string;
-
   @Column({ type: 'bigint', nullable: true })
   CustomerRef?: number;
 

@@ -21,7 +21,6 @@ export declare class CreateSalesProformaInvoiceDto {
     ProformaNumber?: any;
     ProformaDate?: any;
     ValidityDate?: any;
-    DeliveryDate?: any;
     CustomerRef?: any;
     CustomerName?: any;
     SalesTypeRef?: any;

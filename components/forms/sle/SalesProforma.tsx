@@ -235,7 +235,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
     ProformaDate: getTodayJalali(),
     // Task 88: تاریخ اعتبار پیش فاکتور
     ValidityDate: "",
-    DeliveryDate: "",
     CustomerRef: "",
     CustomerName: "",
     SalesTypeRef: "",
@@ -577,7 +576,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
               ProformaDate: data.ProformaDate ? gregorianToJalaliDisplay(data.ProformaDate) : getTodayJalali(),
               // Task 88: تاریخ اعتبار ذخیره‌شده
               ValidityDate: data.ValidityDate ? gregorianToJalaliDisplay(data.ValidityDate) : "",
-              DeliveryDate: data.DeliveryDate ? gregorianToJalaliDisplay(data.DeliveryDate) : "",
               CustomerRef: data.CustomerRef ? Number(data.CustomerRef) : "",
               CustomerName: data.CustomerName || "",
               SalesTypeRef: data.SalesTypeRef ? Number(data.SalesTypeRef) : "",
@@ -644,7 +642,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
       ProformaNumber: "",
       ProformaDate: getTodayJalali(),
       ValidityDate: "",
-      DeliveryDate: "",
       CustomerRef: "",
       CustomerName: "",
       SalesTypeRef: defaults.SalesTypeRef,
@@ -679,10 +676,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
     // Task 63: کنترل صحت تاریخ‌ها — روز/ماه نامعتبر (مثل ۴۵) اجازه ذخیره ندارد
     if (!isValidJalaliDate(values.ProformaDate)) {
       showToast("تاریخ پیش فاکتور وارد شده معتبر نیست *", "error");
-      return false;
-    }
-    if (values.DeliveryDate && !isValidJalaliDate(values.DeliveryDate)) {
-      showToast("تاریخ تحویل وارد شده معتبر نیست *", "error");
       return false;
     }
     // Task 88: کنترل صحت تاریخ اعتبار
@@ -729,7 +722,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
       ProformaDate: jalaliToGregorianISO(values.ProformaDate || getTodayJalali()),
       // Task 88: تاریخ اعتبار
       ValidityDate: values.ValidityDate ? jalaliToGregorianISO(values.ValidityDate) : null,
-      DeliveryDate: values.DeliveryDate ? jalaliToGregorianISO(values.DeliveryDate) : null,
       CustomerRef: Number(values.CustomerRef),
       CustomerName: customerName,
       SalesTypeRef: Number(values.SalesTypeRef),
@@ -979,18 +971,11 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
       ),
     },
     {
-      name: "DeliveryDateAndSalesType",
+      name: "SalesType",
       type: "custom",
       noWrapper: true,
       render: ({ disabled }) => (
         <div className="grid grid-cols-2 gap-x-2 w-full items-center">
-          <DateInput
-            label="تاریخ تحویل :"
-            value={values.DeliveryDate || ""}
-            onChange={(val) => handleChange("DeliveryDate", val)}
-            disabled={disabled || isUsed}
-            labelWidth="62px"
-          />
           <SingleSelectDropDown
             options={salesTypeOptions}
             columns={refColumns}

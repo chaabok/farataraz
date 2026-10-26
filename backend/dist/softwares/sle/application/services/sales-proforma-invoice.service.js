@@ -81,7 +81,6 @@ let SalesProformaInvoiceService = class SalesProformaInvoiceService {
             ProformaNumber: proformaNumber,
             ProformaDate: dto.ProformaDate || null,
             ValidityDate: dto.ValidityDate || null,
-            DeliveryDate: dto.DeliveryDate || null,
             CustomerRef: dto.CustomerRef ? Number(dto.CustomerRef) : null,
             CustomerName: dto.CustomerName || null,
             SalesTypeRef: dto.SalesTypeRef ? Number(dto.SalesTypeRef) : null,
@@ -183,7 +182,6 @@ let SalesProformaInvoiceService = class SalesProformaInvoiceService {
         }
         proforma.ProformaDate = dto.ProformaDate !== undefined ? dto.ProformaDate : proforma.ProformaDate;
         proforma.ValidityDate = dto.ValidityDate !== undefined ? (dto.ValidityDate || null) : proforma.ValidityDate;
-        proforma.DeliveryDate = dto.DeliveryDate !== undefined ? (dto.DeliveryDate || null) : proforma.DeliveryDate;
         proforma.CustomerRef = dto.CustomerRef !== undefined ? (dto.CustomerRef ? Number(dto.CustomerRef) : null) : proforma.CustomerRef;
         proforma.CustomerName = dto.CustomerName !== undefined ? dto.CustomerName : proforma.CustomerName;
         proforma.SalesTypeRef = dto.SalesTypeRef !== undefined ? (dto.SalesTypeRef ? Number(dto.SalesTypeRef) : null) : proforma.SalesTypeRef;

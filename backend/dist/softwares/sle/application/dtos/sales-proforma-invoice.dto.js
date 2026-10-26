@@ -96,10 +96,6 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
-], CreateSalesProformaInvoiceDto.prototype, "DeliveryDate", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", Object)
 ], CreateSalesProformaInvoiceDto.prototype, "CustomerRef", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

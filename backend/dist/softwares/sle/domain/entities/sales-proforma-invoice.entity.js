@@ -34,10 +34,6 @@ __decorate([
     __metadata("design:type", String)
 ], SalesProformaInvoice.prototype, "ValidityDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 10, nullable: true }),
-    __metadata("design:type", String)
-], SalesProformaInvoice.prototype, "DeliveryDate", void 0);
-__decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
     __metadata("design:type", Number)
 ], SalesProformaInvoice.prototype, "CustomerRef", void 0);

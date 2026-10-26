@@ -233,7 +233,6 @@ exports.AppModule = AppModule = __decorate([
                     "ProformaNumber" integer NOT NULL,
                     "ProformaDate" varchar(10),
                     "ValidityDate" varchar(10),
-                    "DeliveryDate" varchar(10),
                     "CustomerRef" bigint,
                     "CustomerName" varchar(200),
                     "SalesTypeRef" bigint,

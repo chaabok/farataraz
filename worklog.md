@@ -1485,3 +1485,30 @@ Stage Summary:
 - فرم کامل «پیش فاکتور فروش جدید» در فروش > عملیات فعال شد؛ همه اقلام فرم سفارش فروش (هدر ۷ فیلد + وضعیت + توضیحات، جدول اقلام با واحد فرعی/عامل ردیابی، فوتر عوامل/گردش/مبالغ، ۴ تب پایین، دستگیره ارتفاع فوتر، فهرست و ناوبری رکورد) دقیقاً کلون شد
 - تفاوت‌ها: فیلد تاریخ اعتبار (هدر، اعتبارسنجی، ذخیره در ValidityDate)، تنظیمات از آیتم پیش فاکتور (type=2)، جدول‌های جدید Sle.SalesProformaInvoices/Items/Factors با ساخت خودکار idempotent
 - فایل‌های جدید: backend (۳ entity + dto + service + controller)، components/forms/sle/SalesProforma.tsx، app/forms/sle/sales-proforma-new/page.tsx؛ ویرایش: sle.module.ts، app.module.ts، sidebar-structure.data.ts، sidebar-metadata.ts، tab-registry.tsx
+---
+Task ID: 89
+Agent: Z.ai Code (main)
+Task: حذف کامل فیلد «تاریخ تحویل» از فرم پیش فاکتور فروش (فرانت‌اند + بک‌اند + دیتابیس)
+
+Work Log:
+- جستجوی کامل پروژه برای DeliveryDate/تاریخ تحویل؛ نقاط مرتبط با پیش فاکتور فروش شناسایی شد (فرم‌های دیگر مثل سفارش فروش/درخواست‌ها دست‌نخورده ماندند)
+- Backend (۳ فایل):
+  • sales-proforma-invoice.entity.ts: حذف ستون DeliveryDate (varchar(10) nullable) از کلاس SalesProformaInvoice — فیلد تاریخ اعتبار (ValidityDate) حفظ شد
+  • sales-proforma-invoice.dto.ts: حذف DeliveryDate از CreateSalesProformaInvoiceDto (Update آن را ارث می‌برد)
+  • sales-proforma-invoice.service.ts: حذف DeliveryDate از mapping create و update (۲ محل)
+  • app.module.ts: حذف «"DeliveryDate" varchar(10)» از DDL idempotent جدول Sle.SalesProformaInvoices (بلوک Task 88)
+- Database: ALTER TABLE "Sle"."SalesProformaInvoices" DROP COLUMN IF EXISTS "DeliveryDate" با node-pg اجرا شد؛ information_schema تأیید کرد ستون دیگر وجود ندارد (فقط ValidityDate)
+- Frontend components/forms/sle/SalesProforma.tsx (۶ نقطه):
+  • حذف DeliveryDate از state اولیه، mapping لود رکورد، reset فرم جدید، payload ذخیره
+  • حذف validation «تاریخ تحویل وارد شده معتبر نیست» از handleSave
+  • بخش هدر: DateInput «تاریخ تحویل» از بلوک DeliveryDateAndSalesType حذف شد؛ بلوک به name "SalesType" تغییر کرد و «نوع فروش» به‌تنهایی در grid-cols-2 رندر می‌شود (هم‌تراز با ردیف محل تحویل/روش تسویه)
+- بازسازی: npx tsc پاک؛ kill پروسه dist/main.js → server.js ری‌استارت کرد؛ eslint فرانت = پاک
+- تست API: login → POST پیش فاکتور آزمایشی (شماره ۹۰۱، فقط ValidityDate) → GET → کلید DeliveryDate در پاسخ absent و ValidityDate سالم → DELETE پاک‌سازی ✓
+- E2E مرورگر (admin/1234): منو → پیش فاکتور فروش جدید؛ count «تاریخ تحویل» در کل فرم = ۰ و count «تاریخ اعتبار» = ۱؛ فیلدهای تاریخ هدر فقط «تاریخ :*» و «تاریخ اعتبار :»؛ فرم کامل شد (مشتری علی جهانی + کالا نشاسته + فی ۵۰٬۰۰۰ با ارقام بومی + تاریخ اعتبار ۱۴۰۵/۰۹/۰۴) → ذخیره → عنوان «ویرایش پیش فاکتور فروش» ✓
+- دیتابیس بعد از ذخیره فرم: رکورد جدید ValidityDate=2026/11/25 ✓ و ستون DeliveryDate absent؛ رکورد شماره ۱ کاربر سالم؛ رکورد آزمایشی DELETE شد تا شماره‌گذاری تمیز بماند
+- اسکرین‌شات: .zscreenshots/t89-proforma-no-delivery.png؛ کنسول مرورگر بدون خطا (فقط warningهای recharts موجود از قبل)
+
+Stage Summary:
+- فیلد «تاریخ تحویل» (DeliveryDate) به‌طور کامل از چرخه پیش فاکتور فروش حذف شد: UI فرم، validation، payload، DTO، service (create/update)، entity و ستون جدول Sle.SalesProformaInvoices
+- «تاریخ اعتبار» (ValidityDate) که مختص پیش فاکتور است دست‌نخورده ماند و round-trip آن در فرم/API/دیتابیس مجدداً تأیید شد
+- فایل‌های تغییر یافته: backend/src/softwares/sle/domain/entities/sales-proforma-invoice.entity.ts، backend/src/softwares/sle/application/dtos/sales-proforma-invoice.dto.ts، backend/src/softwares/sle/application/services/sales-proforma-invoice.service.ts، backend/src/app.module.ts، components/forms/sle/SalesProforma.tsx

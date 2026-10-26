@@ -67,9 +67,6 @@ export class CreateSalesProformaInvoiceDto {
   ValidityDate?: any;
 
   @IsOptional()
-  DeliveryDate?: any;
-
-  @IsOptional()
   CustomerRef?: any;
 
   @IsOptional()

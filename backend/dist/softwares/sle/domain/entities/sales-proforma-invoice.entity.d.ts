@@ -6,7 +6,6 @@ export declare class SalesProformaInvoice extends AppBaseEntity {
     ProformaNumber: number;
     ProformaDate?: string;
     ValidityDate?: string;
-    DeliveryDate?: string;
     CustomerRef?: number;
     CustomerName?: string;
     SalesTypeRef?: number;
