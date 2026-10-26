@@ -1834,3 +1834,31 @@ Stage Summary:
 - 结论: انواع تفصیلی 的种子数据完整存在——DB 21 行、种子代码 21 项、两份备份均有、API 返回 21 条、UI 网格 21 行全部渲染。
 - 建议: ①种子数据安全，无需重新 seed; ②勿设 SYNC_DB=true (会触发 DELETE+重建种子，虽自愈机制保留引用但 ID 可能变化); ③用户此前"表单无数据"不适用于 انواع تفصیلی——该表单数据完整; 若其他表单仍空，需逐表单排查过滤链; ④DetailedAccountsNumbering 为空属正常 (按需生成)，但若编号基准表单需要默认行可后续补种。
 - 证据: .zscreenshots/t98-detailed-types-seed-verified.png
+
+---
+Task ID: 98-b
+Agent: Z.ai Code (main)
+Task: حذف سفارش‌های فروش بدون «مانده باز» از لیست مبنا فرم پیش فاکتور فروش
+
+Work Log:
+- درخواست کاربر: «اگر برای تمامی اقلام سند مبنا پیش فاکتور صادر شده بود و سفارش فروش مانده باز نداشت دیگر نباید در لیست مبنا نمایش داده شوند»
+- تحلیل زنجیره: فرم SalesProforma.tsx → دراپ‌داون «مبنا» با listApiUrl=/api/sle/base-documents/available?type=1 → SleBaseDocumentController → SleBaseDocumentService.getAvailableBaseDocuments (فقط فیلتر Status IN (4,5) داشت — بدون بررسی مانده)
+- مدل داده: Sle.SalesOrderItems(SalesOrderRef, ItemRef, Quantity) / Sle.SalesProformaInvoices(BaseDocumentTypeRef=1, BaseDocumentRef=orderId, Status) / Sle.SalesProformaInvoiceItems(SalesProformaRef, ItemRef, Quantity)
+- وضعیت‌ها: 6=ابطال شده؛ پیش فاکتورهای ابطال‌شده در پوشش لحاظ نمی‌شوند
+- بک‌اند (base-document.service.ts): متد جدید getFullyCoveredOrderIds — دو کوئری تجمیعی SQL (جمع مقدار اقلام سفارش‌ها و جمع مقادیر اقلام پیش فاکتورهای صادرشده با Status<>6 به تفکیک orderId+ItemRef) → سفارشی که برای «تمامی» اقلامش used>=ordered باشد بسته است و فیلتر می‌شود؛ پارامتر excludeProformaId برای استثناکردن پیش فاکتورِ در حال ویرایش؛ EPS=1e-9 برای گردکردن اعشار
+- کنترلر: پارامتر @Query('excludeProformaId') به available اضافه شد
+- فرانت‌اند (SalesProforma.tsx line ~1090): listApiUrl اکنون در حالت ویرایش &excludeProformaId=activeId را می‌فرستد؛ SingleSelectDropDown با تغییر listApiUrl دوباره fetch می‌کند (useEffect موجود)
+- کامپایل: cd backend && npx tsc (EXIT=0) → kill backend → restart خودکار (PID جدید)
+- تست API (سه سناریو با داده واقعی):
+  * type=1 → [] (سفارش ۸ با ۳ پیش فاکتور جمعاً qty=5>=1 و سفارش ۱۹ با ۱ پیش فاکتور qty=1>=1 هر دو بسته)
+  * type=1&excludeProformaId=8 → سفارش ۱۹ برمی‌گردد (سهم پیش فاکتور خودش حذف شد → مانده ۱)
+  * type=1&excludeProformaId=7 → [] (سفارش ۸ هنوز با پیش فاکتورهای ۵و۶ پوشش کامل دارد)
+- E2E (agent-browser): پیش فاکتور جدید → نوع سند مبنا=سفارش فروش → پنل مبنا: «اطلاعاتی یافت نشد / 0 مورد» ✓؛ دکمه آخرین رکورد (svg.lucide-chevrons-left) → ویرایش پیش فاکتور ۵ (مبنا=سفارش ۱۹) → پنل مبنا: «۱ مورد — شماره ۵ / علی جهانی» ✓
+- lint فایل‌های تغییر یافته: پاک (خطاهای موجود lint مربوط به Voucher.tsx/ActivationModal.tsx/utils.ts/sidebar.tsx قدیمی است)
+
+Stage Summary:
+- سفارش‌های فروشی که تمام اقلامشان با پیش فاکتور پوشش داده شده (مانده باز ندارند) دیگر در لیست «مبنا» فرم پیش فاکتور فروش ظاهر نمی‌شوند
+- در حالت ویرایش، پیش فاکتورِ جاری از محاسبه پوشش مستثنی است تا سند مبنا در دراپ‌داون قابل انتخاب بماند
+- پیش فاکتورهای ابطال‌شده (Status=6) مانده را آزاد می‌کنند (در پوشش شمرده نمی‌شوند)
+- فایل‌ها: backend/src/softwares/sle/application/services/base-document.service.ts، backend/src/softwares/sle/presentation/controllers/base-document.controller.ts، components/forms/sle/SalesProforma.tsx
+- اسکرین‌شات‌ها: .zscreenshots/t98b-base-empty-popup.png (لیست خالی در حالت جدید)، t98b-base-edit-mode.png (سفارش ۱۹ در حالت ویرایش)

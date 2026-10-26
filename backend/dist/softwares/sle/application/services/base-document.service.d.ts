@@ -9,7 +9,8 @@ export declare class SleBaseDocumentService {
     constructor(orderRepository: Repository<SalesOrder>, proformaRepository: Repository<SalesProformaInvoice>, requestContextService: RequestContextService);
     private getScope;
     private static readonly BASE_ELIGIBLE_STATUSES;
-    getAvailableBaseDocuments(type: number): Promise<any[]>;
+    private getFullyCoveredOrderIds;
+    getAvailableBaseDocuments(type: number, excludeProformaId?: number): Promise<any[]>;
     getBaseDocumentDetail(type: number, id: number): Promise<any>;
     private normalizeBaseDetail;
 }

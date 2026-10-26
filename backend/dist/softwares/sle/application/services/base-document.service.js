@@ -35,7 +35,58 @@ let SleBaseDocumentService = class SleBaseDocumentService {
             compId = 2;
         return { bsId, compId, fiscalYearId };
     }
-    async getAvailableBaseDocuments(type) {
+    async getFullyCoveredOrderIds(orderIds, excludeProformaId) {
+        const closed = new Set();
+        if (!orderIds.length)
+            return closed;
+        const manager = this.orderRepository.manager;
+        const orderedRows = await manager.query(`SELECT "SalesOrderRef" AS "orderId", "ItemRef" AS "itemRef", SUM("Quantity") AS "ordered"
+         FROM "Sle"."SalesOrderItems"
+         WHERE "SalesOrderRef" = ANY($1::bigint[]) AND "ItemRef" IS NOT NULL
+         GROUP BY 1, 2`, [orderIds]);
+        const usedRows = await manager.query(`SELECT p."BaseDocumentRef" AS "orderId", i."ItemRef" AS "itemRef", SUM(i."Quantity") AS "used"
+       FROM "Sle"."SalesProformaInvoices" p
+       JOIN "Sle"."SalesProformaInvoiceItems" i ON i."SalesProformaRef" = p."SalesProformaID"
+       WHERE p."BaseDocumentTypeRef" = 1
+         AND p."BaseDocumentRef" = ANY($1::bigint[])
+         AND COALESCE(p."Status", 0) <> 6
+         AND ($2::bigint IS NULL OR p."SalesProformaID" <> $2::bigint)
+         AND i."ItemRef" IS NOT NULL
+       GROUP BY 1, 2`, [orderIds, excludeProformaId && excludeProformaId > 0 ? excludeProformaId : null]);
+        if (!orderedRows.length)
+            return closed;
+        const EPS = 1e-9;
+        const orderedMap = new Map();
+        for (const r of orderedRows) {
+            const oid = Number(r.orderId);
+            const iid = Number(r.itemRef);
+            if (!orderedMap.has(oid))
+                orderedMap.set(oid, new Map());
+            const m = orderedMap.get(oid);
+            m.set(iid, (m.get(iid) || 0) + (Number(r.ordered) || 0));
+        }
+        const usedMap = new Map();
+        for (const r of usedRows) {
+            const oid = Number(r.orderId);
+            const iid = Number(r.itemRef);
+            if (!usedMap.has(oid))
+                usedMap.set(oid, new Map());
+            const m = usedMap.get(oid);
+            m.set(iid, (m.get(iid) || 0) + (Number(r.used) || 0));
+        }
+        for (const [oid, items] of orderedMap.entries()) {
+            if (!items.size)
+                continue;
+            const fullyCovered = Array.from(items.entries()).every(([iid, orderedQty]) => {
+                const usedQty = usedMap.get(oid)?.get(iid) || 0;
+                return usedQty + EPS >= orderedQty;
+            });
+            if (fullyCovered)
+                closed.add(oid);
+        }
+        return closed;
+    }
+    async getAvailableBaseDocuments(type, excludeProformaId) {
         const { bsId, compId, fiscalYearId } = this.getScope();
         const t = Number(type);
         if (t === 1) {
@@ -49,7 +100,12 @@ let SleBaseDocumentService = class SleBaseDocumentService {
             if (fiscalYearId)
                 qb.andWhere('(so.FiscalYearRef = :fiscalYearId OR so.FiscalYearRef IS NULL)', { fiscalYearId });
             qb.orderBy('so.OrderNumber', 'DESC');
-            const docs = await qb.getMany();
+            let docs = await qb.getMany();
+            const excludeId = Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined;
+            const candidateIds = docs.map((d) => Number(d.SalesOrderID));
+            const closedIds = await this.getFullyCoveredOrderIds(candidateIds, excludeId);
+            if (closedIds.size)
+                docs = docs.filter((d) => !closedIds.has(Number(d.SalesOrderID)));
             return docs.map((d) => ({
                 id: Number(d.SalesOrderID),
                 number: d.OrderNumber,

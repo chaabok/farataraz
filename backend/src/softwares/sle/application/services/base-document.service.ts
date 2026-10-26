@@ -40,7 +40,78 @@ export class SleBaseDocumentService {
   /** وضعیت‌های مجاز برای انتخاب به‌عنوان مبنا: بازبینی‌شده (4) و تاییدشده (5) */
   private static readonly BASE_ELIGIBLE_STATUSES = [4, 5];
 
-  async getAvailableBaseDocuments(type: number): Promise<any[]> {
+  /**
+   * Task 98-b: سفارش‌های فروش که «مانده باز» ندارند از فهرست مبنا حذف می‌شوند.
+   * منطق: برای هر قلم سفارش (ItemRef) جمع مقدار همه پیش فاکتورهای صادرشده بر مبنای
+   * همان سفارش (BaseDocumentTypeRef=1 و BaseDocumentRef=شناسه سفارش) محاسبه می‌شود؛
+   * اگر برای «تمامی» اقلام، جمع مقادیر پیش فاکتورها >= مقدار سفارش باشد، سفارش بسته
+   * است و نباید در لیست مبنا نمایش داده شود.
+   * - پیش فاکتورهای ابطال‌شده (Status=6) در محاسبه پوشش لحاظ نمی‌شوند.
+   * - excludeProformaId: هنگام ویرایش یک پیش فاکتور، مقادیر خودِ همان پیش فاکتور از
+   *   محاسبه حذف می‌شود تا سند مبنا در دراپ‌داون قابل انتخاب باقی بماند.
+   */
+  private async getFullyCoveredOrderIds(orderIds: number[], excludeProformaId?: number): Promise<Set<number>> {
+    const closed = new Set<number>();
+    if (!orderIds.length) return closed;
+    const manager = this.orderRepository.manager;
+
+    // جمع مقدار اقلام سفارش به تفکیک (سفارش، قلم)
+    const orderedRows: Array<{ orderId: string; itemRef: string; ordered: string }> =
+      await manager.query(
+        `SELECT "SalesOrderRef" AS "orderId", "ItemRef" AS "itemRef", SUM("Quantity") AS "ordered"
+         FROM "Sle"."SalesOrderItems"
+         WHERE "SalesOrderRef" = ANY($1::bigint[]) AND "ItemRef" IS NOT NULL
+         GROUP BY 1, 2`,
+        [orderIds],
+      );
+
+    // جمع مقدار اقلام پیش فاکتورهای صادرشده روی این سفارش‌ها (به‌جز ابطال‌شده‌ها)
+    const usedRows: Array<{ orderId: string; itemRef: string; used: string }> = await manager.query(
+      `SELECT p."BaseDocumentRef" AS "orderId", i."ItemRef" AS "itemRef", SUM(i."Quantity") AS "used"
+       FROM "Sle"."SalesProformaInvoices" p
+       JOIN "Sle"."SalesProformaInvoiceItems" i ON i."SalesProformaRef" = p."SalesProformaID"
+       WHERE p."BaseDocumentTypeRef" = 1
+         AND p."BaseDocumentRef" = ANY($1::bigint[])
+         AND COALESCE(p."Status", 0) <> 6
+         AND ($2::bigint IS NULL OR p."SalesProformaID" <> $2::bigint)
+         AND i."ItemRef" IS NOT NULL
+       GROUP BY 1, 2`,
+      [orderIds, excludeProformaId && excludeProformaId > 0 ? excludeProformaId : null],
+    );
+
+    if (!orderedRows.length) return closed;
+
+    const EPS = 1e-9;
+    const orderedMap = new Map<number, Map<number, number>>();
+    for (const r of orderedRows) {
+      const oid = Number(r.orderId);
+      const iid = Number(r.itemRef);
+      if (!orderedMap.has(oid)) orderedMap.set(oid, new Map());
+      const m = orderedMap.get(oid)!;
+      m.set(iid, (m.get(iid) || 0) + (Number(r.ordered) || 0));
+    }
+    const usedMap = new Map<number, Map<number, number>>();
+    for (const r of usedRows) {
+      const oid = Number(r.orderId);
+      const iid = Number(r.itemRef);
+      if (!usedMap.has(oid)) usedMap.set(oid, new Map());
+      const m = usedMap.get(oid)!;
+      m.set(iid, (m.get(iid) || 0) + (Number(r.used) || 0));
+    }
+
+    for (const [oid, items] of orderedMap.entries()) {
+      // اگر سفارش هیچ قلمی نداشته باشد بسته تلقی نمی‌شود (محتاطانه)
+      if (!items.size) continue;
+      const fullyCovered = Array.from(items.entries()).every(([iid, orderedQty]) => {
+        const usedQty = usedMap.get(oid)?.get(iid) || 0;
+        return usedQty + EPS >= orderedQty;
+      });
+      if (fullyCovered) closed.add(oid);
+    }
+    return closed;
+  }
+
+  async getAvailableBaseDocuments(type: number, excludeProformaId?: number): Promise<any[]> {
     const { bsId, compId, fiscalYearId } = this.getScope();
     const t = Number(type);
 
@@ -53,7 +124,14 @@ export class SleBaseDocumentService {
       if (compId && compId > 1) qb.andWhere('(so.companyRef = :compId OR so.companyRef IS NULL)', { compId });
       if (fiscalYearId) qb.andWhere('(so.FiscalYearRef = :fiscalYearId OR so.FiscalYearRef IS NULL)', { fiscalYearId });
       qb.orderBy('so.OrderNumber', 'DESC');
-      const docs = await qb.getMany();
+      let docs = await qb.getMany();
+
+      // Task 98-b: حذف سفارش‌هایی که تمام اقلامشان با پیش فاکتور پوشش داده شده و مانده باز ندارند
+      const excludeId = Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined;
+      const candidateIds = docs.map((d) => Number(d.SalesOrderID));
+      const closedIds = await this.getFullyCoveredOrderIds(candidateIds, excludeId);
+      if (closedIds.size) docs = docs.filter((d) => !closedIds.has(Number(d.SalesOrderID)));
+
       return docs.map((d) => ({
         id: Number(d.SalesOrderID),
         number: d.OrderNumber,

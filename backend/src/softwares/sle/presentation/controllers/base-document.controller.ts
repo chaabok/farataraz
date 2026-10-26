@@ -14,8 +14,13 @@ export class SleBaseDocumentController {
   constructor(private readonly service: SleBaseDocumentService) {}
 
   @Get('available')
-  async getAvailable(@Query('type') type: string) {
-    const data = await this.service.getAvailableBaseDocuments(Number(type) || 0);
+  async getAvailable(@Query('type') type: string, @Query('excludeProformaId') excludeProformaId?: string) {
+    // Task 98-b: excludeProformaId — هنگام ویرایش پیش فاکتور، مقادیر خود آن پیش فاکتور از
+    // محاسبه «مانده باز» سفارش‌ها حذف می‌شود تا سند مبنا در لیست باقی بماند
+    const data = await this.service.getAvailableBaseDocuments(
+      Number(type) || 0,
+      Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined,
+    );
     return { success: true, data };
   }
 

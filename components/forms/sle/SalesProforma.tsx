@@ -1083,9 +1083,11 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
               مبنا:
             </span>
             <div className="flex-1">
+              {/* Task 98-b: هنگام ویرایش پیش فاکتور، شناسه آن به سرور ارسال می‌شود تا مقادیر
+                  خودش از محاسبه «مانده باز» سفارش مبنا حذف شود و در لیست قابل انتخاب بماند */}
               <SingleSelectDropDown
                 noWrapper={true}
-                listApiUrl={`/api/sle/base-documents/available?type=${selectedBaseType}`}
+                listApiUrl={`/api/sle/base-documents/available?type=${selectedBaseType}${activeId ? `&excludeProformaId=${activeId}` : ""}`}
                 columns={[
                   { key: "number", label: "شماره", width: 90 },
                   {
