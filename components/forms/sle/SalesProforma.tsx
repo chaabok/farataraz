@@ -971,32 +971,31 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
       ),
     },
     {
+      // Task 89-b: «نوع فروش» هم‌تراز با «مشتری» — تمام‌عرض سلول (مثل عرض دراپ‌داون مشتری در ردیف بالا)
       name: "SalesType",
       type: "custom",
       noWrapper: true,
       render: ({ disabled }) => (
-        <div className="grid grid-cols-2 gap-x-2 w-full items-center">
-          <SingleSelectDropDown
-            options={salesTypeOptions}
-            columns={refColumns}
-            value={values.SalesTypeRef || ""}
-            valueKey="id"
-            displayKey="title"
-            onChange={(sel: any) => {
-              if (!sel) {
-                setValues((prev) => ({ ...prev, SalesTypeRef: "" }));
-                return;
-              }
-              const refId = typeof sel === "object" ? sel.id : sel;
-              setValues((prev) => ({ ...prev, SalesTypeRef: refId ? Number(refId) : "" }));
-            }}
-            placeholder="انتخاب نوع فروش..."
-            label="نوع فروش :"
-            required
-            labelWidth="55px"
-            disabled={disabled || isUsed}
-          />
-        </div>
+        <SingleSelectDropDown
+          options={salesTypeOptions}
+          columns={refColumns}
+          value={values.SalesTypeRef || ""}
+          valueKey="id"
+          displayKey="title"
+          onChange={(sel: any) => {
+            if (!sel) {
+              setValues((prev) => ({ ...prev, SalesTypeRef: "" }));
+              return;
+            }
+            const refId = typeof sel === "object" ? sel.id : sel;
+            setValues((prev) => ({ ...prev, SalesTypeRef: refId ? Number(refId) : "" }));
+          }}
+          placeholder="انتخاب نوع فروش..."
+          label="نوع فروش :"
+          required
+          labelWidth="80px"
+          disabled={disabled || isUsed}
+        />
       ),
     },
     {

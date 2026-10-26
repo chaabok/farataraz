@@ -1512,3 +1512,22 @@ Stage Summary:
 - فیلد «تاریخ تحویل» (DeliveryDate) به‌طور کامل از چرخه پیش فاکتور فروش حذف شد: UI فرم، validation، payload، DTO، service (create/update)، entity و ستون جدول Sle.SalesProformaInvoices
 - «تاریخ اعتبار» (ValidityDate) که مختص پیش فاکتور است دست‌نخورده ماند و round-trip آن در فرم/API/دیتابیس مجدداً تأیید شد
 - فایل‌های تغییر یافته: backend/src/softwares/sle/domain/entities/sales-proforma-invoice.entity.ts، backend/src/softwares/sle/application/dtos/sales-proforma-invoice.dto.ts، backend/src/softwares/sle/application/services/sales-proforma-invoice.service.ts، backend/src/app.module.ts، components/forms/sle/SalesProforma.tsx
+---
+Task ID: 89-b
+Agent: Z.ai Code (main)
+Task: هم‌تراز کردن فیلد «نوع فروش» با فیلد «مشتری» در فرم پیش فاکتور فروش (طبق اسکرین‌شات کاربر)
+
+Work Log:
+- ریشه‌یابی: گرید اصلی هدر دوستونه است (مشتری کل سلول راست ردیف ۱ را می‌گیرد: input w=376) ولی بلوک SalesType بعد از حذف «تاریخ تحویل» (Task 89) هنوز grid-cols-2 داشت و «نوع فروش» فقط در یک‌چهارم صفحه رندر می‌شد (input w=130، x=808 در برابر مشتری x=562) — عدم هم‌ترازی عمودی که در اسکرین‌شات کاربر با فلش قرمز مشخص بود
+- اصلاح در components/forms/sle/SalesProforma.tsx (بلوک SalesType):
+  • حذف wrapper «grid grid-cols-2 gap-x-2» و رندر مستقیم SingleSelectDropDown تمام‌عرض سلول (همان عرضی که مشتری دارد)
+  • labelWidth از 55px به 80px برای منطبق شدن موقعیت label با FormFieldWrapper پیش‌فرض مشتری
+- تأیید با اندازه‌گیری getBoundingClientRect در مرورگر (admin/1234، فرم باز):
+  • قبل: customer {x:562, w:376} / salesType {x:808, w:130}
+  • بعد: customer {x:562, y:185, w:376} / salesType {x:562, y:219, w:376} → aligned=true (تفاوت فقط y: ردیف ۱ و ۲)
+- اسکرین‌شات: .zscreenshots/t89b-sales-type-aligned.png — «نوع فروش» دقیقاً زیر «مشتری» با عرض یکسان؛ ساختار متقارن دوستونه: [مشتری | شماره+تاریخ+اعتبار] / [نوع فروش | محل تحویل+روش تسویه] / [مرکز فروش | وضعیت]
+- eslint فرم = پاک؛ کنسول مرورگر بدون خطای جدید
+
+Stage Summary:
+- فیلد «نوع فروش» فرم پیش فاکتور فروش اکنون تمام‌عرض سلول خود است و دقیقاً زیر و هم‌عرض دراپ‌داون «مشتری» می‌نشیند (x و w یکسان، فقط تفاوت ردیف) — همانند چیدمان ستونی درخواستی کاربر
+- فایل تغییر یافته: components/forms/sle/SalesProforma.tsx (فقط بلوک SalesType؛ منطق ذخیره/API دست‌نخورده)
