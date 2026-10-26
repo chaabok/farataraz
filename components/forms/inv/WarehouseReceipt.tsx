@@ -3502,7 +3502,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
 
   const hasOtherInfo = Boolean(values.Description && String(values.Description).trim() !== "");
   // Task 87: دستگیره فوتر — درگ موس برای کم/زیاد کردن ارتفاع + دبل‌کلیک برای جمع شدن کامل و بازگشت
-  const { isCollapsed: isFooterCollapsed, footerHeight, isDragging: footerDragging, handleProps: footerHandleProps } = useFooterPanelResize(150);
+  // Task 108: ارتفاع پیش‌فرض فوتر ۵۰٪ کاهش یافت (150 → 75)
+  const { isCollapsed: isFooterCollapsed, footerHeight, isDragging: footerDragging, handleProps: footerHandleProps } = useFooterPanelResize(75);
 
   return (
     <>
