@@ -959,6 +959,96 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
   const selectedBaseType = Number(values.BaseDocumentTypeRef || 0);
   const showBaseDocFields = baseDocSettings.hasBase;
 
+  // ---------------------------------------------------------------------------
+  // Task 94: قفل انتقال اطلاعات سند مبنا — وقتی «نوع سند مبنا» و «شماره مبنا» در هدر
+  // انتخاب شده باشد، فیلدهای نوع فروش/محل تحویل/روش تسویه/مرکز فروش و اطلاعات اقلام
+  // (به‌جز ستون مقدار) فقط‌خواندنی می‌شوند.
+  // ---------------------------------------------------------------------------
+  const isBaseLocked = selectedBaseType !== 0 && Number(values.BaseDocumentRef || 0) > 0;
+
+  // ---------------------------------------------------------------------------
+  // Task 94: انتقال اطلاعات سند مبنا به پیش فاکتور فروش — با انتخاب شماره مبنا در هدر:
+  // ۱) فیلدهای نوع فروش/محل های تحویل/روش تسویه/مرکز فروش از سند مبنا پر و فقط‌خواندنی می‌شوند
+  // ۲) اقلام سند مبنا (به همراه عوامل ردیابی هر ردیف) به جدول اقلام منتقل می‌شود؛ کاربر حق
+  //    تغییر اطلاعات اقلام را ندارد و فقط می‌تواند ستون «مقدار» را کم یا زیاد کند
+  // ۳) عوامل (اضافات/کسورات) سند مبنا به تب «عوامل پیش فاکتور» منتقل می‌شود
+  // ---------------------------------------------------------------------------
+  const applyBaseDocumentTransfer = async (typeVal: number, refVal: number) => {
+    if (!typeVal || !refVal) return;
+    try {
+      const res = await apiFetch(`/api/sle/base-documents/detail?type=${typeVal}&id=${refVal}`);
+      if (!res.ok) return;
+      const json = await res.json().catch(() => null);
+      const data = json?.data || json;
+      if (!data) return;
+
+      setValues((prev) => {
+        // اگر کاربر در فاصله واکشی، سند مبنا یا نوع دیگری انتخاب کرده بود، اعمال نشود
+        if (
+          Number(prev.BaseDocumentTypeRef || 0) !== Number(typeVal) ||
+          Number(prev.BaseDocumentRef || 0) !== Number(refVal)
+        ) {
+          return prev;
+        }
+        const baseItems = Array.isArray(data.items) ? data.items : [];
+        const baseFactors = Array.isArray(data.factors) ? data.factors : [];
+        return {
+          ...prev,
+          SalesTypeRef:
+            data.SalesTypeRef != null && data.SalesTypeRef !== ""
+              ? Number(data.SalesTypeRef)
+              : prev.SalesTypeRef,
+          SalesCenterRef:
+            data.SalesCenterRef != null && data.SalesCenterRef !== ""
+              ? Number(data.SalesCenterRef)
+              : prev.SalesCenterRef,
+          DeliveryLocationRef:
+            data.DeliveryLocationRef != null && data.DeliveryLocationRef !== ""
+              ? Number(data.DeliveryLocationRef)
+              : prev.DeliveryLocationRef,
+          SettlementMethodRef:
+            data.SettlementMethodRef != null && data.SettlementMethodRef !== ""
+              ? Number(data.SettlementMethodRef)
+              : prev.SettlementMethodRef,
+          items:
+            baseItems.length > 0
+              ? baseItems.map((d: any, idx: number) => ({
+                  id: `base-${typeVal}-${refVal}-${idx + 1}`,
+                  RowNo: idx + 1,
+                  ItemRef: d.ItemRef != null ? Number(d.ItemRef) : null,
+                  ItemCode: d.ItemCode || "",
+                  ItemName: d.ItemName || "",
+                  UnitName: d.UnitName || "عدد",
+                  Quantity: Number(d.Quantity) || 1,
+                  UnitPrice:
+                    d.UnitPrice != null && d.UnitPrice !== "" ? Math.round(Number(d.UnitPrice)) : "",
+                  TotalPrice:
+                    d.TotalPrice != null && d.TotalPrice !== "" ? Math.round(Number(d.TotalPrice)) : "",
+                  Description: d.Description || "",
+                  // Task 94: عوامل ردیابی ردیف سند مبنا — منتقل می‌شود و قابل تغییر نیست
+                  trackingFactorValues: d.trackingFactorValues ?? d.TrackingFactorValues ?? null,
+                }))
+              : prev.items,
+          factors:
+            baseFactors.length > 0
+              ? baseFactors.map((f: any, idx: number) => ({
+                  id: `basef-${typeVal}-${refVal}-${idx + 1}`,
+                  RowNo: idx + 1,
+                  FactorTitle: f.FactorTitle || "",
+                  FactorType: Number(f.FactorType || 1),
+                  Amount: Number(f.Amount || 0),
+                  Description: f.Description || "",
+                }))
+              : prev.factors,
+        };
+      });
+      showToast("اطلاعات سند مبنا به پیش فاکتور فروش منتقل شد", "success");
+    } catch (err) {
+      console.error("Error fetching base document detail:", err);
+      showToast("خطا در دریافت اطلاعات سند مبنا", "error");
+    }
+  };
+
   const baseDocumentCell: FieldConfig = {
     name: "BaseDocumentGroup",
     type: "custom",
@@ -1016,7 +1106,10 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
                 searchKeys={["number", "customer", "date"]}
                 onChange={(sel: any) => {
                   const refId = typeof sel === "object" ? sel?.id : sel;
-                  setValues((prev) => ({ ...prev, BaseDocumentRef: refId ? Number(refId) : "" }));
+                  const refNum = refId ? Number(refId) : 0;
+                  setValues((prev) => ({ ...prev, BaseDocumentRef: refNum || "" }));
+                  // Task 94: با انتخاب شماره مبنا، اطلاعات سند مبنا به فرم منتقل می‌شود
+                  if (refNum) applyBaseDocumentTransfer(selectedBaseType, refNum);
                 }}
                 placeholder="انتخاب سند مبنا..."
                 disabled={disabled || isUsed}
@@ -1054,7 +1147,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
           label="مرکز فروش :"
           required
           labelWidth="58px"
-          disabled={disabled || isUsed}
+          // Task 94: با انتخاب سند مبنا فقط‌خواندنی می‌شود (از سند مبنا پر می‌شود)
+          disabled={disabled || isUsed || isBaseLocked}
         />
         <StateListInput
           label="وضعیت :"
@@ -1175,7 +1269,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
           label="نوع فروش :"
           required
           labelWidth="80px"
-          disabled={disabled || isUsed}
+          // Task 94: با انتخاب سند مبنا فقط‌خواندنی می‌شود (از سند مبنا پر می‌شود)
+          disabled={disabled || isUsed || isBaseLocked}
         />
       ),
     },
@@ -1204,7 +1299,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             label="محل تحویل :"
             required
             labelWidth="58px"
-            disabled={disabled || isUsed}
+            // Task 94: با انتخاب سند مبنا فقط‌خواندنی می‌شود (از سند مبنا پر می‌شود)
+            disabled={disabled || isUsed || isBaseLocked}
           />
           <SingleSelectDropDown
             options={settlementMethodOptions}
@@ -1224,7 +1320,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             label="روش تسویه :"
             required
             labelWidth="58px"
-            disabled={disabled || isUsed}
+            // Task 94: با انتخاب سند مبنا فقط‌خواندنی می‌شود (از سند مبنا پر می‌شود)
+            disabled={disabled || isUsed || isBaseLocked}
           />
         </div>
       ),
@@ -1255,7 +1352,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
                   setValues((prev) => ({ ...prev, SalesCenterRef: refId ? Number(refId) : "" }));
                 }}
                 placeholder="انتخاب مرکز فروش..."
-                disabled={disabled || isUsed}
+                // Task 94: با انتخاب سند مبنا فقط‌خواندنی می‌شود (از سند مبنا پر می‌شود)
+                disabled={disabled || isUsed || isBaseLocked}
               />
             ),
           },
@@ -1331,7 +1429,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             value={selectedObj}
             displayKey="ItemCode"
             placeholder="انتخاب کالا..."
-            disabled={isUsed}
+            // Task 94: با انتخاب سند مبنا، انتخاب/تغییر کالا مسدود می‌شود (فقط ستون مقدار فعال است)
+            disabled={isUsed || isBaseLocked}
             enableMultiSelection={true}
             addFormOptions={[
               { title: "افزودن کالای جدید", componentName: "ProductServiceForm", groupId: "inv" },
@@ -1441,7 +1540,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             </span>
             <button
               type="button"
-              disabled={isUsed}
+              // Task 94: با انتخاب سند مبنا، تغییر واحد سنجش اقلام منتقل‌شده مسدود می‌شود
+              disabled={isUsed || isBaseLocked}
               onClick={() => {
                 const subUnitsForModal = subUnitsList.map((u: any, idx: number) => ({
                   ItemSubUnitID: u.ItemSubUnitID || u.id || u.MeasurementUnitID || (idx + 1),
@@ -1484,7 +1584,9 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
       render: (row, rowIndex) => {
         const itemRef = getItemRef(row);
         const itemTfs = getItemTrackingFactors(itemRef);
-        const showPlusBtn = isTrackingFactorEnabled && itemTfs.length > 0;
+        // Task 94: برای اقلام منتقل‌شده از سند مبنا، مودال/دکمه عامل ردیابی غیرفعال است —
+        // عامل ردیابی تعیین‌شده در سند مبنا قابل تغییر نیست و کاربر فقط می‌تواند مقدار را تغییر دهد
+        const showPlusBtn = !isBaseLocked && isTrackingFactorEnabled && itemTfs.length > 0;
         const hasEnteredTf =
           row?.trackingFactorValues &&
           (Array.isArray(row.trackingFactorValues)
@@ -1580,6 +1682,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
           localizeDigits
           thousandsSeparator
           integerOnly
+          // Task 94: با انتخاب سند مبنا، فی اقلام منتقل‌شده فقط‌خواندنی می‌شود
+          disabled={isUsed || isBaseLocked}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = {
@@ -1592,7 +1696,6 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             };
             setValues((prev) => ({ ...prev, items: updatedItems }));
           }}
-          disabled={isUsed}
         />
       ),
     },
@@ -1623,7 +1726,8 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
             updatedItems[rowIndex] = { ...updatedItems[rowIndex], Description: newVal };
             setValues((prev) => ({ ...prev, items: updatedItems }));
           }}
-          disabled={isUsed}
+          // Task 94: با انتخاب سند مبنا، توضیحات اقلام منتقل‌شده فقط‌خواندنی می‌شود
+          disabled={isUsed || isBaseLocked}
         />
       ),
     },
@@ -1775,8 +1879,11 @@ export function SalesProforma({ id, tabId }: SalesProformaProps) {
                       }))
                     }
                     hideHeader={false}
-                    hideAddButton={isUsed}
-                    hideDeleteButton={isUsed}
+                    // Task 94: با انتخاب سند مبنا، افزودن/حذف/کپی ردیف اقلام مسدود می‌شود —
+                    // اقلام فقط از سند مبنا منتقل می‌شوند و کاربر فقط مقدار را کم/زیاد می‌کند
+                    hideAddButton={isUsed || isBaseLocked}
+                    hideDeleteButton={isUsed || isBaseLocked}
+                    hideCopyPaste={isUsed || isBaseLocked}
                     onActiveRowChange={(_tabId, rowIndex) => {
                       if (rowIndex !== null && rowIndex !== undefined) {
                         setSelectedItemIndex(rowIndex);

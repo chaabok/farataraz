@@ -78,6 +78,69 @@ let SleBaseDocumentService = class SleBaseDocumentService {
         }
         return [];
     }
+    async getBaseDocumentDetail(type, id) {
+        const t = Number(type);
+        const docId = Number(id);
+        if (!docId || !Number.isFinite(docId))
+            return null;
+        if (t === 1) {
+            const doc = await this.orderRepository.findOne({
+                where: { SalesOrderID: docId },
+                relations: ['items', 'factors'],
+            });
+            if (!doc)
+                return null;
+            return this.normalizeBaseDetail(doc, doc.OrderNumber, doc.OrderDate, doc.items, doc.factors);
+        }
+        if (t === 2) {
+            const doc = await this.proformaRepository.findOne({
+                where: { SalesProformaID: docId },
+                relations: ['items', 'factors'],
+            });
+            if (!doc)
+                return null;
+            return this.normalizeBaseDetail(doc, doc.ProformaNumber, doc.ProformaDate, doc.items, doc.factors);
+        }
+        return null;
+    }
+    normalizeBaseDetail(header, number, date, items, factors) {
+        return {
+            id: Number(header.SalesOrderID ?? header.SalesProformaID),
+            number: number ?? null,
+            date: date || '',
+            customer: header.CustomerName || '',
+            CustomerRef: header.CustomerRef != null ? Number(header.CustomerRef) : null,
+            CustomerName: header.CustomerName || '',
+            SalesTypeRef: header.SalesTypeRef != null ? Number(header.SalesTypeRef) : null,
+            SalesCenterRef: header.SalesCenterRef != null ? Number(header.SalesCenterRef) : null,
+            DeliveryLocationRef: header.DeliveryLocationRef != null ? Number(header.DeliveryLocationRef) : null,
+            SettlementMethodRef: header.SettlementMethodRef != null ? Number(header.SettlementMethodRef) : null,
+            items: (items || [])
+                .slice()
+                .sort((a, b) => (Number(a.RowNo) || 0) - (Number(b.RowNo) || 0))
+                .map((i) => ({
+                ItemRef: i.ItemRef != null ? Number(i.ItemRef) : null,
+                ItemCode: i.ItemCode || '',
+                ItemName: i.ItemName || '',
+                UnitName: i.UnitName || 'عدد',
+                Quantity: Number(i.Quantity) || 0,
+                UnitPrice: Number(i.UnitPrice) || 0,
+                TotalPrice: Number(i.TotalPrice) || 0,
+                Description: i.Description || '',
+                trackingFactorValues: i.TrackingFactorValues ?? null,
+            })),
+            factors: (factors || [])
+                .slice()
+                .sort((a, b) => (Number(a.RowNo) || 0) - (Number(b.RowNo) || 0))
+                .map((f) => ({
+                RowNo: Number(f.RowNo) || 1,
+                FactorTitle: f.FactorTitle || '',
+                FactorType: Number(f.FactorType) === 2 ? 2 : 1,
+                Amount: Number(f.Amount) || 0,
+                Description: f.Description || '',
+            })),
+        };
+    }
 };
 exports.SleBaseDocumentService = SleBaseDocumentService;
 SleBaseDocumentService.BASE_ELIGIBLE_STATUSES = [4, 5];

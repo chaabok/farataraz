@@ -6,4 +6,8 @@ export declare class SleBaseDocumentController {
         success: boolean;
         data: any[];
     }>;
+    getDetail(type: string, id: string): Promise<{
+        success: boolean;
+        data: any;
+    }>;
 }

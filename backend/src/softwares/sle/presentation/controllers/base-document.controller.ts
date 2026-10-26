@@ -18,4 +18,15 @@ export class SleBaseDocumentController {
     const data = await this.service.getAvailableBaseDocuments(Number(type) || 0);
     return { success: true, data };
   }
+
+  /**
+   * Task 94: جزئیات کامل سند مبنا (هدر + اقلام + عوامل + عوامل ردیابی)
+   * GET sle/base-documents/detail?type=N&id=ID
+   * برای انتقال اطلاعات سند مبنا به فرم پیش فاکتور فروش هنگام انتخاب شماره مبنا
+   */
+  @Get('detail')
+  async getDetail(@Query('type') type: string, @Query('id') id: string) {
+    const data = await this.service.getBaseDocumentDetail(Number(type) || 0, Number(id) || 0);
+    return { success: true, data };
+  }
 }

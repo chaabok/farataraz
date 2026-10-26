@@ -10,4 +10,6 @@ export declare class SleBaseDocumentService {
     private getScope;
     private static readonly BASE_ELIGIBLE_STATUSES;
     getAvailableBaseDocuments(type: number): Promise<any[]>;
+    getBaseDocumentDetail(type: number, id: number): Promise<any>;
+    private normalizeBaseDetail;
 }

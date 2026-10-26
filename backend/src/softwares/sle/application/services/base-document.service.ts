@@ -84,4 +84,93 @@ export class SleBaseDocumentService {
     // رسید انبار و حواله انبار) فعلاً فهرستی ندارند — خروجی خالی
     return [];
   }
+
+  // ---------------------------------------------------------------------------
+  // Task 94: جزئیات کامل سند مبنا (هدر + اقلام + عوامل + عوامل ردیابی) برای انتقال
+  // اطلاعات به فرم پیش فاکتور فروش هنگام انتخاب «شماره مبنا» در هدر فرم.
+  // خروجی شامل فیلدهای نوع فروش/مرکز فروش/محل تحویل/روش تسویه سند مبنا و همه اقلام
+  // (به همراه TrackingFactorValues هر ردیف) و همه عوامل (اضافات/کسورات) است.
+  // ---------------------------------------------------------------------------
+  async getBaseDocumentDetail(type: number, id: number): Promise<any> {
+    const t = Number(type);
+    const docId = Number(id);
+    if (!docId || !Number.isFinite(docId)) return null;
+
+    // سفارش فروش (1)
+    if (t === 1) {
+      const doc = await this.orderRepository.findOne({
+        where: { SalesOrderID: docId as any },
+        relations: ['items', 'factors'],
+      });
+      if (!doc) return null;
+      return this.normalizeBaseDetail(doc, doc.OrderNumber, doc.OrderDate, doc.items, doc.factors);
+    }
+
+    // پیش فاکتور فروش (2)
+    if (t === 2) {
+      const doc = await this.proformaRepository.findOne({
+        where: { SalesProformaID: docId as any },
+        relations: ['items', 'factors'],
+      });
+      if (!doc) return null;
+      return this.normalizeBaseDetail(
+        doc,
+        doc.ProformaNumber,
+        doc.ProformaDate,
+        doc.items,
+        doc.factors,
+      );
+    }
+
+    return null;
+  }
+
+  /** نرمال‌سازی خروجی جزئیات سند مبنا برای مصرف فرانت‌اند */
+  private normalizeBaseDetail(
+    header: any,
+    number: number | undefined,
+    date: string | undefined,
+    items: any[] | undefined,
+    factors: any[] | undefined,
+  ) {
+    return {
+      id: Number(header.SalesOrderID ?? header.SalesProformaID),
+      number: number ?? null,
+      date: date || '',
+      customer: header.CustomerName || '',
+      CustomerRef: header.CustomerRef != null ? Number(header.CustomerRef) : null,
+      CustomerName: header.CustomerName || '',
+      SalesTypeRef: header.SalesTypeRef != null ? Number(header.SalesTypeRef) : null,
+      SalesCenterRef: header.SalesCenterRef != null ? Number(header.SalesCenterRef) : null,
+      DeliveryLocationRef:
+        header.DeliveryLocationRef != null ? Number(header.DeliveryLocationRef) : null,
+      SettlementMethodRef:
+        header.SettlementMethodRef != null ? Number(header.SettlementMethodRef) : null,
+      items: (items || [])
+        .slice()
+        .sort((a, b) => (Number(a.RowNo) || 0) - (Number(b.RowNo) || 0))
+        .map((i) => ({
+          ItemRef: i.ItemRef != null ? Number(i.ItemRef) : null,
+          ItemCode: i.ItemCode || '',
+          ItemName: i.ItemName || '',
+          UnitName: i.UnitName || 'عدد',
+          Quantity: Number(i.Quantity) || 0,
+          UnitPrice: Number(i.UnitPrice) || 0,
+          TotalPrice: Number(i.TotalPrice) || 0,
+          Description: i.Description || '',
+          // Task 94: عوامل ردیابی ردیف سند مبنا — به فرم مقصد منتقل و غیرقابل تغییر می‌شود
+          trackingFactorValues: i.TrackingFactorValues ?? null,
+        })),
+      factors: (factors || [])
+        .slice()
+        .sort((a, b) => (Number(a.RowNo) || 0) - (Number(b.RowNo) || 0))
+        .map((f) => ({
+          RowNo: Number(f.RowNo) || 1,
+          FactorTitle: f.FactorTitle || '',
+          FactorType: Number(f.FactorType) === 2 ? 2 : 1,
+          Amount: Number(f.Amount) || 0,
+          Description: f.Description || '',
+        })),
+    };
+  }
 }
