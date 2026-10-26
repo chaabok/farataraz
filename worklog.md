@@ -1732,3 +1732,25 @@ Stage Summary:
 - هنگام ورود، لودر تمام‌صفحه «در حال ورود به نرم افزار...» از لحظه submit تا رندر کامل داشبورد نمایش داده می‌شود (قبلاً اسپینر فقط ~۰/۳ ثانیه بود و بعدش هیچ بازخوردی نبود)
 - دلیل تأخیر: ۰/۳ ثانیه bcrypt در API (طبیعی) + کامپایل on-demand و واکشی‌های داشبورد در حالت dev؛ با router.prefetch('/') کاهش بیشتر حاصل شد
 - فایل‌های تغییر یافته: app/login/page.tsx و components/layout/TabBar.tsx
+
+---
+Task ID: 97
+Agent: Z.ai Code (main)
+Task: ریستور بانک اطلاعاتی از فایل آپلودی کاربر (parsa-db-latest.sql)
+
+Work Log:
+- فایل آپلودی /home/z/my-project/upload/parsa-db-latest.sql بررسی شد: بکاپ کامل متنی (UTF-8، ۶۲۴KB، مورخ 2026-10-25T23:15) شامل ۱۷۶ جدول در ۹ اسکیما (Acc/Cnt/Dfb/Gnr/Iam/Inv/Rap/Rpt/Sle)، ۶۹۹ ردیف داده و ۵۷۹ ایندکس/قید؛ بدون extension و grant خاص
+- وضعیت قبل از ریستور ثبت شد: ۱۷۹ جدول، ۱ کاربر، ۵ سفارش فروش، ۴ پیش‌فاکتور
+- اتصالات فعال قطع، بانک parsaDb حذف و از نو ساخته شد (DROP/CREATE DATABASE)
+- چون psql نصب نیست، کل فایل با درایور pg در یک تراکنش واحد (BEGIN/COMMIT) اجرا شد → RESTORE COMMITTED SUCCESSFULLY
+- راستی‌آزمایی: ۱۷۶ جدول ایجاد شد و لیست جداول دقیقاً با فایل بکاپ مطابقت دارد؛ کاربر admin، ۴ سفارش فروش، ۲ مشتری، ۱ کالا، ۳ ساختار کسب‌وکار، ۱ تنظیم سند فروش
+- کشف ناسازگاری ۱: بکاپ آپلودی قدیمی‌تر از جدول‌های پیش‌فاکتور است → ۳ جدول SalesProformaInvoices/SalesProformaInvoiceItems/SalesProformaInvoiceFactors وجود نداشتند؛ DDL آن‌ها از بکاپ محلی جدیدتر (backups/parsa-db-latest.sql مورخ امروز) استخراج و با کلیدها، FK (ON DELETE CASCADE) و ایندکس‌های unique بازسازی شد (خالی از داده — سازگار با وضعیت بکاپ آپلودی)
+- کشف ناسازگاری ۲: مقایسه ستون‌به‌ستون ۱۷۹ جدول DDL بکاپ محلی با بانک ریستورشده → فقط ۲ ستون BaseDocumentTypeRef (integer) و BaseDocumentRef (bigint) در Sle.SalesOrders مفقود بود (ویژگی مبنا Task 93/94)؛ با ALTER TABLE اضافه شدند
+- بک‌اند (dist/main.js) ری‌استارت شد تا pool اتصال TypeORM تازه شود
+- تست‌های API بعد از ریستور: login=200 (۰/۳۴s)، health/iam/business-structure/warehouses/items/customers/sales-types/sales-orders/delivery-locations/settlement-methods/sales-centers/sales-channels/customer-groups/proforma-invoices/accounts/fiscalyear/contracts/dfb-menus همه=200
+- E2E مرورگر (admin/1234): ورود موفق، داشبورد با داده ریستورشده لود شد، فرم سفارش فروش جدید بدون خطا باز شد (شماره سفارش بعدی ۵) — اسکرین‌شات‌ها: .zscreenshots/t97-db-restore-*.png
+
+Stage Summary:
+- بانک parsaDb از بکاپ آپلودی کاربر کامل ریستور شد (۱۷۶ جدول + داده‌ها) و با افزودن ۳ جدول پیش‌فاکتور و ۲ ستون مبنا در SalesOrders، اسکیما با کد فعلی بک‌اند (۱۷۹ جدول) هم‌تراز شد
+- داده‌های قبلی بعد از ریستور (۵ سفارش/۴ پیش‌فاکتور آزمایشی) جایگزین داده بکاپ شدند (۴ سفارش، ۰ پیش‌فاکتور — بکاپ مقدم بر ساخت پیش‌فاکتور بوده)
+- نکته برای کاربر: بکاپ محلی backups/parsa-db-latest.sql جدیدتر است (شامل جداول پیش‌فاکتور و ستون‌های مبنا)؛ بکاپ‌های آینده باید بعد از آخرین تغییرات اسکیما گرفته شوند
