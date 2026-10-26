@@ -1357,9 +1357,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "PriceAfterDiscount",
-      label: "بعد از تخفیف",
+      label: "مبلغ کل پس از تخفیف",
       type: "text",
-      width: "130px",
+      width: "150px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
           {formatCurrency(row?.PriceAfterDiscount)}
@@ -1368,9 +1368,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "VatTax",
-      label: "ارزش افزوده",
+      label: "جمع مالیات و عوارض ارزش افزوده",
       type: "text",
-      width: "110px",
+      width: "185px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
           {formatCurrency(row?.VatTax)}
@@ -1379,9 +1379,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "NetPrice",
-      label: "خالص (ریال)",
+      label: "جمع کل با مالیات و عوارض ارزش افزوده",
       type: "text",
-      width: "140px",
+      width: "215px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-bold text-blue-700 dark:text-blue-400 select-none dir-ltr">
           {formatCurrency(row?.NetPrice)}
