@@ -800,10 +800,18 @@ export function MainDataGrid({
   }, [gridId, sorting, columnFilters, columnOrder, columnVisibility, setPreferences]);
 
   /* --------------------- server-side params ------------------------ */
+  // Task 105: onParamsChange در ref نگه داشته می‌شود تا هویت ناپایدارِ handler در
+  // کامپوننت‌های لیست (تعریف inline در هر رندر) باعث اجرای مجدد این اثر و حلقه
+  // بی‌پایان fetch (Reload دائمی لیست‌ها) نشود؛ اثر فقط با تغییر واقعی پارامترها می‌سوزد.
+  const onParamsChangeRef = useRef(onParamsChange);
   useEffect(() => {
-    if (!serverSide || !onParamsChange) return;
+    onParamsChangeRef.current = onParamsChange;
+  });
+
+  useEffect(() => {
+    if (!serverSide) return;
     const timeout = setTimeout(() => {
-      onParamsChange({
+      onParamsChangeRef.current?.({
         pageIndex,
         pageSize,
         sorting,
@@ -813,7 +821,7 @@ export function MainDataGrid({
       });
     }, 500);
     return () => clearTimeout(timeout);
-  }, [pageIndex, pageSize, sorting, columnFilters, globalFilter, advancedFilters, serverSide, onParamsChange]);
+  }, [pageIndex, pageSize, sorting, columnFilters, globalFilter, advancedFilters, serverSide]);
 
   /* ------------------------ infinite scroll ------------------------ */
   useEffect(() => {
