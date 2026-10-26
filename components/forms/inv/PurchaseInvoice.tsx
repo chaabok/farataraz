@@ -14,6 +14,8 @@ import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSale
 import { StateListInput, DocumentState, DocumentStateLabels, isStatusApprovedOrReviewed } from "@/components/inputs/StateListInput";
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
+import { useLanguage } from "@/lib/stores/languageStore";
+import { localizeNumericString } from "@/lib/digitLocale"; // Task 102: نمایش ارقام فارسی در سراسر فرم
 import { apiFetch, normalizePersianText } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFooterPanelResize } from "@/hooks/useFooterPanelResize"; // Task 87: دستگیره ارتفاع فوتر
@@ -76,6 +78,12 @@ function formatCurrency(val: number | string | null | undefined): string {
 export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
   const { removeTab } = useTabs();
   const { showToast } = useToast();
+  const { language } = useLanguage();
+  // Task 102: تبدیل ارقام لاتین به ارقام زبان جاری (فارسی) برای نمایش ردیف‌ها و شمارنده‌ها
+  const faNum = React.useCallback(
+    (v: number | string) => localizeNumericString(String(v), language),
+    [language]
+  );
   const { activeId, setActiveId } = useFormUpsert(id);
   const { isUsed } = useFormUsageCheck("PurchaseInvoice", activeId);
   const [selectedFactorIndex, setSelectedFactorIndex] = useState<number | null>(null);
@@ -1018,7 +1026,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       width: "40px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
-          {rowIndex + 1}
+          {faNum(rowIndex + 1)}
         </span>
       ),
     },
@@ -1230,6 +1238,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
             <NumberInput
               value={row?.Quantity !== "" && row?.Quantity !== null && row?.Quantity !== undefined ? row.Quantity : ""}
               thousandsSeparator={true}
+              localizeDigits={true}
               onChange={(newVal) => {
                 const updatedItems = [...(values.items || [])];
                 const qtyVal = newVal !== "" && newVal !== null && newVal !== undefined ? Number(newVal) : "";
@@ -1294,6 +1303,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
         <NumberInput
           value={row?.UnitPrice ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             const priceVal = Number(newVal) || 0;
@@ -1335,6 +1345,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
         <NumberInput
           value={row?.Discount ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             const manualDisc = Number(newVal) || 0;
@@ -1399,7 +1410,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       width: "60px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
-          {rowIndex + 1}
+          {faNum(rowIndex + 1)}
         </span>
       ),
     },
@@ -1445,6 +1456,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
         <NumberInput
           value={row?.Amount ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedFactors = [...(values.factors || [])];
             updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
@@ -1538,6 +1550,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
             placeholder="شماره فاکتور"
             labelWidth="75px"
             integerOnly={true}
+            localizeDigits={true}
           />
           <DateInput
             label="تاریخ فاکتور :"
@@ -2086,6 +2099,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                                     <NumberInput
                                       value={rowFactorAmount ?? 0}
                                       thousandsSeparator={true}
+                                      localizeDigits={true}
                                       onChange={(newVal) => {
                                         const numVal = Number(newVal) || 0;
                                         const oldRowAmount = getFactorAmountForRow(f, selItem, values.items, values.InvoiceDate, parametersList);
@@ -2341,7 +2355,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                         تعداد اقلام فاکتور
                       </span>
                       <span className="text-blue-900 dark:text-blue-200 font-extrabold text-sm block mt-1">
-                        {values.items?.length || 0} کالا / خدمت
+                        {faNum(values.items?.length || 0)} کالا / خدمت
                       </span>
                     </div>
                   </div>

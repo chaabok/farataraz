@@ -14,6 +14,8 @@ import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSale
 import { StateListInput, DocumentState, DocumentStateLabels, isStatusApprovedOrReviewed } from "@/components/inputs/StateListInput";
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
+import { useLanguage } from "@/lib/stores/languageStore";
+import { localizeNumericString } from "@/lib/digitLocale"; // Task 102: نمایش ارقام فارسی در سراسر فرم
 import { apiFetch, normalizePersianText } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFooterPanelResize } from "@/hooks/useFooterPanelResize"; // Task 87: دستگیره ارتفاع فوتر
@@ -73,6 +75,12 @@ function formatCurrency(val: number | string | null | undefined): string {
 export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProps) {
   const { removeTab } = useTabs();
   const { showToast } = useToast();
+  const { language } = useLanguage();
+  // Task 102: تبدیل ارقام لاتین به ارقام زبان جاری (فارسی) برای نمایش ردیف‌ها و شمارنده‌ها
+  const faNum = React.useCallback(
+    (v: number | string) => localizeNumericString(String(v), language),
+    [language]
+  );
   const { activeId, setActiveId } = useFormUpsert(id);
   const { isUsed } = useFormUsageCheck("ServicePurchaseInvoice", activeId);
   const [selectedFactorIndex, setSelectedFactorIndex] = useState<number | null>(null);
@@ -651,7 +659,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
       width: "55px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
-          {rowIndex + 1}
+          {faNum(rowIndex + 1)}
         </span>
       ),
     },
@@ -776,6 +784,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
         <NumberInput
           value={row?.Quantity ?? 1}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = calculateRowFields({
@@ -797,6 +806,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
         <NumberInput
           value={row?.UnitPrice ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = calculateRowFields({
@@ -829,6 +839,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
         <NumberInput
           value={row?.Discount ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
             updatedItems[rowIndex] = calculateRowFields({
@@ -885,7 +896,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
       width: "60px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
-          {rowIndex + 1}
+          {faNum(rowIndex + 1)}
         </span>
       ),
     },
@@ -931,6 +942,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
         <NumberInput
           value={row?.Amount ?? 0}
           thousandsSeparator={true}
+          localizeDigits={true}
           onChange={(newVal) => {
             const updatedFactors = [...(values.factors || [])];
             updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
@@ -1516,6 +1528,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
                                     <NumberInput
                                       value={rowFactorAmount ?? 0}
                                       thousandsSeparator={true}
+                                      localizeDigits={true}
                                       onChange={(newVal) => {
                                         const numVal = Number(newVal) || 0;
                                         const oldRowAmount = getFactorAmountForRow(f, selItem, values.items, values.InvoiceDate, parametersList);

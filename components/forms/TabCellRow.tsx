@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { cn, safeStringify } from '@/lib/utils';
 import { Plus, X, Copy, ClipboardPaste, Sigma } from 'lucide-react';
+import { useLanguage } from '@/lib/stores/languageStore';
+import { localizeNumericString, normalizeNumericInput } from '@/lib/digitLocale'; // Task 102: ارقام بومی زبان (فارسی)
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
@@ -130,6 +132,7 @@ export function TabCellRow({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { language } = useLanguage(); // Task 102: زبان جاری برای بومی‌سازی ارقام سلول‌های amount
 
   const getColKey = React.useCallback((col: any, idx: number) => col?.key || col?.name || `col_${idx}`, []);
   const getColHeader = React.useCallback((col: any) => col?.header || col?.label || '', []);
@@ -587,7 +590,7 @@ export function TabCellRow({
       )}
 
       {/* Grid Content */}
-      <fieldset disabled={isReadonly} className="flex-1 min-h-0 overflow-hidden relative border-none p-0 m-0 min-w-0">
+      <fieldset disabled={isReadonly} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto relative border-none p-0 m-0 min-w-0">
         {currentTabConfig && (
           <table 
             className="text-sm text-right border-collapse h-full min-h-full"
@@ -843,13 +846,15 @@ export function TabCellRow({
                                      const numVal = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
                                      if (isNaN(numVal)) return '';
                                      const precision = col.precision !== undefined ? col.precision : 0;
-                                     return numVal.toLocaleString('en-US', { 
+                                     // Task 102: نمایش ارقام بر اساس زبان جاری (مثلاً ارقام فارسی)
+                                     return localizeNumericString(numVal.toLocaleString('en-US', {
                                        minimumFractionDigits: precision,
                                        maximumFractionDigits: precision 
-                                     });
+                                     }), language);
                                    })()}
                                    onChange={(e) => {
-                                       const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+                                       // Task 102: نرمال‌سازی ورودی از هر زبانی (ارقام فارسی/جداکننده هزارگان) به عدد لاتین
+                                       const rawValue = normalizeNumericInput(e.target.value, language);
                                        handleCellChange(rowIndex, colKey, rawValue);
                                    }}
                                    dir="ltr"
@@ -915,10 +920,11 @@ export function TabCellRow({
                               return isNaN(numVal) ? sum : sum + numVal;
                             }, 0);
                             const precision = col.precision !== undefined ? col.precision : 0;
-                            const formattedTotal = total.toLocaleString('en-US', { 
+                            // Task 102: نمایش جمع ستون‌های amount با ارقام زبان جاری
+                            const formattedTotal = localizeNumericString(total.toLocaleString('en-US', {
                               minimumFractionDigits: precision,
                               maximumFractionDigits: precision 
-                            });
+                            }), language);
                             return (
                               <td 
                                 key={`foot_${colKey}_${idx}`} 
