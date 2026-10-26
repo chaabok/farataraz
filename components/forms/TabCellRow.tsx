@@ -613,7 +613,7 @@ export function TabCellRow({
                        return (
                          <th 
                            key={`th_${colKey}_${idx}`} 
-                           className="p-1 px-2 border-l border-gray-300 dark:border-gray-700 text-[11px] bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 font-semibold align-middle text-right relative group"
+                           className="p-1 px-2 border-l border-gray-300 dark:border-gray-700 text-sm font-medium bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 align-middle text-right relative group"
                            style={{ 
                              width: isLast ? undefined : customWidth, 
                              minWidth: customWidth, 
@@ -672,10 +672,10 @@ export function TabCellRow({
                            <th
                              key={`parent_header_${group.parentHeader}_${groupIdx}`}
                              colSpan={group.columns.length}
-                             className="p-1 px-2 border-l border-b border-gray-300 dark:border-gray-700 text-[11px] bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 font-bold text-center align-middle"
+                             className="p-1 px-2 border-l border-b border-gray-300 dark:border-gray-700 text-sm font-medium bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-center align-middle"
                            >
                              <div className="flex items-center justify-center w-full">
-                               <span className="font-bold text-gray-800 dark:text-gray-100 underline decoration-gray-400 decoration-1 underline-offset-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                               <span className="font-medium text-gray-800 dark:text-gray-100 underline decoration-gray-400 decoration-1 underline-offset-2 whitespace-nowrap overflow-hidden text-ellipsis">
                                  {group.parentHeader}
                                </span>
                              </div>
@@ -690,7 +690,7 @@ export function TabCellRow({
                              <th
                                key={`th_top_standalone_${colKey}_${originalIndex}`}
                                rowSpan={2}
-                               className="p-1 px-2 border-l border-b border-gray-300 dark:border-gray-700 text-[11px] bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 font-semibold align-middle text-right relative group"
+                               className="p-1 px-2 border-l border-b border-gray-300 dark:border-gray-700 text-sm font-medium bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 align-middle text-right relative group"
                                style={{
                                  width: isLast ? undefined : customWidth,
                                  minWidth: customWidth,
@@ -726,7 +726,7 @@ export function TabCellRow({
                        return (
                          <th
                            key={`th_sub_${colKey}_${idx}`}
-                           className="p-1 px-2 border-l border-gray-300 dark:border-gray-700 text-[11px] bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 font-semibold align-middle text-center relative group"
+                           className="p-1 px-2 border-l border-gray-300 dark:border-gray-700 text-sm font-medium bg-gradient-to-b from-gray-50 to-gray-200 dark:from-gray-700 dark:to-gray-800 align-middle text-center relative group"
                            style={{
                              width: isLast ? undefined : customWidth,
                              minWidth: customWidth,
