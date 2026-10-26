@@ -3502,8 +3502,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
 
   const hasOtherInfo = Boolean(values.Description && String(values.Description).trim() !== "");
   // Task 87: دستگیره فوتر — درگ موس برای کم/زیاد کردن ارتفاع + دبل‌کلیک برای جمع شدن کامل و بازگشت
-  // Task 108: ارتفاع پیش‌فرض فوتر ۵۰٪ کاهش یافت (150 → 75)
-  const { isCollapsed: isFooterCollapsed, footerHeight, isDragging: footerDragging, handleProps: footerHandleProps } = useFooterPanelResize(75);
+  // Task 109: ارتفاع پیش‌فرض فوتر به 150 بازگشت (تغییر Task 108 اشتباه بود — منظور کاربر نوار دکمه‌های باکس عوامل بود نه ارتفاع باکس‌های فوتر)
+  const { isCollapsed: isFooterCollapsed, footerHeight, isDragging: footerDragging, handleProps: footerHandleProps } = useFooterPanelResize(150);
 
   return (
     <>
@@ -3893,7 +3893,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                     </table>
                   </div>
 
-                  <div className="flex items-center justify-start gap-1 pt-1 pb-0.5 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                  {/* Task 109: نوار دکمه‌های عوامل — ارتفاع ۵۰٪ کاهش یافت تا ردیف‌های عامل بیشتری دیده شوند */}
+                  <div className="flex items-center justify-start gap-1 border-t border-slate-100 dark:border-slate-800 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -3912,10 +3913,10 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                         setSelectedFactorIndex((values.factors?.length || 0));
                       }}
                       disabled={isUsed}
-                      className="p-1 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="افزودن ردیف"
                     >
-                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <Plus className="w-3 h-3 stroke-[3]" />
                     </button>
                     <button
                       type="button"
@@ -3930,10 +3931,10 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                         }
                       }}
                       disabled={isUsed || (values.factors || []).length === 0}
-                      className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="حذف ردیف"
                     >
-                      <X className="w-4 h-4 stroke-[3]" />
+                      <X className="w-3 h-3 stroke-[3]" />
                     </button>
                     <button
                       type="button"
@@ -3941,10 +3942,10 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                         showToast("ردیف عامل انتخاب شده آماده ویرایش است", "info");
                       }}
                       disabled={isUsed || selectedFactorIndex === null}
-                      className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="ویرایش ردیف"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
