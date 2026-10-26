@@ -2056,7 +2056,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "RowNo",
       label: "ردیف",
       type: "text",
-      width: "55px",
+      width: "40px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
           {rowIndex + 1}
@@ -2069,7 +2069,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
             name: "BaseNumber",
             label: "شماره مبنا",
             type: "custom" as const,
-            width: "110px",
+            width: "88px",
             render: (row: any, rowIndex: number) => {
               let defaultBaseNo = row?.BaseNumber || row?.BaseDocumentNumber || "";
               if (!defaultBaseNo) {
@@ -2105,7 +2105,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "ItemRef",
       label: "کد کالا/خدمت *",
       type: "custom",
-      width: "230px",
+      width: "88px",
       render: (row, rowIndex) => {
         const val = row?.ItemRef;
         const selectedObj =
@@ -2193,7 +2193,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "ItemName",
       label: "عنوان کالا/خدمت",
       type: "text",
-      width: "200px",
+      width: "110px",
       render: (row) => (
         <span className="flex items-center w-full h-[25px] px-2 text-xs text-slate-800 dark:text-slate-200 truncate select-none">
           {row?.ItemName || "-"}
@@ -2204,7 +2204,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "UnitName",
       label: "واحد سنجش",
       type: "custom",
-      width: "140px",
+      width: "62px",
       render: (row, rowIndex) => {
         const itemRef = getItemRef(row);
         const matchedItem =
@@ -2287,7 +2287,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "UnitType",
       label: "نوع واحد",
       type: "text",
-      width: "80px",
+      width: "58px",
       render: (row) => {
         const unitTypeStr = typeof row?.UnitType === "number"
           ? (row.UnitType === 2 ? "فرعی" : "اصلی")
@@ -2303,7 +2303,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "Quantity",
       label: "مقدار *",
       type: "custom",
-      width: "140px",
+      width: "68px",
       render: (row, rowIndex) => {
         const itemRef = getItemRef(row);
         const itemTfs = getItemTrackingFactors(itemRef);
@@ -2398,7 +2398,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "UnitPrice",
       label: "فی (ریال) *",
       type: "custom",
-      width: "120px",
+      width: "85px",
       render: (row, rowIndex) => (
         <NumberInput
           value={row?.UnitPrice ?? 0}
@@ -2428,7 +2428,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "TotalPrice",
       label: "مبلغ کل (ریال)",
       type: "text",
-      width: "130px",
+      width: "96px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-800 dark:text-slate-100 select-none dir-ltr">
           {formatCurrency(row?.TotalPrice)}
@@ -2439,7 +2439,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       name: "Discount",
       label: "تخفیف (ریال)",
       type: "text",
-      width: "110px",
+      width: "86px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
           {formatCurrency(row?.Discount)}
@@ -2448,9 +2448,9 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
     },
     {
       name: "PriceAfterDiscount",
-      label: "بعد از تخفیف",
+      label: "مبلغ کل\nپس از تخفیف",
       type: "text",
-      width: "130px",
+      width: "98px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
           {formatCurrency(row?.PriceAfterDiscount)}
@@ -2459,39 +2459,20 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
     },
     {
       name: "VatTax",
-      label: "اضافات (ریال)",
-      type: "custom",
-      width: "120px",
-      render: (row, rowIndex) => (
-        <NumberInput
-          value={row?.Additions ?? row?.VatTax ?? 0}
-          thousandsSeparator={true}
-          onChange={(newVal) => {
-            const updatedItems = [...(values.items || [])];
-            const manualAdds = Number(newVal) || 0;
-            updatedItems[rowIndex] = {
-              ...updatedItems[rowIndex],
-              ManualAdditions: manualAdds,
-              Additions: manualAdds,
-              VatTax: manualAdds,
-            };
-            const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
-              updatedItems,
-              values.factors || [],
-              values.ReceiptDate || "",
-              parametersList || []
-            );
-            setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
-          }}
-          disabled={isUsed}
-        />
+      label: "جمع مالیات و عوارض\nارزش افزوده",
+      type: "text",
+      width: "110px",
+      render: (row) => (
+        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
+          {formatCurrency(row?.VatTax)}
+        </span>
       ),
     },
     {
       name: "NetPrice",
-      label: "مبلغ خالص (ریال)",
+      label: "جمع کل با مالیات\nو عوارض ارزش افزوده",
       type: "text",
-      width: "140px",
+      width: "115px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-bold text-blue-700 dark:text-blue-400 select-none dir-ltr">
           {formatCurrency(row?.NetPrice)}
