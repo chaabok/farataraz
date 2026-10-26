@@ -618,7 +618,7 @@ export function TabCellRow({
                            }}
                          >
                            <div className="flex items-center justify-between">
-                             <span className="whitespace-nowrap overflow-visible">{getColHeader(col)}</span>
+                             <span className={String(getColHeader(col)).includes("\n") ? "whitespace-pre-line overflow-visible leading-tight text-center" : "whitespace-nowrap overflow-visible"}>{getColHeader(col)}</span>
                              {col.required && <span className="text-red-500 mr-1">*</span>}
                            </div>
                            {/* Resize handle */}

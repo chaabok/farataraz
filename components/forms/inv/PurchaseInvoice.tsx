@@ -1015,7 +1015,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "RowNo",
       label: "ردیف",
       type: "text",
-      width: "55px",
+      width: "40px",
       render: (_row, rowIndex) => (
         <span className="flex items-center justify-center w-full h-[25px] text-xs font-semibold text-center select-none text-slate-600 dark:text-slate-400">
           {rowIndex + 1}
@@ -1026,7 +1026,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "ItemRef",
       label: "کد کالا/خدمت *",
       type: "custom",
-      width: "230px",
+      width: "88px",
       render: (row, rowIndex) => {
         const val = row?.ItemRef;
         const selectedObj = availableItems.find(
@@ -1099,7 +1099,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "ItemName",
       label: "عنوان کالا/خدمت",
       type: "text",
-      width: "200px",
+      width: "110px",
       render: (row) => (
         <span className="flex items-center w-full h-[25px] px-2 text-xs text-slate-800 dark:text-slate-200 truncate select-none">
           {row?.ItemName || "-"}
@@ -1110,7 +1110,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "UnitName",
       label: "واحد سنجش",
       type: "custom",
-      width: "140px",
+      width: "62px",
       render: (row, rowIndex) => {
         const matchedItem = availableItems.find(
           (i) => Number(i.id) === Number(row?.ItemRef) || Number(i.ItemID) === Number(row?.ItemRef)
@@ -1184,7 +1184,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "UnitType",
       label: "نوع واحد",
       type: "text",
-      width: "80px",
+      width: "58px",
       render: (row) => {
         const unitTypeStr = typeof row?.UnitType === "number"
           ? (row.UnitType === 2 ? "فرعی" : "اصلی")
@@ -1200,7 +1200,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "Quantity",
       label: "مقدار *",
       type: "custom",
-      width: "140px",
+      width: "68px",
       render: (row, rowIndex) => {
         const itemRef = row?.ItemRef ? Number(row.ItemRef) : null;
         const itemTfs = getItemTrackingFactors(itemRef);
@@ -1289,7 +1289,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "UnitPrice",
       label: "فی (ریال) *",
       type: "custom",
-      width: "120px",
+      width: "85px",
       render: (row, rowIndex) => (
         <NumberInput
           value={row?.UnitPrice ?? 0}
@@ -1319,7 +1319,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "TotalPrice",
       label: "مبلغ کل (ریال)",
       type: "text",
-      width: "130px",
+      width: "96px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-800 dark:text-slate-100 select-none dir-ltr">
           {formatCurrency(row?.TotalPrice)}
@@ -1330,7 +1330,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
       name: "Discount",
       label: "تخفیف (ریال)",
       type: "custom",
-      width: "110px",
+      width: "86px",
       render: (row, rowIndex) => (
         <NumberInput
           value={row?.Discount ?? 0}
@@ -1357,9 +1357,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "PriceAfterDiscount",
-      label: "مبلغ کل پس از تخفیف",
+      label: "مبلغ کل\nپس از تخفیف",
       type: "text",
-      width: "150px",
+      width: "98px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
           {formatCurrency(row?.PriceAfterDiscount)}
@@ -1368,9 +1368,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "VatTax",
-      label: "جمع مالیات و عوارض ارزش افزوده",
+      label: "جمع مالیات و عوارض\nارزش افزوده",
       type: "text",
-      width: "185px",
+      width: "110px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
           {formatCurrency(row?.VatTax)}
@@ -1379,9 +1379,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     },
     {
       name: "NetPrice",
-      label: "جمع کل با مالیات و عوارض ارزش افزوده",
+      label: "جمع کل با مالیات\nو عوارض ارزش افزوده",
       type: "text",
-      width: "215px",
+      width: "115px",
       render: (row) => (
         <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-bold text-blue-700 dark:text-blue-400 select-none dir-ltr">
           {formatCurrency(row?.NetPrice)}
