@@ -1792,7 +1792,13 @@ export const SingleSelectDropDown = React.forwardRef(function SingleSelectDropDo
                           return (
                             <td key={col.key} className={cn("px-2 py-[3px] text-[11px] text-slate-600 dark:text-slate-300 truncate border border-slate-200 dark:border-slate-700", dir === 'rtl' ? "text-right" : "text-left")}>
                               {(() => {
-                                if (col.renderItem) return col.renderItem(item);
+                                if (col.renderItem) {
+                                  const renderedItem = col.renderItem(item);
+                                  // خروجی رشته‌ای/عددی renderItem هم بومی‌سازی می‌شود (مثل تاریخ شمسی دراپ‌داون مبنا) تا ارقام با زبان نرم‌افزار هماهنگ بمانند
+                                  return typeof renderedItem === 'string' || typeof renderedItem === 'number'
+                                    ? localizeNumericString(String(renderedItem), language)
+                                    : renderedItem;
+                                }
                                 const rendered = (col as any).render ? (col as any).render(rawValue, item) : displayValue;
                                 // خروجی رشته‌ای/عددی رندرهای اختصاصی هم بومی‌سازی می‌شود (مثل تاریخ شمسی)
                                 return typeof rendered === 'string' || typeof rendered === 'number'
