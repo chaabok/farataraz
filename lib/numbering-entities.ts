@@ -38,6 +38,8 @@ export const NUMBERING_ENTITY_OPTIONS: NumberingEntityOption[] = [
   { label: 'درخواست تامین خدمت', value: 'service_supply_request', menu: 'انبارداری', hasHeaderNumberInput: true },
 
   // فروش
+  { label: 'سفارش فروش', value: 'sales_order', menu: 'فروش', hasHeaderNumberInput: true },
+  { label: 'پیش فاکتور فروش', value: 'sales_proforma', menu: 'فروش', hasHeaderNumberInput: true },
   { label: 'فاکتور فروش', value: 'sales_invoice', menu: 'فروش', hasHeaderNumberInput: true },
 
   // دریافت و پرداخت

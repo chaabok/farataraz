@@ -53,6 +53,8 @@ const ENTITY_TITLES = {
     item_supply_request: 'درخواست تامین کالا',
     service_supply_request: 'درخواست تامین خدمت',
     sales_invoice: 'فاکتور فروش',
+    sales_order: 'سفارش فروش',
+    sales_proforma: 'پیش فاکتور فروش',
     payment_notification: 'اعلامیه پرداخت',
     receipt_notification: 'رسید دریافت',
     received_cheque_operation: 'عملیات چک دریافتنی',
