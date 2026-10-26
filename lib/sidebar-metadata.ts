@@ -509,7 +509,9 @@ export const SIDEBAR_STRUCTURE: SidebarGroup[] = [
             icon: Settings,
             subItems: [
               { id: 'new_invoice', title: 'فاکتور جدید', icon: Plus },
-              { id: 'SalesOrderForm', title: 'سفارش فروش جدید', icon: Plus, componentName: 'SalesOrderForm', path: '/forms/sle/sales-order-new' }
+              { id: 'SalesOrderForm', title: 'سفارش فروش جدید', icon: Plus, componentName: 'SalesOrderForm', path: '/forms/sle/sales-order-new' },
+              // Task 88: پیش فاکتور فروش — فرم مشابه سفارش فروش + فیلد تاریخ اعتبار
+              { id: 'SalesProformaForm', title: 'پیش فاکتور فروش جدید', icon: Plus, componentName: 'SalesProformaForm', path: '/forms/sle/sales-proforma-new' }
             ]
           },
           {

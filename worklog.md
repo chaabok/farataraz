@@ -1464,3 +1464,24 @@ Work Log:
 Stage Summary:
 - اتصال GitHub برقرار شد؛ کامیت Task 87 (دستگیره resize فوتر در ۷ فرم) منتشر شد
 - origin/main اکنون = 91ace87؛ اسنپ‌شات repo.tar هم به‌روز شد
+---
+Task ID: 88
+Agent: Z.ai Code (main)
+Task: فرم جدید «پیش فاکتور فروش جدید» در منوی فروش > عملیات — کلون کامل فرم سفارش فروش + فیلد تاریخ اعتبار (بک‌اند و فرانت‌اند)
+
+Work Log:
+- تحقیق: enum بک‌اند SalesDocumentType.SalesProformaInvoice=2 از قبل موجود؛ ردیف تنظیمات type=2 در Sle.SalesDocumentSettings موجود (پیش‌فرض‌ها: نوع فروش=2، مرکز=1، محل تحویل=2، تسویه=4، پارامترها=true)؛ فرم/entity/controller/منو ساخته نشده بودند
+- بک‌اند (۶ فایل جدید + ۳ ویرایش): entities SalesProformaInvoice (+ValidityDate varchar(10)) / SalesProformaInvoiceItem / SalesProformaInvoiceFactor در schema Sle؛ DTO با پشتیبانی ValidityDate؛ SalesProformaInvoiceService (الگوی SalesOrderService: getScope، getNextNumber=MAX+1، create/update با delete-and-reinsert اقلام و عوامل، findAll با datagrid)؛ Controller @Controller('sle/sales-proforma-invoices') با next-number؛ ثبت در SleModule
+- ساخت خودکار جداول: DDL idempotent (CREATE TABLE IF NOT EXISTS + FK CASCADE) در بلوک pre-connect اصلی app.module.ts — با هر بوت اجرا می‌شود (DB_SYNCHRONIZE=false در sandbox)
+- آینه منو در backend/src/gateway/sidebar-structure.data.ts (درخت دسترسی‌ها)
+- فرانت‌اند: components/forms/sle/SalesProforma.tsx (کلون ۲۰۷۸ خطی SalesOrder با تغییر نام دقیق: SalesProformaID/ProformaNumber/ProformaDate، API /api/sle/sales-proforma-invoices، تنظیمات type=2، کلید showTrackingFactorInSalesProforma، useFormUsageCheck("SalesProformaInvoices"))؛ فیلد «تاریخ اعتبار» در ردیف شماره/تاریخ (grid-cols-3)؛ اعتبارسنجی تاریخ اعتبار با isValidJalaliDate؛ صفحه app/forms/sle/sales-proforma-new/page.tsx؛ ثبت در tab-registry (SalesProformaForm/SalesProforma)؛ منو در lib/sidebar-metadata.ts زیر operations_sales
+- بازسازی بک‌اند: tsc پاک؛ kill پروسه dist/main.js → server.js بازگرداند؛ جداول ساخته شدند ([Task88] log)
+- تست API با curl: login → next-number=1 → POST با ValidityDate=2026-11-25 + اقلام + عوامل → GET/PUT (تغییر ValidityDate و Status) → DELETE (پاک‌سازی) → next-number=1 ✓
+- E2E با agent-browser: جستجوی منو «پیش فاکتور» → فرم باز شد (عنوان «پیش فاکتور فروش جدید»، شماره ۱ با ارقام بومی)؛ پیش‌فرض‌های تنظیمات type=2 اعمال شد (لطلطی/درب نمایندگی/نقدی/فروش زاهدان)؛ انتخاب مشتری «علی جهانی» و کالا «نشاسته» (پنل MultiColumnDropDown + دکمه تایید ✓ با eval)؛ فی=۵۰٬۰۰۰ → مبلغ کل خودکار؛ تاریخ اعتبار=۱۴۰۵/۰۹/۰۴؛ ذخیره → عنوان «ویرایش پیش فاکتور فروش»؛ دیتابیس: ValidityDate=2026/11/25 ✓؛ تب‌ها: عوامل پیش فاکتور، خلاصه محاسبات مالی پیش فاکتور فروش (۵۰٬۰۰۰)، سایر اطلاعات؛ فوتر سه‌باکسه با خلاصه گردش (AJAX refresh)؛ فهرست: رکورد ۱ با ستون‌های شماره/تاریخ/مشتری/وضعیت؛ دکمه جدید → شماره ۲ و فرم خالی؛ deep-link /forms/sle/sales-proforma-new ✓؛ دستگیره resize فوتر (Task 87) در کلون موجود ✓
+- نکته: panel of MultiColumnDropDown در snapshot بسته می‌شود — انتخاب با کلیک ردیف + دکمه ✓ (svg.lucide-check) با eval انجام شد؛ اسکرین‌شات‌ها: .zscreenshots/t88-filled-form.png، t88-after-save.png، t88-list-panel.png، t88-final-form.png
+- وضعیت سند ذخیره‌شده = ۲ (DocumentState.InitialRegistration) — همان رفتار SalesOrder
+
+Stage Summary:
+- فرم کامل «پیش فاکتور فروش جدید» در فروش > عملیات فعال شد؛ همه اقلام فرم سفارش فروش (هدر ۷ فیلد + وضعیت + توضیحات، جدول اقلام با واحد فرعی/عامل ردیابی، فوتر عوامل/گردش/مبالغ، ۴ تب پایین، دستگیره ارتفاع فوتر، فهرست و ناوبری رکورد) دقیقاً کلون شد
+- تفاوت‌ها: فیلد تاریخ اعتبار (هدر، اعتبارسنجی، ذخیره در ValidityDate)، تنظیمات از آیتم پیش فاکتور (type=2)، جدول‌های جدید Sle.SalesProformaInvoices/Items/Factors با ساخت خودکار idempotent
+- فایل‌های جدید: backend (۳ entity + dto + service + controller)، components/forms/sle/SalesProforma.tsx، app/forms/sle/sales-proforma-new/page.tsx؛ ویرایش: sle.module.ts، app.module.ts، sidebar-structure.data.ts، sidebar-metadata.ts، tab-registry.tsx

@@ -61,6 +61,12 @@ import { SalesOrderItem } from './domain/entities/sales-order-item.entity';
 import { SalesOrderFactor } from './domain/entities/sales-order-factor.entity';
 import { SalesOrderController } from './presentation/controllers/sales-order.controller';
 import { SalesOrderService } from './application/services/sales-order.service';
+// Task 88: پیش فاکتور فروش
+import { SalesProformaInvoice } from './domain/entities/sales-proforma-invoice.entity';
+import { SalesProformaInvoiceItem } from './domain/entities/sales-proforma-invoice-item.entity';
+import { SalesProformaInvoiceFactor } from './domain/entities/sales-proforma-invoice-factor.entity';
+import { SalesProformaInvoiceController } from './presentation/controllers/sales-proforma-invoice.controller';
+import { SalesProformaInvoiceService } from './application/services/sales-proforma-invoice.service';
 import { CoreModule } from '../../core/core.module';
 import { CommonModule } from '../common/common.module';
 
@@ -82,6 +88,10 @@ import { CommonModule } from '../common/common.module';
       SalesOrder,
       SalesOrderItem,
       SalesOrderFactor,
+      // Task 88: پیش فاکتور فروش
+      SalesProformaInvoice,
+      SalesProformaInvoiceItem,
+      SalesProformaInvoiceFactor,
     ]),
     CoreModule,
     CommonModule,
@@ -99,6 +109,8 @@ import { CommonModule } from '../common/common.module';
     SalesDocumentSettingsController,
     SettlementMethodController,
     SalesOrderController,
+    // Task 88: پیش فاکتور فروش
+    SalesProformaInvoiceController,
   ],
   providers: [
     {
@@ -157,6 +169,8 @@ import { CommonModule } from '../common/common.module';
     },
     SettlementMethodService,
     SalesOrderService,
+    // Task 88: پیش فاکتور فروش
+    SalesProformaInvoiceService,
   ],
   exports: [
     CustomerGroupService,
@@ -171,6 +185,8 @@ import { CommonModule } from '../common/common.module';
     SalesDocumentSettingsService,
     SettlementMethodService,
     SalesOrderService,
+    // Task 88: پیش فاکتور فروش
+    SalesProformaInvoiceService,
   ],
 })
 export class SleModule {}

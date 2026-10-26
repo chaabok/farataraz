@@ -199,7 +199,87 @@ import { GatewayModule } from './gateway/gateway.module';
                 await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
               }
               console.log('Schemas ensured.');
-            
+
+              // -----------------------------------------------------------------
+              // Task 88: جداول پیش فاکتور فروش — ساخت idempotent (فقط اگر وجود نداشته باشند)
+              // الگوی جداول سفارش فروش + ستون ValidityDate (تاریخ اعتبار)
+              // -----------------------------------------------------------------
+              try {
+                await client.query(`
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesProformaInvoices" (
+                    "SalesProformaID" bigint PRIMARY KEY,
+                    "Version" bigint DEFAULT 1,
+                    "Creator" bigint DEFAULT 1,
+                    "CreationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "CreateTime" varchar(8) DEFAULT '00:00:00',
+                    "LastModifier" bigint DEFAULT 1,
+                    "LastModificationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "LastModificationTime" varchar(8) DEFAULT '00:00:00',
+                    "BusinessStructureRef" bigint DEFAULT 2,
+                    "CompanyRef" bigint,
+                    "BranchRef" bigint,
+                    "AgencyRef" bigint,
+                    "ProformaNumber" integer NOT NULL,
+                    "ProformaDate" varchar(10),
+                    "ValidityDate" varchar(10),
+                    "DeliveryDate" varchar(10),
+                    "CustomerRef" bigint,
+                    "CustomerName" varchar(200),
+                    "SalesTypeRef" bigint,
+                    "SalesCenterRef" bigint,
+                    "DeliveryLocationRef" bigint,
+                    "SettlementMethodRef" bigint,
+                    "Status" integer DEFAULT 1,
+                    "Description" varchar(1000),
+                    "FiscalYearRef" bigint
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesProformaInvoiceItems" (
+                    "SalesProformaInvoiceItemID" bigint PRIMARY KEY,
+                    "SalesProformaRef" bigint NOT NULL,
+                    "RowNo" integer NOT NULL,
+                    "ItemRef" bigint,
+                    "ItemCode" varchar(100),
+                    "ItemName" varchar(250),
+                    "UnitName" varchar(100),
+                    "Quantity" numeric(18,4) DEFAULT 0,
+                    "UnitPrice" numeric(18,2) DEFAULT 0,
+                    "TotalPrice" numeric(18,2) DEFAULT 0,
+                    "Description" varchar(500),
+                    "TrackingFactorValues" jsonb
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesProformaInvoiceFactors" (
+                    "SalesProformaInvoiceFactorID" bigint PRIMARY KEY,
+                    "SalesProformaRef" bigint NOT NULL,
+                    "RowNo" integer DEFAULT 1,
+                    "FactorTitle" varchar(200),
+                    "FactorType" integer DEFAULT 1,
+                    "Amount" numeric(18,4) DEFAULT 0,
+                    "Description" varchar(500)
+                  );
+                `);
+                // کلیدهای خارجی با حذف آبشاری (در صورت نبود Constraint)
+                await client.query(`
+                  DO $$
+                  BEGIN
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesProformaInvoiceItems_SalesProforma'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesProformaInvoiceItems" ADD CONSTRAINT "FK_SalesProformaInvoiceItems_SalesProforma"
+                        FOREIGN KEY ("SalesProformaRef") REFERENCES "Sle"."SalesProformaInvoices"("SalesProformaID") ON DELETE CASCADE;
+                    END IF;
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesProformaInvoiceFactors_SalesProforma'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesProformaInvoiceFactors" ADD CONSTRAINT "FK_SalesProformaInvoiceFactors_SalesProforma"
+                        FOREIGN KEY ("SalesProformaRef") REFERENCES "Sle"."SalesProformaInvoices"("SalesProformaID") ON DELETE CASCADE;
+                    END IF;
+                  END $$;
+                `);
+                console.log('[Task88] SalesProformaInvoices tables ensured.');
+              } catch (proformaErr: any) {
+                console.warn('[Task88] Could not ensure SalesProformaInvoices tables:', proformaErr.message);
+              }
+
             // Drop all RESTRICT/blocking foreign keys that reference "Gnr"."BusinessStructure"
             console.log('Cleaning up self-referential or blocking foreign key constraints referencing BusinessStructure...');
             const dropFksQuery = `

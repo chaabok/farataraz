@@ -70,6 +70,11 @@ const sales_order_item_entity_1 = require("./domain/entities/sales-order-item.en
 const sales_order_factor_entity_1 = require("./domain/entities/sales-order-factor.entity");
 const sales_order_controller_1 = require("./presentation/controllers/sales-order.controller");
 const sales_order_service_1 = require("./application/services/sales-order.service");
+const sales_proforma_invoice_entity_1 = require("./domain/entities/sales-proforma-invoice.entity");
+const sales_proforma_invoice_item_entity_1 = require("./domain/entities/sales-proforma-invoice-item.entity");
+const sales_proforma_invoice_factor_entity_1 = require("./domain/entities/sales-proforma-invoice-factor.entity");
+const sales_proforma_invoice_controller_1 = require("./presentation/controllers/sales-proforma-invoice.controller");
+const sales_proforma_invoice_service_1 = require("./application/services/sales-proforma-invoice.service");
 const core_module_1 = require("../../core/core.module");
 const common_module_1 = require("../common/common.module");
 let SleModule = class SleModule {
@@ -94,6 +99,9 @@ exports.SleModule = SleModule = __decorate([
                 sales_order_entity_1.SalesOrder,
                 sales_order_item_entity_1.SalesOrderItem,
                 sales_order_factor_entity_1.SalesOrderFactor,
+                sales_proforma_invoice_entity_1.SalesProformaInvoice,
+                sales_proforma_invoice_item_entity_1.SalesProformaInvoiceItem,
+                sales_proforma_invoice_factor_entity_1.SalesProformaInvoiceFactor,
             ]),
             core_module_1.CoreModule,
             common_module_1.CommonModule,
@@ -111,6 +119,7 @@ exports.SleModule = SleModule = __decorate([
             sales_document_settings_controller_1.SalesDocumentSettingsController,
             settlement_method_controller_1.SettlementMethodController,
             sales_order_controller_1.SalesOrderController,
+            sales_proforma_invoice_controller_1.SalesProformaInvoiceController,
         ],
         providers: [
             {
@@ -169,6 +178,7 @@ exports.SleModule = SleModule = __decorate([
             },
             settlement_method_service_1.SettlementMethodService,
             sales_order_service_1.SalesOrderService,
+            sales_proforma_invoice_service_1.SalesProformaInvoiceService,
         ],
         exports: [
             customer_group_service_1.CustomerGroupService,
@@ -183,6 +193,7 @@ exports.SleModule = SleModule = __decorate([
             sales_document_settings_service_1.SalesDocumentSettingsService,
             settlement_method_service_1.SettlementMethodService,
             sales_order_service_1.SalesOrderService,
+            sales_proforma_invoice_service_1.SalesProformaInvoiceService,
         ],
     })
 ], SleModule);
