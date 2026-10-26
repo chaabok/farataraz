@@ -78,43 +78,44 @@ export function PurchaseSalesParameterDropDown({
   const dropdownRef = useRef<SingleSelectDropDownRef>(null);
   const [data, setData] = useState<any[]>([]);
 
-  useEffect(() => {
-    let isMounted = true;
+  // Task 99: واکشی لیست پارامترهای خرید و فروش — این تابع هم در mount و هم هر بار که
+  // پنل دراپ‌داون باز می‌شود (و با کلیک روی دکمه بروزرسانی پنل) فراخوانی می‌شود تا اگر
+  // عامل (پارامتر) جدیدی تعریف شده بود، فهرست بدون بستن فرم به‌روز شود.
+  const loadData = React.useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/inv/purchase-sales-parameters");
+      if (!res.ok) return;
+      const resData = await res.json().catch(() => null);
+      const list = Array.isArray(resData)
+        ? resData
+        : (Array.isArray(resData?.data) ? resData.data : []);
 
-    apiFetch("/api/inv/purchase-sales-parameters")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((resData) => {
-        if (!isMounted) return;
-        const list = Array.isArray(resData)
-          ? resData
-          : (Array.isArray(resData?.data) ? resData.data : []);
-
-        // Filter: parameters with IsProcurement == true OR IsWarehouse == true, and active
-        const filtered = list.filter((p: any) => {
-          const isProcurement = Boolean(p.IsProcurement);
-          const isWarehouse = Boolean(p.IsWarehouse);
-          const isActive = p.IsActive !== false;
-          return (isProcurement || isWarehouse) && isActive;
-        });
-
-        // Map enum titles for display/search
-        const mapped = filtered.map((item: any) => ({
-          ...item,
-          ParameterTypeLabel: PARAMETER_TYPE_MAP[item.ParameterType] || "-",
-          OperationTypeLabel: OPERATION_TYPE_MAP[item.OperationType] || "-",
-          RelationTypeLabel: RELATION_TYPE_MAP[item.RelationType] || "-",
-          CategoryOtherLabel: CATEGORY_OTHER_MAP[item.CategoryOther] || "-",
-        }));
-
-        setData(mapped);
-      })
-      .catch((err) => {
-        console.error("Error fetching purchase sales parameters:", err);
+      // Filter: parameters with IsProcurement == true OR IsWarehouse == true, and active
+      const filtered = list.filter((p: any) => {
+        const isProcurement = Boolean(p.IsProcurement);
+        const isWarehouse = Boolean(p.IsWarehouse);
+        const isActive = p.IsActive !== false;
+        return (isProcurement || isWarehouse) && isActive;
       });
 
-    return () => {
-      isMounted = false;
-    };
+      // Map enum titles for display/search
+      const mapped = filtered.map((item: any) => ({
+        ...item,
+        ParameterTypeLabel: PARAMETER_TYPE_MAP[item.ParameterType] || "-",
+        OperationTypeLabel: OPERATION_TYPE_MAP[item.OperationType] || "-",
+        RelationTypeLabel: RELATION_TYPE_MAP[item.RelationType] || "-",
+        CategoryOtherLabel: CATEGORY_OTHER_MAP[item.CategoryOther] || "-",
+      }));
+
+      setData(mapped);
+    } catch (err) {
+      console.error("Error fetching purchase sales parameters:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Task 99: واکشی اولیه؛ رفرش‌های بعدی با باز شدن پنل از طریق onRefresh انجام می‌شود
+    loadData();
   }, []);
 
   const columns: SingleSelectColumn[] = useMemo(() => [
@@ -144,6 +145,8 @@ export function PurchaseSalesParameterDropDown({
       noWrapper={noWrapper}
       className={className}
       addFormOptions={addFormOptions}
+      // Task 99: هر بار پنل باز شود (و با دکمه بروزرسانی پنل) لیست از سرور تازه می‌شود
+      onRefresh={loadData}
     />
   );
 }

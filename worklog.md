@@ -1862,3 +1862,28 @@ Stage Summary:
 - پیش فاکتورهای ابطال‌شده (Status=6) مانده را آزاد می‌کنند (در پوشش شمرده نمی‌شوند)
 - فایل‌ها: backend/src/softwares/sle/application/services/base-document.service.ts، backend/src/softwares/sle/presentation/controllers/base-document.controller.ts، components/forms/sle/SalesProforma.tsx
 - اسکرین‌شات‌ها: .zscreenshots/t98b-base-empty-popup.png (لیست خالی در حالت جدید)، t98b-base-edit-mode.png (سفارش ۱۹ در حالت ویرایش)
+
+---
+Task ID: 99
+Agent: Z.ai Code (main)
+Task: رفرش خودکار لیست دراپ‌داون عوامل (پارامترهای خرید و فروش) هنگام باز شدن پنل
+
+Work Log:
+- درخواست کاربر (با اسکرین‌شات و فلش قرمز): در فرم‌هایی که از پارامترهای خرید و فروش استفاده می‌کنند، وقتی دراپ‌داون عوامل باز می‌شود باید لیست رفرش شود تا عامل جدید تعریف‌شده نمایش داده شود
+- ریشه‌یابی: کامپوننت مشترک components/inputs/PurchaseSalesParameterDropDown.tsx در حالت data-mode است (بدون listApiUrl) و فقط در mount یک بار /api/inv/purchase-sales-parameters را می‌گیرد؛ SingleSelectDropDown از Task 70 پراپ onRefresh دارد که «هر بار پنل باز شود» و با دکمه بروزرسانی (↻) پنل صدا زده می‌شود — ولی این کامپوننت onRefresh پاس نمی‌داد → پنل باز می‌شد و هیچ رفرشی انجام نمی‌شد
+- fix: منطق واکشی به React.useCallback(loadData) منتقل شد؛ useEffect mount فقط loadData() را صدا می‌زند؛ onRefresh={loadData} به SingleSelectDropDown اضافه شد → رفرش خودکار با هر بار باز شدن پنل + کارکرد دکمه بروزرسانی (↻) که کاربر با فلش قرمز مشخص کرده بود
+- پوشش: یک fix مشترک برای ۸ فرم — WarehouseReceipt، WarehouseIssue، PurchaseInvoice، ServicePurchaseInvoice، TemporaryItemReceipt، ReturnTemporaryItemReceipt، SalesOrder، SalesProforma (هم دراپ‌داون‌های هدر و هم ستون «عنوان عامل» گرید تب عوامل)
+- sync داخلی کنترل شد: useEffect([data]) در SingleSelectDropDown تغییر props داده را به internalData منتقل می‌کند (شامل حالت خالی شدن لیست)
+- lint فایل تغییر یافته: پاک (EXIT=0)
+- E2E (agent-browser، رسید انبار → آخرین رکورد → تب عوامل رسید):
+  * قبل: پنل عامل = «3 مورد» (تخفیف درصدی، مالیات بر ارزش افزوده، عوارض بر ارزش افزوده)
+  * عامل جدید «عامل تستی تسک ۹۹» با POST /api/inv/purchase-sales-parameters ساخته شد (بدون هیچ تعاملی با فرم)
+  * بستن (Escape) و باز کردن دوباره پنل → «4 مورد» و عامل جدید در لیست ✓ (رفرش خودکار بدون بستن فرم)
+  * عامل تستی با DELETE /api/inv/purchase-sales-parameters/5 پاک شد؛ مرورگر بسته شد
+- نکته جانبی: در ابتدای تست، لاگین مرورگر یک بار به‌خاطر rebuild طولانی Fast Refresh (۳۲ ثانیه، محیط sandbox) گیر کرد؛ با reload حل شد — ارتباطی با این fix ندارد (ریشه Task 96 جدا است)
+
+Stage Summary:
+- دراپ‌داون عوامل (پارامترهای خرید و فروش) اکنون هر بار که باز شود لیست را از سرور تازه می‌کند؛ عامل جدید بدون بستن/رفرش فرم بلافاصله قابل انتخاب است
+- دکمه بروزرسانی (↻) در تولبار پنل (محل فلش قرمز کاربر) نیز اکنون واقعاً لیست را رفرش می‌کند
+- فایل: components/inputs/PurchaseSalesParameterDropDown.tsx
+- اسکرین‌شات‌ها: .zscreenshots/t99-dropdown-before.png (3 مورد)، t99-dropdown-after.png (4 مورد با عامل جدید)
