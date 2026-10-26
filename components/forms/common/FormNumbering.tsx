@@ -92,6 +92,9 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
             warehouseDocumentType: "نوع سند انبار",
             branch: "شعبه",
             salesCenter: "مرکز فروش",
+            salesType: "نوع فروش",
+            deliveryLocations: "مکان های تحویل",
+            settlementMethod: "روش تسویه",
             invoiceType: "نوع فاکتور",
             requester: "درخواست کننده",
           };
@@ -212,6 +215,9 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
         const sel = entityOptions.find(o => o.value === value);
         if (sel?.menu === 'حسابداری' || sel?.menu === 'دریافت و پرداخت') {
           updated.baseNumbering = ['fiscalYear'];
+        } else if (sel?.menu === 'فروش' || ['sales_order', 'sales_proforma', 'sales_invoice'].includes(value)) {
+          // Task 92: فرم‌های فروش — انبار و نوع سند انبار از مبنا حذف می‌شوند
+          updated.baseNumbering = (updated.baseNumbering || []).filter(b => !['warehouse', 'warehouseDocType', 'warehouseDocumentType'].includes(b));
         } else if (value === 'warehouse') {
           updated.baseNumbering = ['warehouse'];
         } else if (value === 'stocktaking_tag' || value === 'StocktakingTagForm' || value === 'stocktaking_tag_header') {
@@ -439,6 +445,9 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
 
   const isStocktakingTag = values.entityRef === 'stocktaking_tag' || values.entityRef === 'StocktakingTagForm' || values.entityRef === 'stocktaking_tag_header';
 
+  // Task 92: فرم‌های فروش (سفارش فروش، پیش فاکتور فروش، فاکتور فروش) — مبنای شماره‌گذاری اختصاصی فروش
+  const isSalesEntity = selectedEntity?.menu === 'فروش' || ['sales_order', 'sales_proforma', 'sales_invoice'].includes(values.entityRef);
+
   const methodOptions = [
     { label: t("manual", "دستی"), value: "1" },
     { label: t("automatic", "اتوماتیک"), value: "2" },
@@ -453,6 +462,11 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
     { label: t("fiscalYear", "سال مالی"), value: "fiscalYear" },
     { label: t("warehouse", "انبار"), value: "warehouse" },
     { label: t("warehouseDocType", "نوع سند انبار"), value: "warehouseDocType" },
+    // Task 92: پایه‌های اختصاصی فرم‌های فروش
+    { label: "نوع فروش", value: "salesType" },
+    { label: "مرکز فروش", value: "salesCenter" },
+    { label: "مکان های تحویل", value: "deliveryLocations" },
+    { label: "روش تسویه", value: "settlementMethod" },
   ];
 
   const gapOptions = [
@@ -467,6 +481,9 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
     ? baseOptions.filter(o => o.value === 'fiscalYear')
     : isStocktakingTag
     ? baseOptions.filter(o => o.value === 'fiscalYear' || o.value === 'warehouse')
+    : isSalesEntity
+    ? // Task 92: برای فرم‌های فروش آیتم انبار حذف و پایه‌های فروش اضافه شد
+      baseOptions.filter(o => ['fiscalYear', 'salesType', 'salesCenter', 'deliveryLocations', 'settlementMethod'].includes(o.value))
     : baseOptions.filter(o => {
         if (o.value === 'warehouseDocType') {
           return isWarehouseDocEntity;
@@ -482,6 +499,11 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
   const hasFiscalYearSelected = baseNumList.includes('fiscalYear');
   const hasWarehouseSelected = baseNumList.includes('warehouse');
   const hasWarehouseDocTypeSelected = baseNumList.includes('warehouseDocType') || baseNumList.includes('warehouseDocumentType');
+  // Task 92: پایه‌های فروش
+  const hasSalesTypeSelected = baseNumList.includes('salesType');
+  const hasSalesCenterSelected = baseNumList.includes('salesCenter');
+  const hasDeliveryLocationsSelected = baseNumList.includes('deliveryLocations');
+  const hasSettlementMethodSelected = baseNumList.includes('settlementMethod');
 
   const currentDisplayTitle = selectedEntityOption?.label || (values.entityRef ? NUMBERING_ENTITY_MAP[values.entityRef] || values.entityRef : '');
 
@@ -664,6 +686,111 @@ export function FormNumbering({ entityRef, activeId }: { entityRef?: string; act
                               onChange?.(wTitle);
                             }}
                             placeholder="انتخاب انبار..."
+                          />
+                        )
+                      }] : []),
+                      // Task 92: ستون‌های پایه‌های فروش (نوع فروش، مرکز فروش، مکان های تحویل، روش تسویه)
+                      ...(hasSalesTypeSelected ? [{
+                        key: 'salesTypeTitle',
+                        header: 'نوع فروش',
+                        type: 'custom',
+                        width: '200px',
+                        render: (row: any, index: number, onChange: (val: any) => void) => (
+                          <SingleSelectDropDown
+                            listApiUrl="/api/sle/sales-types"
+                            columns={[
+                              { key: 'Code', label: 'کد', width: 70 },
+                              { key: 'Title', label: 'عنوان نوع فروش', width: 160 },
+                            ]}
+                            displayKey="Title"
+                            value={row.salesTypeTitle ? { id: row.salesTypeTitle, Title: row.salesTypeTitle } : null}
+                            onChange={(item: any) => {
+                              if (!item) {
+                                onChange?.('');
+                                return;
+                              }
+                              const stTitle = typeof item === 'object' ? (item.Title || item.title || item.SalesTypeTitle || '') : String(item);
+                              onChange?.(stTitle);
+                            }}
+                            placeholder="انتخاب نوع فروش..."
+                          />
+                        )
+                      }] : []),
+                      ...(hasSalesCenterSelected ? [{
+                        key: 'salesCenterTitle',
+                        header: 'مرکز فروش',
+                        type: 'custom',
+                        width: '200px',
+                        render: (row: any, index: number, onChange: (val: any) => void) => (
+                          <SingleSelectDropDown
+                            listApiUrl="/api/sle/sales-centers"
+                            columns={[
+                              { key: 'Code', label: 'کد', width: 70 },
+                              { key: 'Title', label: 'عنوان مرکز فروش', width: 160 },
+                            ]}
+                            displayKey="Title"
+                            value={row.salesCenterTitle ? { id: row.salesCenterTitle, Title: row.salesCenterTitle } : null}
+                            onChange={(item: any) => {
+                              if (!item) {
+                                onChange?.('');
+                                return;
+                              }
+                              const scTitle = typeof item === 'object' ? (item.Title || item.title || item.SalesCenterTitle || '') : String(item);
+                              onChange?.(scTitle);
+                            }}
+                            placeholder="انتخاب مرکز فروش..."
+                          />
+                        )
+                      }] : []),
+                      ...(hasDeliveryLocationsSelected ? [{
+                        key: 'deliveryLocationTitle',
+                        header: 'مکان های تحویل',
+                        type: 'custom',
+                        width: '200px',
+                        render: (row: any, index: number, onChange: (val: any) => void) => (
+                          <SingleSelectDropDown
+                            listApiUrl="/api/sle/delivery-locations"
+                            columns={[
+                              { key: 'Code', label: 'کد', width: 70 },
+                              { key: 'Title', label: 'عنوان مکان تحویل', width: 160 },
+                            ]}
+                            displayKey="Title"
+                            value={row.deliveryLocationTitle ? { id: row.deliveryLocationTitle, Title: row.deliveryLocationTitle } : null}
+                            onChange={(item: any) => {
+                              if (!item) {
+                                onChange?.('');
+                                return;
+                              }
+                              const dlTitle = typeof item === 'object' ? (item.Title || item.title || item.DeliveryLocationTitle || '') : String(item);
+                              onChange?.(dlTitle);
+                            }}
+                            placeholder="انتخاب مکان تحویل..."
+                          />
+                        )
+                      }] : []),
+                      ...(hasSettlementMethodSelected ? [{
+                        key: 'settlementMethodTitle',
+                        header: 'روش تسویه',
+                        type: 'custom',
+                        width: '200px',
+                        render: (row: any, index: number, onChange: (val: any) => void) => (
+                          <SingleSelectDropDown
+                            listApiUrl="/api/sle/settlement-methods"
+                            columns={[
+                              { key: 'Code', label: 'کد', width: 70 },
+                              { key: 'Title', label: 'عنوان روش تسویه', width: 160 },
+                            ]}
+                            displayKey="Title"
+                            value={row.settlementMethodTitle ? { id: row.settlementMethodTitle, Title: row.settlementMethodTitle } : null}
+                            onChange={(item: any) => {
+                              if (!item) {
+                                onChange?.('');
+                                return;
+                              }
+                              const smTitle = typeof item === 'object' ? (item.Title || item.title || item.SettlementMethodTitle || '') : String(item);
+                              onChange?.(smTitle);
+                            }}
+                            placeholder="انتخاب روش تسویه..."
                           />
                         )
                       }] : []),

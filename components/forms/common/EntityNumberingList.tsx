@@ -66,6 +66,9 @@ export const useEntityNumberingColumns = () => {
             warehouseDocumentType: 'نوع سند انبار',
             branch: 'شعبه',
             salesCenter: 'مرکز فروش',
+            salesType: 'نوع فروش',
+            deliveryLocations: 'مکان های تحویل',
+            settlementMethod: 'روش تسویه',
             invoiceType: 'نوع فاکتور',
             requester: 'درخواست کننده',
           };

@@ -1585,3 +1585,35 @@ Stage Summary:
 - کانفیگ‌های پیش‌فرض (اتوماتیک/عددی/مبنای سال مالی) برای هر دو از طریق خود UI ذخیره شد تا در فهرست هم بلافاصله نمایش داده شوند
 - نکته برای کار بعدی: منطق getNextNumber این دو فرم فعلاً MAX+1 است و پارامترهای کانفیگ (پیشوند ثابت، شماره آغازین/پایانی، گپ) را اعمال نمی‌کند (همانند وضعیت فعلی فاکتور فروش)؛ در صورت درخواست کاربر قابل اتصال است
 - فایل‌های تغییر یافته: lib/numbering-entities.ts، backend/src/softwares/common/presentation/controllers/entity-numbering.controller.ts
+---
+Task ID: 92
+Agent: Z.ai Code (main)
+Task: در فرم «روش شماره گذاری» برای سه فرم فروش (سفارش فروش، پیش فاکتور فروش، فاکتور فروش) — حذف آیتم «انبار» از «مبنای شماره گذاری» و افزودن ۴ پایه جدید: نوع فروش، مرکز فروش، مکان های تحویل، روش تسویه
+
+Work Log:
+- components/forms/common/FormNumbering.tsx:
+  • افزودن flag isSalesEntity (منوی فروش یا مقادیر sales_order/sales_proforma/sales_invoice)
+  • baseOptions: افزودن ۴ گزینه جدید { salesType: 'نوع فروش', salesCenter: 'مرکز فروش', deliveryLocations: 'مکان های تحویل', settlementMethod: 'روش تسویه' }
+  • filteredBaseOptions: شاخه جدید isSalesEntity → فقط [fiscalYear, salesType, salesCenter, deliveryLocations, settlementMethod] (انبار و نوع سند انبار حذف)
+  • handleChange(entityRef): شاخه فروش — پاک‌سازی warehouse/warehouseDocType از baseNumbering هنگام انتخاب فرم فروش
+  • گرید «جزئیات شماره گذاری»: ۴ ستون شرطی جدید با SingleSelectDropDown (listApiUrl: /api/sle/sales-types، /api/sle/sales-centers، /api/sle/delivery-locations، /api/sle/settlement-methods؛ کلیدها salesTypeTitle/salesCenterTitle/deliveryLocationTitle/settlementMethodTitle؛ ستون‌ها کد+عنوان مطابق SalesDocumentSettings)
+  • baseMap ستون فهرست داخلی: افزودن ۴ کلید جدید
+- components/forms/common/EntityNumberingList.tsx: baseMap ستون «مبنای شماره گذاری» فهرست — افزودن ۴ کلید جدید (رندر «سال مالی - نوع فروش»)
+- بک‌اند نیاز به تغییر نداشت (baseNumbering و items به‌صورت JSON عمومی ذخیره می‌شوند)
+- eslint = پاک (فقط خطای از-before sidebar.tsx بی‌ربط)
+- E2E مرورگر (admin/1234):
+  • ویرایش سفارش فروش از فهرست: چک‌باکس‌های مبنا = [سال مالی ✓، نوع فروش، مرکز فروش، مکان های تحویل، روش تسویه] — انبار absent — اسکرین‌شات t92-sales-bases-no-warehouse.png
+  • تیک «نوع فروش» → ستون «نوع فروش» با دراپ‌دان در گرید ظاهر شد؛ انتخاب «لطلطی» از /api/sle/sales-types — اسکرین‌شات t92-sales-type-column-grid.png
+  • ذخیره → DB: BaseNumbering=["fiscalYear","salesType"] و Items شامل salesTypeTitle="لطلطی" ✓
+  • رفرش فهرست → ستون مبنا رندر «سال مالی - نوع فروش» — اسکرین‌شات t92-list-base-rendering.png
+  • بازگردانی کانفیگ به حالت اولیه (فقط سال مالی) از طریق UI + PUT پاک‌سازی salesTypeTitle آزمایشی؛ DB نهایی: هر دو کانفیگ ["fiscalYear"]
+  • فرم جدید با «فاکتور فروش» (بدون کانفیگ): همان ۵ گزینه بدون انبار — اسکرین‌شات t92-sales-invoice-bases.png
+  • ویرایش «پیش فاکتور فروش» از فهرست: همان ۵ گزینه بدون انبار — اسکرین‌شات t92-proforma-edit-check در مسیر /tmp
+  • کنسول مرورگر بدون خطا
+
+Stage Summary:
+- برای هر سه فرم فروش، «مبنای شماره گذاری» اکنون شامل: سال مالی، نوع فروش، مرکز فروش، مکان های تحویل، روش تسویه است و آیتم «انبار» (و «نوع سند انبار») از آن‌ها حذف شد
+- با تیک هر پایه جدید، ستون انتخاب متناظر با دراپ‌دان داینامیک (از API های فروش) در گرید «جزئیات شماره گذاری» اضافه می‌شود و مقدار انتخابی در Items هر ردیف سال مالی ذخیره می‌شود
+- فهرست «روش های شماره گذاری» پایه‌های جدید را با عنوان فارسی رندر می‌کند (مثال: «سال مالی - نوع فروش»)
+- سایر فرم‌ها (انبارداری و غیره) بدون تغییر؛ رفتار انبار/رسید انبار/تگ انبارگردانی دست‌نخورده ماند
+- فایل‌های تغییر یافته: components/forms/common/FormNumbering.tsx، components/forms/common/EntityNumberingList.tsx
