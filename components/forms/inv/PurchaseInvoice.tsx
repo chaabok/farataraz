@@ -16,6 +16,7 @@ import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { apiFetch, normalizePersianText } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
+import { useFooterPanelResize } from "@/hooks/useFooterPanelResize"; // Task 87: دستگیره ارتفاع فوتر
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
 import momentJalaali from "moment-jalaali";
 import { Calculator, FileText, DollarSign, TrendingUp, ShoppingBag, Layers, Plus, X, Pencil } from "lucide-react";
@@ -1916,7 +1917,8 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
     showToast("اطلاعات ثبت شده فاکتور خرید با موفقیت از سیستم دریافت و پرداخت حذف گردید.", "success");
   };
 
-  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
+  // Task 87: دستگیره فوتر — درگ موس برای کم/زیاد کردن ارتفاع + دبل‌کلیک برای جمع شدن کامل و بازگشت
+  const { isCollapsed: isFooterCollapsed, footerHeight, isDragging: footerDragging, handleProps: footerHandleProps } = useFooterPanelResize(150);
 
   return (
     <>
@@ -2007,9 +2009,9 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
 
               {/* Splitter handle between Items Grid and Footer Summary Layout */}
               <div 
-                onClick={() => setIsFooterCollapsed(!isFooterCollapsed)}
-                className="group relative flex items-center justify-center h-2.5 bg-slate-100 hover:bg-blue-500/80 dark:bg-slate-800/80 dark:hover:bg-blue-600/80 cursor-pointer select-none border-y border-slate-200 dark:border-slate-700/60 transition-colors shrink-0 my-0"
-                title={isFooterCollapsed ? "نمایش خلاصه مبالغ و گردش" : "مخفی‌سازی خلاصه مبالغ جهت بزرگ‌نمایی جدول اقلام"}
+                {...footerHandleProps}
+                className={`group relative flex items-center justify-center h-2.5 bg-slate-100 hover:bg-blue-500/80 dark:bg-slate-800/80 dark:hover:bg-blue-600/80 cursor-row-resize select-none border-y border-slate-200 dark:border-slate-700/60 transition-colors shrink-0 my-0 ${footerDragging ? "bg-blue-500/80 dark:bg-blue-600/80" : ""}`}
+                title={isFooterCollapsed ? "دابل‌کلیک: نمایش فوتر" : "درگ موس: تغییر ارتفاع فوتر — دابل‌کلیک: مخفی‌سازی فوتر"}
               >
                 <div className="w-16 h-1 rounded-full bg-slate-300 dark:bg-slate-500 group-hover:bg-white group-hover:w-24 transition-all flex items-center justify-center gap-1">
                   <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-600 group-hover:bg-white/80"></span>
@@ -2019,9 +2021,12 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
 
               {/* 2. Image 2 Layout: 3 Columns below Items Table */}
               {!isFooterCollapsed && (
-              <div className={`grid grid-cols-1 lg:grid-cols-3 gap-2 w-full shrink-0 transition-all pt-0 ${!hasValidItem ? "opacity-50 pointer-events-none select-none" : ""}`}>
+              <div
+                style={{ "--footer-h": `${footerHeight}px` } as React.CSSProperties}
+                className={`grid grid-cols-1 lg:grid-cols-3 gap-2 w-full shrink-0 pt-0 lg:h-[var(--footer-h)] ${!hasValidItem ? "opacity-50 pointer-events-none select-none" : ""}`}
+              >
                 {/* Column 1 (RTL Right): عوامل خرید */}
-                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] lg:h-full lg:max-h-full overflow-hidden">
                   {/* Lavender/Indigo Vertical Badge on Right Corner */}
                   <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
                     <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
@@ -2030,7 +2035,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                   </div>
 
                   {/* Factors Table with internal scrollbar */}
-                  <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[105px] border border-slate-100 dark:border-slate-800/60 rounded">
+                  <div className="overflow-y-auto overflow-x-auto w-full flex-1 min-h-0 max-h-[105px] lg:max-h-none border border-slate-100 dark:border-slate-800/60 rounded">
                     <table className="w-full text-xs text-right border-collapse table-fixed">
                       <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
                         <tr className="bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
@@ -2161,7 +2166,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                 </div>
 
                 {/* Column 2 (RTL Middle): خلاصه گردش */}
-                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] lg:h-full lg:max-h-full overflow-hidden">
                   <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
                     <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
                       خلاصه گردش
@@ -2181,7 +2186,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                       .reduce((acc: number, it: any) => acc + (Number(it.Quantity) || 0), 0);
 
                     return (
-                      <div className="overflow-y-auto w-full flex-1 max-h-[135px]">
+                      <div className="overflow-y-auto w-full flex-1 min-h-0 max-h-[135px] lg:max-h-none">
                         <StockSummaryBox
                           itemId={itemId}
                           warehouseId={values.DeliverWarehouseRef || values.WarehouseRef}
@@ -2198,7 +2203,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                 </div>
 
                 {/* Column 3 (RTL Left): مبالغ */}
-                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] overflow-hidden">
+                <div className="bg-white dark:bg-slate-800/90 rounded-lg border border-slate-200 dark:border-slate-700/80 p-2 pr-8 flex flex-col justify-between shadow-2xs relative h-[150px] max-h-[150px] lg:h-full lg:max-h-full overflow-hidden">
                   {/* Lavender/Indigo Vertical Badge on Right Corner */}
                   <div className="absolute top-2 right-0 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-r-0 border-indigo-200 dark:border-indigo-800 text-[11px] font-bold px-1 py-2.5 rounded-l-md shadow-2xs flex items-center justify-center z-10 select-none">
                     <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap tracking-wide">
@@ -2207,7 +2212,7 @@ export function PurchaseInvoice({ id, tabId }: PurchaseInvoiceProps) {
                   </div>
 
                   {/* Totals Table */}
-                  <div className="overflow-y-auto overflow-x-auto w-full flex-1 max-h-[115px]">
+                  <div className="overflow-y-auto overflow-x-auto w-full flex-1 min-h-0 max-h-[115px] lg:max-h-none">
                     <table className="w-full text-xs text-right border-collapse">
                       <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
                         <tr className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">

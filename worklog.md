@@ -1431,3 +1431,22 @@ Stage Summary:
 - فایل تغییر یافته: components/Providers.tsx (افزودن useChunkErrorAutoRecovery، eslint پاک)
 - رفتار جدید: اگر هر chunk lazy (تب‌های tab-registry) بعد از ری‌استارت سرور/دیپلوی جدید بارگذاری نشود، صفحه یک‌بار خودکار refresh می‌شود و کاربر دیگر صفحه‌ی قرمز ChunkLoadError نمی‌بیند
 - نکته برای عامل‌های بعدی: ری‌استارت‌های خودکار next dev در این sandbox ادامه دارد (server.js نویز محیط را هندل می‌کند)؛ این recovery لایه‌ی محافظ مرورگر است
+---
+Task ID: 87
+Agent: Z.ai Code (main)
+Task: فعال‌سازی دستگیره تغییر ارتفاع فوتر فرم‌ها — درگ موس برای کم/زیاد کردن ارتفاع + دبل‌کلیک برای جمع شدن کامل و بازگشت (در ۷ فرم اسناد)
+
+Work Log:
+- ریشه‌یابی: دستگیره بین جدول اقلام و فوتر فقط onClick toggle داشت (isFooterCollapsed)؛ نه درگ ارتفاع داشت نه دبل‌کلیک؛ ارتفاع باکس‌های فوتر هم h-[150px] ثابت بود
+- ساخت هوک مشترک hooks/useFooterPanelResize.ts: مدیریت footerHeight (پیش‌فرض ۱۵۰)، isCollapsed با حافظه expandedHeightRef (آخرین ارتفاع باز)، درگ با document mousemove/mouseup + clamp پویا (حداقل ۶۰، حداکثر = ارتفاع کانتینر − ۱۶۰ تا جدول اقلام حداقل ۱۵۰px بماند)، preventDefault برای جلوگیری از انتخاب متن، role=separator + aria-label برای دسترس‌پذیری
+- اعمال در ۷ فرم: SalesOrder، PurchaseInvoice، ReturnTemporaryItemReceipt، ServicePurchaseInvoice، TemporaryItemReceipt، WarehouseIssue، WarehouseReceipt — در هر فرم: import هوک، جایگزینی state با هوک، جایگزینی onClick با {...footerHandleProps}، cursor-pointer → cursor-row-resize + هایلایت آبی حین درگ، به‌روزرسانی tooltip
+- ارتفاع داینامیک: wrapper فوتر style={{'--footer-h': footerHeight}} + کلاس lg:h-[var(--footer-h)]؛ باکس‌ها h-[150px] max-h-[150px] lg:h-full lg:max-h-full؛ اسکرول‌های داخلی (max-h-[105/135/115/132]) → + lg:max-h-none و min-h-0 — نتیجه: دسکتاپ ارتفاع متغیر، موبایل (زیر lg) دقیقاً رفتار قبلی
+- E2E با agent-browser (mouse واقعی): SalesOrder — درگ بالا ۱۰۰→۲۰۰ ✓، درگ پایین ۲۰۰→۱۴۰ ✓، دبل‌کلیک → unmount فوتر (ارتفاع صفر) ✓، دبل‌کلیک دوم → بازگشت دقیق به ۱۴۰ ✓، درگ شدید → clamp دقیق در ۳۲۵ (۴۸۵−۱۶۰) ✓؛ WarehouseReceipt — درگ ۱۵۰→۲۴۰ ✓، دبل‌کلیک جمع/باز با بازگشت به ۲۴۰ ✓؛ viewport زیر lg — باکس‌ها ۱۵۰px ثابت مثل قبل ✓
+- نکته تست: dispatch رویداد dblclick از eval استفاده شد چون فاصله زمانی دستورات CLI از آستانه دبل‌کلیک مرورگر بیشتر است (محدودیت ابزار)
+- اسکرین‌شات: .zscreenshots/t87-footer-resized.png (فوتر ۲۴۰px با گردش/مبالغ کامل بدون اسکرول)
+
+Stage Summary:
+- فایل جدید: hooks/useFooterPanelResize.ts (هوک مشترک، eslint پاک)
+- ۷ فرم ویرایش شد؛ رفتار جدید: درگ عمودی دستگیره = تغییر ارتفاع فوتر (جدول اقلام فشرده/گشاد می‌شود)، دبل‌کلیک = جمع شدن کامل فوتر، دبل‌کلیک مجدد = بازگشت به آخرین ارتفاع
+- ارتفاع فوتر per-mount است (persist بین session ها نیست)؛ اگر لازم شد بعداً به localStorage وصل شود
+- رفتار موبایل و عرض‌های زیر lg دست‌نخورده ماند (h-[150px] ثابت)
