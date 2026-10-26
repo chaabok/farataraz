@@ -1450,3 +1450,17 @@ Stage Summary:
 - ۷ فرم ویرایش شد؛ رفتار جدید: درگ عمودی دستگیره = تغییر ارتفاع فوتر (جدول اقلام فشرده/گشاد می‌شود)، دبل‌کلیک = جمع شدن کامل فوتر، دبل‌کلیک مجدد = بازگشت به آخرین ارتفاع
 - ارتفاع فوتر per-mount است (persist بین session ها نیست)؛ اگر لازم شد بعداً به localStorage وصل شود
 - رفتار موبایل و عرض‌های زیر lg دست‌نخورده ماند (h-[150px] ثابت)
+---
+Task ID: 87-push
+Agent: Z.ai Code (main)
+Task: به‌روزرسانی توکن GitHub و انتشار کامیت‌های در انتظار (Task 87)
+
+Work Log:
+- کاربر PAT جدید فرستاد؛ توکن قبلی منقضی/ناموجود بود (~/.git-credentials وجود نداشت)
+- ذخیره توکن جدید در ~/.git-credentials با chmod 600 (credential.helper=store)
+- تست احراز هویت با git ls-remote origin → موفق
+- اجرای .zscripts/push-to-github.sh → push موفق 5924df3..91ace87 (کامیت Task 87 aa0269e + refresh دامپ DB)
+
+Stage Summary:
+- اتصال GitHub برقرار شد؛ کامیت Task 87 (دستگیره resize فوتر در ۷ فرم) منتشر شد
+- origin/main اکنون = 91ace87؛ اسنپ‌شات repo.tar هم به‌روز شد
