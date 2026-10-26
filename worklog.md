@@ -1776,3 +1776,18 @@ Stage Summary:
 - داده‌های تستی کاربر ۱۰۰٪ بازیابی شد؛ منبع واقعی آن تاریخچه گیتِ فایل بکاپ خودکار بود نه فایل آپلودی (که قدیمی‌تر بود)
 - نکته ماندگار: backups/parsa-db-latest.sql در هر پوش بازتولید می‌شود؛ نسخه‌های تاریخی در گیت موجودند (bca088a, 6cc700f, ...) و کپی امن هم در backups/parsa-db-2026-10-26-1053-full-testdata.sql ذخیره شد
 - از این پس backup «latest» دوباره شامل داده‌های تستی است
+
+---
+Task ID: 97-c
+Agent: Z.ai Code (main)
+Task: بازسازی اعتبارنامه گیت‌هاب پس از ریست محیط (کاربر PAT جدید ارسال کرد)
+
+Work Log:
+- ریست محیط ساعت 11:19 باعث پاک شدن ~/.git-credentials شده بود → پوش کامیت 0051ee7 شکست خورده بود
+- PAT جدید کاربر در ~/.git-credentials (chmod 600) و کپی ماندگار در /home/sync/upload/env-recovery/.git-credentials ذخیره شد (پوشه env-recovery در ریست‌های قبلی پایدار مانده است)
+- پوش مجدد موفق: c880066..0051ee7 main -> main
+- نکته امنیتی: توکن هرگز در مخزن عمومی کامیت نمی‌شود
+
+Stage Summary:
+- اتصال گیت‌هاب برقرار شد؛ همه کامیت‌های Task 97/97-b روی origin/main هستند
+- مسیر بازیابی احتبارنامه برای آینده: کپی از /home/sync/upload/env-recovery/.git-credentials به ~/.git-credentials
