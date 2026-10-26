@@ -1811,3 +1811,26 @@ Work Log:
 
 Stage Summary:
 - داده‌ها ۱۰۰٪ سر جای خود هستند و در نشست تازه نمایش داده می‌شوند؛ توضیح به کاربر: فرم‌های سندی در حالت «رکورد جدید» باز می‌شوند (خالی به‌طور طراحی‌شده) و باید با دکمه‌های ناوبری اولین/قبلی/بعدی/آخرین رکوردها را دید؛ آیتم‌های «فهرست‌ها» placeholderهای پیاده‌سازی‌نشده‌اند؛ در صورت ادامه مشکل، نام فرم دقیق + اسکرین‌شات لازم است
+
+---
+Task ID: 98
+Agent: Z.ai Code (main)
+Task: بررسی وجود اطلاعات انواع تفصیلی در Seeddata و ارائه مشاوره
+
+Work Log:
+-复查环境: backend (PID 1503) 运行正常，parsaDb 可连接，前端 3000 正常。
+- 定位相关表: "Acc"."DetailedTypes" (انواع تفصیلی)、"Acc"."DetailedAccounts" (حساب‌های تفصیلی)、"Gnr"."DetailedAccountsNumbering"。
+- DB 查询: DetailedTypes = 21 行完整种子数据 (BusinessStructureRef=2, CompanyRef=2, isActive=true, CreationDate 2026-10-23 保留自最初 seed，还原后 ID 1-21 未变)。
+- 种子代码比对: backend/src/softwares/accounting/application/services/detailed-type.service.ts seedForBusinessStructure 的 21 项列表与 DB 完全一致 (حساب بانکی/صندوق/کارتخوان/درگاه های اینترنتی/تنخواه گردان/اشخاص حقیقی/اشخاص حقوقی/پروژه/قرارداد/انبار/کالاها و خدمات/اعتبارات اسنادی/گروه مشتریان/گروه تامین کنندگان/مراکز هزینه/تسهیلات مالی/دارایی های ثابت/سایر/گروه بندی کالا انبار/گروه بندی کالا فروش/کانال فروش)。
+- 种子自愈逻辑: seedForBusinessStructure 含去重 (duplicate) 自愈——按 Title 分组、保留最老 ID、UPDATE DetailedAccounts 重映射引用。
+- 触发机制梳理: BusinessStructureService.onModuleInit 仅在 SYNC_DB=true 或缺 root '01'/child '01-01' 时跑 seedDefaults; updateAllSharing(false) 与新建公司也触发; erp.env 中 SYNC_DB 未设置、DB_SYNCHRONIZE=false → 还原后种子未重跑，数据完好。
+- 备份核验: 'حساب بانکی' 在 backups/parsa-db-2026-10-26-1053-full-testdata.sql 与 upload/parsa-db-latest.sql 均存在 (种子行随备份走)。
+- API 实测: 登录后 GET /api/accounting/detailed-types 返回 21 条 (camelCase 字段 code/title)。
+- E2E 验证 (agent-browser): admin/1234 登录 → منوی شروع 搜索 «انواع تفصیلی» → 打开 «فهرست انواع تفصیلی» → 表格渲染，document.body.innerText 含全部 21 个标题 (missing=[])。截图 .zscreenshots/t98-detailed-types-seed-verified.png。
+- 关联数据盘点: DetailedAccounts 仅 6 行测试数据 (Ghodsi Sharifi/علی جهانی=اشخاص حقیقی، شرکت پارس داده=اشخاص حقوقی، 3 个 گروه مشتریان); Gnr.DetailedAccountsNumbering = 0 行 (编号配置为空，按需生成)。
+- FK 安全性: DetailedAccounts.DetailedTypesID → DetailedTypes 为 ON DELETE RESTRICT; initializeSeeds 的 DELETE+重建在 try/catch 中，现有引用存在时 DELETE 失败被捕获，不会破坏数据。
+
+Stage Summary:
+- 结论: انواع تفصیلی 的种子数据完整存在——DB 21 行、种子代码 21 项、两份备份均有、API 返回 21 条、UI 网格 21 行全部渲染。
+- 建议: ①种子数据安全，无需重新 seed; ②勿设 SYNC_DB=true (会触发 DELETE+重建种子，虽自愈机制保留引用但 ID 可能变化); ③用户此前"表单无数据"不适用于 انواع تفصیلی——该表单数据完整; 若其他表单仍空，需逐表单排查过滤链; ④DetailedAccountsNumbering 为空属正常 (按需生成)，但若编号基准表单需要默认行可后续补种。
+- 证据: .zscreenshots/t98-detailed-types-seed-verified.png
