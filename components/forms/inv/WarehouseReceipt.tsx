@@ -2438,30 +2438,12 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
     {
       name: "Discount",
       label: "تخفیف (ریال)",
-      type: "custom",
+      type: "text",
       width: "110px",
-      render: (row, rowIndex) => (
-        <NumberInput
-          value={row?.Discount ?? 0}
-          thousandsSeparator={true}
-          onChange={(newVal) => {
-            const updatedItems = [...(values.items || [])];
-            const manualDisc = Number(newVal) || 0;
-            updatedItems[rowIndex] = {
-              ...updatedItems[rowIndex],
-              ManualDiscount: manualDisc,
-              Discount: manualDisc,
-            };
-            const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
-              updatedItems,
-              values.factors || [],
-              values.ReceiptDate || "",
-              parametersList || []
-            );
-            setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
-          }}
-          disabled={isUsed}
-        />
+      render: (row) => (
+        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
+          {formatCurrency(row?.Discount)}
+        </span>
       ),
     },
     {

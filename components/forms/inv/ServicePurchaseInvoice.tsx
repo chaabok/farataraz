@@ -839,23 +839,12 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     {
       name: "Discount",
       label: "تخفیف (ریال)",
-      type: "custom",
+      type: "text",
       width: "110px",
-      render: (row, rowIndex) => (
-        <NumberInput
-          value={row?.Discount ?? 0}
-          thousandsSeparator={true}
-          localizeDigits={true}
-          onChange={(newVal) => {
-            const updatedItems = [...(values.items || [])];
-            updatedItems[rowIndex] = calculateRowFields({
-              ...updatedItems[rowIndex],
-              Discount: Number(newVal) || 0,
-            });
-            setValues((prev) => ({ ...prev, items: updatedItems }));
-          }}
-          disabled={isUsed}
-        />
+      render: (row) => (
+        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs font-semibold text-slate-700 dark:text-slate-200 select-none dir-ltr">
+          {formatCurrency(row?.Discount)}
+        </span>
       ),
     },
     {
@@ -872,28 +861,12 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     {
       name: "VatTax",
       label: "ارزش افزوده",
-      type: "custom",
+      type: "text",
       width: "110px",
-      render: (row, rowIndex) => (
-        <NumberInput
-          value={row?.VatTax ?? 0}
-          thousandsSeparator={true}
-          localizeDigits={true}
-          onChange={(newVal) => {
-            const updatedItems = [...(values.items || [])];
-            const manualVat = Number(newVal) || 0;
-            const r = updatedItems[rowIndex];
-            const afterDiscount = Math.max(0, (Number(r?.TotalPrice) || 0) - (Number(r?.Discount) || 0));
-            updatedItems[rowIndex] = {
-              ...r,
-              ManualVatTax: manualVat,
-              VatTax: manualVat,
-              NetPrice: afterDiscount + manualVat,
-            };
-            setValues((prev) => ({ ...prev, items: updatedItems }));
-          }}
-          disabled={isUsed}
-        />
+      render: (row) => (
+        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
+          {formatCurrency(row?.VatTax)}
+        </span>
       ),
     },
     {
