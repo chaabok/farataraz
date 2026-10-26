@@ -1400,25 +1400,26 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       }
 
       let computedAmount = Number(factor.Amount || 0);
+      // مبلغ دستی واردشده توسط کاربر: بدون بازمحاسبه خودکار تا انتخاب مجدد عامل
+      const isManualAmount = factor.ManualAmount === true;
 
-      if (isVat) {
+      if (!isManualAmount && isVat) {
         const rate = getFactorVatRate(paramObj, factor, issueDate);
         totalVatRate += rate;
         const totalAfterManualDiscount = updatedItems.reduce((acc, r) => acc + Math.max(0, r.TotalPrice - r.ManualDiscount), 0);
         computedAmount = Math.round(totalAfterManualDiscount * rate);
-        totalVatFactorsAmount += computedAmount;
-      } else if (opType === 3 || titleNorm.includes("درصد")) {
+      } else if (!isManualAmount && (opType === 3 || titleNorm.includes("درصد"))) {
         const rawVal = getParameterValueForDate(paramObj, issueDate) || Number(factor.PercentOrAmount || factor.Value || 0);
         if (rawVal > 0) {
           const rate = rawVal > 1 ? rawVal / 100 : rawVal;
           computedAmount = Math.round(totalGrossSum * rate);
         }
-      } else if (opType === 4) {
+      } else if (!isManualAmount && opType === 4) {
         const unitVal = getParameterValueForDate(paramObj, issueDate) || Number(factor.PercentOrAmount || factor.Value || 0);
         if (unitVal > 0) {
           computedAmount = Math.round(totalItemsQuantity * unitVal);
         }
-      } else if (opType === 1) {
+      } else if (!isManualAmount && opType === 1) {
         if (computedAmount === 0) {
           const fixedVal = getParameterValueForDate(paramObj, issueDate);
           if (fixedVal > 0) {
@@ -1427,9 +1428,11 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
         }
       }
 
-      if (isDiscount) {
+      if (isVat) {
+        totalVatFactorsAmount += computedAmount;
+      } else if (isDiscount) {
         totalDiscountFactorsAmount += computedAmount;
-      } else if (!isVat && factorTypeVal === 1) {
+      } else if (factorTypeVal === 1) {
         totalAdditionFactorsAmount += computedAmount;
       }
 
@@ -1447,17 +1450,25 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       const total = Number(row.TotalPrice) || 0;
       const manualDisc = Number(row.ManualDiscount) || 0;
       const manualAdds = Number(row.ManualAdditions) || 0;
+      const hasManualDisc = row.ManualDiscount !== undefined && row.ManualDiscount !== null;
+      const hasManualVat = row.ManualVatTax !== undefined && row.ManualVatTax !== null;
 
       let factorDisc = 0;
       if (totalDiscountFactorsAmount > 0 && totalGrossSum > 0) {
         factorDisc = Math.round((total / totalGrossSum) * totalDiscountFactorsAmount);
       }
 
-      const totalDiscount = manualDisc + factorDisc;
+      // حفظ تخفیف ذخیره‌شده وقتی نه تخفیف دستی وجود دارد و نه عاملی برای تخصیص
+      const totalDiscount = hasManualDisc || factorDisc > 0
+        ? manualDisc + factorDisc
+        : Number(row.Discount) || 0;
       const afterDiscount = Math.max(0, total - totalDiscount);
 
       let vat = 0;
-      if (totalVatRate > 0) {
+      if (hasManualVat) {
+        // مالیات و عوارض ارزش افزوده دستی واردشده توسط کاربر
+        vat = Number(row.ManualVatTax) || 0;
+      } else if (totalVatRate > 0) {
         vat = Math.round(afterDiscount * totalVatRate);
       } else if (totalVatFactorsAmount > 0 && totalGrossSum > 0) {
         vat = Math.round((total / totalGrossSum) * totalVatFactorsAmount);
@@ -1967,12 +1978,31 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
     {
       name: "VatTax",
       label: "ارزش افزوده",
-      type: "text",
+      type: "custom",
       width: "110px",
-      render: (row) => (
-        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
-          {formatCurrency(row?.VatTax)}
-        </span>
+      render: (row, rowIndex) => (
+        <NumberInput
+          value={row?.VatTax ?? 0}
+          thousandsSeparator={true}
+          localizeDigits={true}
+          onChange={(newVal) => {
+            const updatedItems = [...(values.items || [])];
+            const manualVat = Number(newVal) || 0;
+            updatedItems[rowIndex] = {
+              ...updatedItems[rowIndex],
+              ManualVatTax: manualVat > 0 ? manualVat : null,
+              VatTax: manualVat,
+            };
+            const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+              updatedItems,
+              values.factors || [],
+              values.IssueDate || values.ReceiptDate || "",
+              parametersList || []
+            );
+            setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
+          }}
+          disabled={isUsed}
+        />
       ),
     },
     {
@@ -2075,7 +2105,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
           thousandsSeparator={true}
           onChange={(newVal) => {
             const updatedFactors = [...(values.factors || [])];
-            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
+            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0, ManualAmount: true };
             
             const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
               values.items || [],
@@ -3181,7 +3211,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                                         const diff = numVal - oldRowAmount;
                                         const newTotal = Math.max(0, Number(f.Amount || 0) + diff);
                                         const updated = [...(values.factors || [])];
-                                        updated[idx] = { ...updated[idx], Amount: newTotal };
+                                        updated[idx] = { ...updated[idx], Amount: newTotal, ManualAmount: true };
                                         setValues((prev) => ({ ...prev, factors: updated }));
                                       }}
                                       disabled={isUsed || !hasValidItem}

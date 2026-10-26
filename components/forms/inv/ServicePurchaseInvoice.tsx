@@ -363,7 +363,13 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     const discount = Number(row.Discount) || 0;
     const total = qty * price;
     const afterDiscount = Math.max(0, total - discount);
-    const vat = Math.round(afterDiscount * vatRate);
+    const hasManualVat = row.ManualVatTax !== undefined && row.ManualVatTax !== null;
+    // نگه‌داشت مالیات موجود/دستی وقتی نرخ محاسبه‌ای وجود ندارد
+    const vat = vatRate > 0
+      ? Math.round(afterDiscount * vatRate)
+      : hasManualVat
+      ? Number(row.ManualVatTax) || 0
+      : Number(row.VatTax) || 0;
     const net = afterDiscount + vat;
 
     return {
@@ -866,12 +872,28 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     {
       name: "VatTax",
       label: "ارزش افزوده",
-      type: "text",
+      type: "custom",
       width: "110px",
-      render: (row) => (
-        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
-          {formatCurrency(row?.VatTax)}
-        </span>
+      render: (row, rowIndex) => (
+        <NumberInput
+          value={row?.VatTax ?? 0}
+          thousandsSeparator={true}
+          localizeDigits={true}
+          onChange={(newVal) => {
+            const updatedItems = [...(values.items || [])];
+            const manualVat = Number(newVal) || 0;
+            const r = updatedItems[rowIndex];
+            const afterDiscount = Math.max(0, (Number(r?.TotalPrice) || 0) - (Number(r?.Discount) || 0));
+            updatedItems[rowIndex] = {
+              ...r,
+              ManualVatTax: manualVat,
+              VatTax: manualVat,
+              NetPrice: afterDiscount + manualVat,
+            };
+            setValues((prev) => ({ ...prev, items: updatedItems }));
+          }}
+          disabled={isUsed}
+        />
       ),
     },
     {

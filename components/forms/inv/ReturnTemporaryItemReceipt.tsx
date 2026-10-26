@@ -747,6 +747,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
       CategoryOther: cat,
       FactorType: factorTypeVal,
       Amount: initialAmount > 0 ? initialAmount : (updatedFactors[idx]?.Amount || 0),
+      ManualAmount: false,
     };
 
     setValues((prev) => ({ ...prev, factors: updatedFactors }));
@@ -785,6 +786,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
 
     let totalVatRate = 0;
     let totalDiscountFactorsAmount = 0;
+    let totalVatFactorsAmount = 0;
 
     const updatedFactors = (factorsList || []).map((factor) => {
       const paramObj = findParamObj(factor, paramsList);
@@ -804,24 +806,26 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
       }
 
       let computedAmount = Number(factor.Amount || 0);
+      // مبلغ دستی واردشده توسط کاربر: بدون بازمحاسبه خودکار تا انتخاب مجدد عامل
+      const isManualAmount = factor.ManualAmount === true;
 
-      if (isVat) {
+      if (!isManualAmount && isVat) {
         const rate = getFactorVatRate(paramObj, factor, receiptDate);
         totalVatRate += rate;
         const totalAfterManualDiscount = updatedItems.reduce((acc, r) => acc + Math.max(0, r.TotalPrice - r.ManualDiscount), 0);
         computedAmount = Math.round(totalAfterManualDiscount * rate);
-      } else if (opType === 3) {
+      } else if (!isManualAmount && opType === 3) {
         const rawVal = getParameterValueForDate(paramObj, receiptDate);
         if (rawVal > 0) {
           const rate = rawVal > 1 ? rawVal / 100 : rawVal;
           computedAmount = Math.round(totalGrossSum * rate);
         }
-      } else if (opType === 4) {
+      } else if (!isManualAmount && opType === 4) {
         const unitVal = getParameterValueForDate(paramObj, receiptDate);
         if (unitVal > 0) {
           computedAmount = Math.round(totalItemsQuantity * unitVal);
         }
-      } else if (opType === 1) {
+      } else if (!isManualAmount && opType === 1) {
         if (computedAmount === 0) {
           const fixedVal = getParameterValueForDate(paramObj, receiptDate);
           if (fixedVal > 0) {
@@ -830,7 +834,9 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
         }
       }
 
-      if (isDiscount) {
+      if (isVat) {
+        totalVatFactorsAmount += computedAmount;
+      } else if (isDiscount) {
         totalDiscountFactorsAmount += computedAmount;
       }
 
@@ -847,6 +853,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
     const finalItems = updatedItems.map((row) => {
       const total = Number(row.TotalPrice) || 0;
       const manualDisc = Number(row.ManualDiscount) || 0;
+      const hasManualVat = row.ManualVatTax !== undefined && row.ManualVatTax !== null;
 
       let factorDisc = 0;
       if (totalDiscountFactorsAmount > 0 && totalGrossSum > 0) {
@@ -855,7 +862,16 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
 
       const totalDiscount = manualDisc + factorDisc;
       const afterDiscount = Math.max(0, total - totalDiscount);
-      const vat = Math.round(afterDiscount * totalVatRate);
+
+      let vat = 0;
+      if (hasManualVat) {
+        // مالیات و عوارض ارزش افزوده دستی واردشده توسط کاربر
+        vat = Number(row.ManualVatTax) || 0;
+      } else if (totalVatRate > 0) {
+        vat = Math.round(afterDiscount * totalVatRate);
+      } else if (totalVatFactorsAmount > 0 && totalGrossSum > 0) {
+        vat = Math.round((total / totalGrossSum) * totalVatFactorsAmount);
+      }
       const net = afterDiscount + vat;
 
       return {
@@ -1338,12 +1354,31 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
     {
       name: "VatTax",
       label: "ارزش افزوده",
-      type: "text",
+      type: "custom",
       width: "110px",
-      render: (row) => (
-        <span className="flex items-center justify-end w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 select-none dir-ltr">
-          {formatCurrency(row?.VatTax)}
-        </span>
+      render: (row, rowIndex) => (
+        <NumberInput
+          value={row?.VatTax ?? 0}
+          thousandsSeparator={true}
+          localizeDigits={true}
+          onChange={(newVal) => {
+            const updatedItems = [...(values.items || [])];
+            const manualVat = Number(newVal) || 0;
+            updatedItems[rowIndex] = {
+              ...updatedItems[rowIndex],
+              ManualVatTax: manualVat > 0 ? manualVat : null,
+              VatTax: manualVat,
+            };
+            const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+              updatedItems,
+              values.factors || [],
+              values.ReceiptDate || "",
+              parametersList || []
+            );
+            setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
+          }}
+          disabled={isUsed}
+        />
       ),
     },
     {
@@ -1416,7 +1451,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
           thousandsSeparator={true}
           onChange={(newVal) => {
             const updatedFactors = [...(values.factors || [])];
-            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
+            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0, ManualAmount: true };
             setValues((prev) => ({ ...prev, factors: updatedFactors }));
           }}
           disabled={isUsed}
@@ -2060,7 +2095,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
                                         const diff = numVal - oldRowAmount;
                                         const newTotal = Math.max(0, Number(f.Amount || 0) + diff);
                                         const updated = [...(values.factors || [])];
-                                        updated[idx] = { ...updated[idx], Amount: newTotal };
+                                        updated[idx] = { ...updated[idx], Amount: newTotal, ManualAmount: true };
                                         setValues((prev) => ({ ...prev, factors: updated }));
                                       }}
                                       disabled={isUsed || !hasValidItem}

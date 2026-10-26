@@ -1756,6 +1756,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       CategoryOther: cat,
       FactorType: factorTypeVal,
       Amount: initialAmount > 0 ? initialAmount : (updatedFactors[idx]?.Amount || 0),
+      ManualAmount: false,
     };
 
     setValues((prev) => ({ ...prev, factors: updatedFactors }));
@@ -1823,27 +1824,28 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       }
 
       let computedAmount = Number(factor.Amount || 0);
+      // مبلغ دستی واردشده توسط کاربر: بدون بازمحاسبه خودکار تا انتخاب مجدد عامل
+      const isManualAmount = factor.ManualAmount === true;
 
-      if (isVat) {
+      if (!isManualAmount && isVat) {
         const rate = getFactorVatRate(paramObj, factor, receiptDate);
         totalVatRate += rate;
         const totalAfterManualDiscount = updatedItems.reduce((acc, r) => acc + Math.max(0, r.TotalPrice - r.ManualDiscount), 0);
         computedAmount = Math.round(totalAfterManualDiscount * rate);
-        totalVatFactorsAmount += computedAmount;
-      } else if (opType === 3 || titleNorm.includes("درصد")) {
+      } else if (!isManualAmount && (opType === 3 || titleNorm.includes("درصد"))) {
         // Percentage (درصدی)
         const rawVal = getParameterValueForDate(paramObj, receiptDate) || Number(factor.PercentOrAmount || factor.Value || 0);
         if (rawVal > 0) {
           const rate = rawVal > 1 ? rawVal / 100 : rawVal;
           computedAmount = Math.round(totalGrossSum * rate);
         }
-      } else if (opType === 4) {
+      } else if (!isManualAmount && opType === 4) {
         // Unit Amount (مبلغ واحد)
         const unitVal = getParameterValueForDate(paramObj, receiptDate) || Number(factor.PercentOrAmount || factor.Value || 0);
         if (unitVal > 0) {
           computedAmount = Math.round(totalItemsQuantity * unitVal);
         }
-      } else if (opType === 1) {
+      } else if (!isManualAmount && opType === 1) {
         // Fixed Amount (مبلغی)
         if (computedAmount === 0) {
           const fixedVal = getParameterValueForDate(paramObj, receiptDate);
@@ -1853,9 +1855,11 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
         }
       }
 
-      if (isDiscount) {
+      if (isVat) {
+        totalVatFactorsAmount += computedAmount;
+      } else if (isDiscount) {
         totalDiscountFactorsAmount += computedAmount;
-      } else if (!isVat && factorTypeVal === 1) {
+      } else if (factorTypeVal === 1) {
         totalAdditionFactorsAmount += computedAmount;
       }
 
@@ -1873,17 +1877,25 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       const total = Number(row.TotalPrice) || 0;
       const manualDisc = Number(row.ManualDiscount) || 0;
       const manualAdds = Number(row.ManualAdditions) || 0;
+      const hasManualDisc = row.ManualDiscount !== undefined && row.ManualDiscount !== null;
+      const hasManualVat = row.ManualVatTax !== undefined && row.ManualVatTax !== null;
 
       let factorDisc = 0;
       if (totalDiscountFactorsAmount > 0 && totalGrossSum > 0) {
         factorDisc = Math.round((total / totalGrossSum) * totalDiscountFactorsAmount);
       }
 
-      const totalDiscount = manualDisc + factorDisc;
+      // حفظ تخفیف ذخیره‌شده وقتی نه تخفیف دستی وجود دارد و نه عاملی برای تخصیص
+      const totalDiscount = hasManualDisc || factorDisc > 0
+        ? manualDisc + factorDisc
+        : Number(row.Discount) || 0;
       const afterDiscount = Math.max(0, total - totalDiscount);
 
       let vat = 0;
-      if (totalVatRate > 0) {
+      if (hasManualVat) {
+        // مالیات و عوارض ارزش افزوده دستی واردشده توسط کاربر
+        vat = Number(row.ManualVatTax) || 0;
+      } else if (totalVatRate > 0) {
         vat = Math.round(afterDiscount * totalVatRate);
       } else if (totalVatFactorsAmount > 0 && totalGrossSum > 0) {
         vat = Math.round((total / totalGrossSum) * totalVatFactorsAmount);
@@ -2554,7 +2566,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
           thousandsSeparator={true}
           onChange={(newVal) => {
             const updatedFactors = [...(values.factors || [])];
-            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0 };
+            updatedFactors[rowIndex] = { ...updatedFactors[rowIndex], Amount: Number(newVal) || 0, ManualAmount: true };
             setValues((prev) => ({ ...prev, factors: updatedFactors }));
           }}
           disabled={isUsed}
@@ -3901,7 +3913,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                                         const diff = numVal - oldRowAmount;
                                         const newTotal = Math.max(0, Number(f.Amount || 0) + diff);
                                         const updated = [...(values.factors || [])];
-                                        updated[idx] = { ...updated[idx], Amount: newTotal };
+                                        updated[idx] = { ...updated[idx], Amount: newTotal, ManualAmount: true };
                                         setValues((prev) => ({ ...prev, factors: updated }));
                                       }}
                                       disabled={isUsed}
