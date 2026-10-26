@@ -1531,3 +1531,30 @@ Work Log:
 Stage Summary:
 - فیلد «نوع فروش» فرم پیش فاکتور فروش اکنون تمام‌عرض سلول خود است و دقیقاً زیر و هم‌عرض دراپ‌داون «مشتری» می‌نشیند (x و w یکسان، فقط تفاوت ردیف) — همانند چیدمان ستونی درخواستی کاربر
 - فایل تغییر یافته: components/forms/sle/SalesProforma.tsx (فقط بلوک SalesType؛ منطق ذخیره/API دست‌نخورده)
+---
+Task ID: 90
+Agent: Z.ai Code (main)
+Task: کاهش ۴۰٪ ارتفاع هدر داشبورد هنگام باز شدن فرم در تب‌بار
+
+Work Log:
+- تحلیل: تب «داشبورد» دائمی است (داخل tabsStore نیست)؛ آرایه tabs در useTabs فقط فرم‌های باز را نگه می‌دارد → شرط «فرم باز» = tabs.length > 0
+- Header.tsx:
+  • متغیر hasOpenForm = tabs.length > 0
+  • کلاس شرطی hdr-compact روی <header> + کلاس پایه app-header + transition-[height]
+  • cn به import اضافه شد
+  • کلاس‌های کمکی: hdr-title/hdr-sub روی عنوان دو خطی شرکت/شعبه/نمایندگی و hdr-avatar روی آواتار کاربر
+- app/globals.css (قواعد rem-based تا با فونت پایه داینامیک «مدیریت فونت‌ها» هم‌مقیاس بماند — نکته: فونت پایه کاربر ۹۰٪ است و rem=14.4px):
+  • .app-header { transition: height .3s ease-in-out }
+  • .hdr-compact { height: 2.4rem !important } (60% از h-16=4rem → کاهش دقیق ۴۰٪)
+  • .hdr-compact .h-10 → 1.5rem؛ .h-10.w-10 → 1.5rem؛ .hdr-avatar → 1.2rem؛ .hdr-sub مخفی؛ .hdr-title فونت ۱۱px
+- تست E2E (admin/1234):
+  • بدون فرم: هدر 57.59px (4rem×14.4) و compact=false
+  • باز کردن فرم پیش فاکتور فروش: هدر 34.55px و compact=true → کاهش دقیق 40.0%
+  • بستن فرم: برگشت به 57.59px با transition نرم
+  • اسکرین‌شات‌ها: .zscreenshots/t90-header-compact-form-open.png و t90-header-normal-no-form.png
+- نکته اشکال‌زدایی: نسخه اول CSS با مقدار ثابت 38.4px بود که با فونت پایه ۹۰٪ کاربر ناسازگار بود (کاهش 33.3% می‌داد)؛ به calc-like rem (2.4rem) تبدیل شد تا درصد همیشه دقیق باشد
+- eslint = پاک؛ کنسول مرورگر بدون خطا
+
+Stage Summary:
+- رفتار جدید: با باز شدن هر فرم در تب‌بار، هدر داشبورد به‌صورت نرم (0.3s) به ۶۰٪ ارتفاع فشرده می‌شود و با بستن همه فرم‌ها به حالت عادی برمی‌گردد؛ عناصر هدر (لوگوها، دکمه‌ها، آواتار، متن‌ها) نیز متناسب فشرده می‌شوند تا overflow رخ ندهد
+- فایل‌های تغییر یافته: components/layout/Header.tsx، app/globals.css

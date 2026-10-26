@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { apiFetch } from '@/lib/utils';
+import { apiFetch, cn } from '@/lib/utils';
 import { useLanguage, useCompany, CompanyInfo, useAuth } from '@/components/Providers';
 import { useTheme } from 'next-themes';
 import { Moon, Sun, Bell, Settings, MessageSquare, ChevronDown, Palette, Key, Lock, LogOut, Unlock, ShieldCheck, Leaf, Flower, Snowflake, CloudSun, Check } from 'lucide-react';
@@ -21,6 +21,8 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { currentCompany, setCurrentCompany, currentBranch, setCurrentBranch, currentRep, setCurrentRep } = useCompany();
   const { currentUser, setCurrentUser } = useAuth();
   const { tabs, dirtyTabs, removeAllTabs, setActiveTabId } = useTabs();
+  // Task 90: اگر فرمی در تب‌بار باز شده باشد، هدر داشبورد فشرده می‌شود (کاهش ۴۰٪ ارتفاع)
+  const hasOpenForm = tabs.length > 0;
   const router = useRouter();
   
   const [mounted, setMounted] = useState(false);
@@ -400,7 +402,10 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const currentTheme = theme === 'system' ? resolvedTheme : theme;
 
   return (
-    <header className="relative z-[100] shrink-0 flex h-16 items-center justify-between bg-slate-50/95 px-4 md:px-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] backdrop-blur-md dark:bg-gray-950/95 dark:shadow-[0_2px_15px_-3px_rgba(0,0,0,0.4)]">
+    <header className={cn(
+      "app-header relative z-[100] shrink-0 flex h-16 items-center justify-between bg-slate-50/95 px-4 md:px-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.05)] backdrop-blur-md dark:bg-gray-950/95 dark:shadow-[0_2px_15px_-3px_rgba(0,0,0,0.4)]",
+      hasOpenForm && "hdr-compact"
+    )}>
       {/* Creative Gradient Bottom Border */}
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent opacity-70 dark:via-gray-700" />
       <div className="flex items-center gap-2 md:gap-4">
@@ -427,8 +432,8 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
               )}
             </div>
             <div className="hidden sm:block text-start">
-              <h1 className="text-sm font-bold leading-tight line-clamp-1">{currentCompany?.title || "انتخاب شرکت"}</h1>
-              <p className="text-xs text-gray-500 line-clamp-1">{currentCompany?.title_en || "Select Entity"}</p>
+              <h1 className="hdr-title text-sm font-bold leading-tight line-clamp-1">{currentCompany?.title || "انتخاب شرکت"}</h1>
+              <p className="hdr-sub text-xs text-gray-500 line-clamp-1">{currentCompany?.title_en || "Select Entity"}</p>
             </div>
             <ChevronDown className="h-4 w-4 text-gray-500 mx-1" />
           </button>
@@ -482,8 +487,8 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
                 )}
               </div>
               <div className="hidden sm:block text-start">
-                <h1 className="text-sm font-bold leading-tight line-clamp-1">{currentBranch?.title || "انتخاب شعبه"}</h1>
-                <p className="text-xs text-gray-500 line-clamp-1">{currentBranch?.title_en || "Select Branch"}</p>
+                <h1 className="hdr-title text-sm font-bold leading-tight line-clamp-1">{currentBranch?.title || "انتخاب شعبه"}</h1>
+                <p className="hdr-sub text-xs text-gray-500 line-clamp-1">{currentBranch?.title_en || "Select Branch"}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-500 mx-1" />
             </button>
@@ -534,8 +539,8 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
                 )}
               </div>
               <div className="hidden sm:block text-start">
-                <h1 className="text-sm font-bold leading-tight line-clamp-1">{currentRep?.title || "انتخاب نمایندگی"}</h1>
-                <p className="text-xs text-gray-500 line-clamp-1">{currentRep?.title_en || "Select Rep"}</p>
+                <h1 className="hdr-title text-sm font-bold leading-tight line-clamp-1">{currentRep?.title || "انتخاب نمایندگی"}</h1>
+                <p className="hdr-sub text-xs text-gray-500 line-clamp-1">{currentRep?.title_en || "Select Rep"}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-500 mx-1" />
             </button>
@@ -697,7 +702,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
             onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
             className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 py-1 pe-2 ps-1 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 overflow-hidden dark:bg-indigo-900/50 dark:text-indigo-400">
+            <div className="hdr-avatar flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 overflow-hidden dark:bg-indigo-900/50 dark:text-indigo-400">
               <span className="text-xs font-bold">
                 {currentUser 
                   ? (currentUser.firstName && currentUser.lastName

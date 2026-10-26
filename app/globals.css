@@ -280,3 +280,40 @@
   line-height: 1.25rem !important;
 }
 
+
+/* ==========================================================================
+   Task 90: حالت فشرده هدر داشبورد — وقتی فرمی در تب‌بار باز می‌شود
+   ارتفاع هدر ۴۰٪ کاهش می‌یابد (h-16 = 4rem → 2.4rem یعنی 60%) و عناصر داخلی
+   برای جلوگیری از overflow فشرده می‌شوند؛ با transition نرم.
+   مقادیر rem-based هستند تا با فونت پایه داینامیک (مدیریت فونت‌ها) هم‌مقیاس بمانند.
+   ========================================================================== */
+.app-header {
+  transition: height 0.3s ease-in-out;
+}
+.app-header.hdr-compact {
+  height: 2.4rem !important; /* 60% از h-16 (4rem) → کاهش دقیق ۴۰٪ */
+}
+.app-header.hdr-compact .h-10 {
+  height: 1.5rem !important; /* 60% از 2.5rem */
+  min-height: 0 !important;
+}
+.app-header.hdr-compact .h-10.w-10 {
+  width: 1.5rem !important;
+  min-width: 0 !important;
+}
+.app-header.hdr-compact .hdr-avatar {
+  height: 1.2rem !important; /* 60% از h-8 (2rem) */
+  width: 1.2rem !important;
+}
+.app-header.hdr-compact .hdr-sub {
+  display: none;
+}
+.app-header.hdr-compact .hdr-title {
+  font-size: 11px;
+  line-height: 1.1;
+}
+.app-header.hdr-compact .hdr-pill {
+  height: 1.75rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
