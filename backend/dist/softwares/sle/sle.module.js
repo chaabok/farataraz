@@ -75,6 +75,8 @@ const sales_proforma_invoice_item_entity_1 = require("./domain/entities/sales-pr
 const sales_proforma_invoice_factor_entity_1 = require("./domain/entities/sales-proforma-invoice-factor.entity");
 const sales_proforma_invoice_controller_1 = require("./presentation/controllers/sales-proforma-invoice.controller");
 const sales_proforma_invoice_service_1 = require("./application/services/sales-proforma-invoice.service");
+const base_document_controller_1 = require("./presentation/controllers/base-document.controller");
+const base_document_service_1 = require("./application/services/base-document.service");
 const core_module_1 = require("../../core/core.module");
 const common_module_1 = require("../common/common.module");
 let SleModule = class SleModule {
@@ -120,6 +122,7 @@ exports.SleModule = SleModule = __decorate([
             settlement_method_controller_1.SettlementMethodController,
             sales_order_controller_1.SalesOrderController,
             sales_proforma_invoice_controller_1.SalesProformaInvoiceController,
+            base_document_controller_1.SleBaseDocumentController,
         ],
         providers: [
             {
@@ -179,6 +182,7 @@ exports.SleModule = SleModule = __decorate([
             settlement_method_service_1.SettlementMethodService,
             sales_order_service_1.SalesOrderService,
             sales_proforma_invoice_service_1.SalesProformaInvoiceService,
+            base_document_service_1.SleBaseDocumentService,
         ],
         exports: [
             customer_group_service_1.CustomerGroupService,

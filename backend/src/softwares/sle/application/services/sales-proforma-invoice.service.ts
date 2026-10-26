@@ -93,6 +93,9 @@ export class SalesProformaInvoiceService {
       SettlementMethodRef: dto.SettlementMethodRef ? Number(dto.SettlementMethodRef) : null,
       Status: Number(dto.Status || 1),
       Description: dto.Description || null,
+      // Task 93: سند مبنا — 0/undefined = بدون مبنا (null)
+      BaseDocumentTypeRef: dto.BaseDocumentTypeRef !== undefined && dto.BaseDocumentTypeRef !== null && Number(dto.BaseDocumentTypeRef) > 0 ? Number(dto.BaseDocumentTypeRef) : null,
+      BaseDocumentRef: dto.BaseDocumentRef ? Number(dto.BaseDocumentRef) : null,
       businessStructureRef: bsId,
       companyRef: compId,
       FiscalYearRef: fiscalYearId,
@@ -233,6 +236,9 @@ export class SalesProformaInvoiceService {
     proforma.SettlementMethodRef = dto.SettlementMethodRef !== undefined ? (dto.SettlementMethodRef ? Number(dto.SettlementMethodRef) : null) : proforma.SettlementMethodRef;
     proforma.Status = dto.Status !== undefined ? Number(dto.Status || 1) : proforma.Status;
     proforma.Description = dto.Description !== undefined ? dto.Description : proforma.Description;
+    // Task 93: سند مبنا — 0/undefined = بدون مبنا (null)
+    proforma.BaseDocumentTypeRef = dto.BaseDocumentTypeRef !== undefined ? (Number(dto.BaseDocumentTypeRef) > 0 ? Number(dto.BaseDocumentTypeRef) : null) : proforma.BaseDocumentTypeRef;
+    proforma.BaseDocumentRef = dto.BaseDocumentRef !== undefined ? (dto.BaseDocumentRef ? Number(dto.BaseDocumentRef) : null) : proforma.BaseDocumentRef;
     proforma.lastModifier = userId;
 
     await this.repository.save(proforma);

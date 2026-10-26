@@ -234,6 +234,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     SalesCenterRef: "",
     DeliveryLocationRef: "",
     SettlementMethodRef: "",
+    // Task 93: سند مبنا — 0 = بدون مبنا
+    BaseDocumentTypeRef: 0,
+    BaseDocumentRef: "",
     Status: DocumentState.InitialRegistration,
     Description: "",
     items: [emptyRow()],
@@ -259,6 +262,22 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     return ref != null && ref !== "" ? Number(ref) : null;
   });
   const [settingsReady, setSettingsReady] = useState<boolean>(() => getCachedSalesDocumentSettings(1) != null);
+
+  // Task 93: سند مبنا — تیک «دارای سند مبنا» و انواع مجاز سند مبنا از تنظیمات اسناد فروش (SalesDocumentType = 1)
+  const [baseDocSettings, setBaseDocSettings] = useState<{ hasBase: boolean; allowedTypes: number[] }>(() => {
+    const s = getCachedSalesDocumentSettings(1);
+    return {
+      hasBase: !!s?.HasBaseDocument,
+      allowedTypes: s?.BaseDocumentTypes
+        ? String(s.BaseDocumentTypes)
+            .split(",")
+            .map((x) => Number(x.trim()))
+            .filter((n) => Number.isFinite(n))
+        : [],
+    };
+  });
+  // Task 93: فهرست عنوان‌های انواع سند مبنا (بدون مبنا + انواع سند فروش + رسید/حواله انبار)
+  const [baseDocTypeList, setBaseDocTypeList] = useState<{ id: number; title: string }[]>([]);
   const [parametersList, setParametersList] = useState<any[]>([]);
   const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
   const [selectedFactorIndex, setSelectedFactorIndex] = useState<number | null>(null);
@@ -465,6 +484,16 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     fetchSalesDocumentSettings(1).then((data) => {
       if (data) {
         setShowPurchaseSales(!!data.ShowPurchaseSalesParameters);
+        // Task 93: به‌روزرسانی تنظیمات سند مبنا (تیک دارای سند مبنا + انواع مجاز)
+        setBaseDocSettings({
+          hasBase: !!data.HasBaseDocument,
+          allowedTypes: data.BaseDocumentTypes
+            ? String(data.BaseDocumentTypes)
+                .split(",")
+                .map((x: string) => Number(x.trim()))
+                .filter((n: number) => Number.isFinite(n))
+            : [],
+        });
         if (data.DefaultWarehouseRef != null && data.DefaultWarehouseRef !== "") {
           setDefaultWarehouseRef(Number(data.DefaultWarehouseRef));
         }
@@ -476,6 +505,19 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       }
       setSettingsReady(true);
     });
+
+    // Task 93: فهرست عنوان‌های انواع سند مبنا (بدون مبنا + انواع سند فروش + رسید/حواله انبار)
+    apiFetch("/api/sle/sales-document-settings/base-document-types")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const list = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        if (list.length > 0) {
+          setBaseDocTypeList(
+            list.map((x: any) => ({ id: Number(x.id), title: String(x.title || x.label || "") })).filter((x: any) => Number.isFinite(x.id))
+          );
+        }
+      })
+      .catch((err) => console.error("Error fetching base document types:", err));
 
     // Task 67: فهرست پارامترهای خرید و فروش (برای محاسبه خودکار مبلغ عوامل)
     apiFetch("/api/inv/purchase-sales-parameters")
@@ -574,6 +616,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
               SalesCenterRef: data.SalesCenterRef ? Number(data.SalesCenterRef) : "",
               DeliveryLocationRef: data.DeliveryLocationRef ? Number(data.DeliveryLocationRef) : "",
               SettlementMethodRef: data.SettlementMethodRef ? Number(data.SettlementMethodRef) : "",
+              // Task 93: بارگذاری سند مبنا ذخیره‌شده
+              BaseDocumentTypeRef: data.BaseDocumentTypeRef != null && Number(data.BaseDocumentTypeRef) > 0 ? Number(data.BaseDocumentTypeRef) : 0,
+              BaseDocumentRef: data.BaseDocumentRef ? Number(data.BaseDocumentRef) : "",
               Status: data.Status || DocumentState.InitialRegistration,
               Description: data.Description || "",
               // Task 85: بارگذاری عوامل سفارش ذخیره‌شده (همانند رسید انبار)
@@ -640,6 +685,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       SalesCenterRef: defaults.SalesCenterRef,
       DeliveryLocationRef: defaults.DeliveryLocationRef,
       SettlementMethodRef: defaults.SettlementMethodRef,
+      // Task 93: ریست سند مبنا — 0 = بدون مبنا
+      BaseDocumentTypeRef: 0,
+      BaseDocumentRef: "",
       Status: DocumentState.InitialRegistration,
       Description: "",
       items: [emptyRow()],
@@ -718,6 +766,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       SalesCenterRef: Number(values.SalesCenterRef),
       DeliveryLocationRef: Number(values.DeliveryLocationRef),
       SettlementMethodRef: Number(values.SettlementMethodRef),
+      // Task 93: سند مبنا — بدون مبنا (0) به‌صورت null ذخیره می‌شود
+      BaseDocumentTypeRef: Number(values.BaseDocumentTypeRef || 0) || null,
+      BaseDocumentRef: values.BaseDocumentRef ? Number(values.BaseDocumentRef) : null,
       Status: values.Status || DocumentState.InitialRegistration,
       Description: values.Description || "",
       // Task 85: ذخیره عوامل سفارش فروش (اضافات/کسورات) — همانند رسید انبار فقط ردیف‌های دارای عنوان و مبلغ
@@ -884,6 +935,134 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
   };
 
   // Header fields
+  // ---------------------------------------------------------------------------
+  // Task 93: سند مبنا — فیلدهای «نوع سند مبنا» و «مبنا»
+  // اگر در تنظیمات اسناد فروش برای سفارش فروش تیک «دارای سند مبنا» فعال باشد، این دو
+  // فیلد همانند فرم رسید انبار در ردیف دوم سمت راست هدر نمایش داده می‌شوند؛ با انتخاب
+  // آیتم «بدون مبنا» در لیست «نوع سند مبنا»، فیلد «مبنا» مخفی می‌شود.
+  // ---------------------------------------------------------------------------
+  const baseDocTypeOptions = (() => {
+    const allowed = baseDocSettings.allowedTypes;
+    const filtered = baseDocTypeList.filter((x) => Number(x.id) !== 0 && allowed.includes(Number(x.id)));
+    return [{ id: 0, title: "بدون مبنا" }, ...filtered];
+  })();
+  const selectedBaseType = Number(values.BaseDocumentTypeRef || 0);
+  const showBaseDocFields = baseDocSettings.hasBase;
+
+  const baseDocumentCell: FieldConfig = {
+    name: "BaseDocumentGroup",
+    type: "custom",
+    noWrapper: true,
+    render: ({ disabled }) => (
+      <div className="flex items-center gap-2 w-full">
+        <div className={selectedBaseType !== 0 ? "w-1/2" : "w-full"}>
+          <SingleSelectDropDown
+            options={baseDocTypeOptions}
+            columns={[
+              { key: "id", label: "کد", width: 60 },
+              { key: "title", label: "عنوان", width: 180 },
+            ]}
+            value={selectedBaseType}
+            selectedValue={selectedBaseType}
+            valueKey="id"
+            displayKey="title"
+            onChange={(sel: any) => {
+              const t = typeof sel === "object" ? Number(sel?.id ?? 0) : Number(sel ?? 0);
+              setValues((prev) => ({ ...prev, BaseDocumentTypeRef: t || 0, BaseDocumentRef: "" }));
+            }}
+            placeholder="انتخاب نوع سند مبنا..."
+            label="نوع سند مبنا :"
+            required
+            labelWidth="85px"
+            disabled={disabled || isUsed}
+          />
+        </div>
+        {selectedBaseType !== 0 && (
+          <div className="w-1/2 flex items-center gap-1">
+            <span className="text-slate-700 dark:text-slate-300 min-w-[42px] text-xs whitespace-nowrap font-semibold">
+              مبنا:
+            </span>
+            <div className="flex-1">
+              <SingleSelectDropDown
+                noWrapper={true}
+                listApiUrl={`/api/sle/base-documents/available?type=${selectedBaseType}`}
+                columns={[
+                  { key: "number", label: "شماره", width: 90 },
+                  {
+                    key: "date",
+                    label: "تاریخ",
+                    width: 100,
+                    renderItem: (row: any) => {
+                      const raw = String(row?.date || "");
+                      return gregorianToJalaliDisplay(raw) || raw;
+                    },
+                  },
+                  { key: "customer", label: "مشتری", width: 170 },
+                ]}
+                value={values.BaseDocumentRef || ""}
+                selectedValue={values.BaseDocumentRef || ""}
+                valueKey="id"
+                displayKey="number"
+                searchKeys={["number", "customer", "date"]}
+                onChange={(sel: any) => {
+                  const refId = typeof sel === "object" ? sel?.id : sel;
+                  setValues((prev) => ({ ...prev, BaseDocumentRef: refId ? Number(refId) : "" }));
+                }}
+                placeholder="انتخاب سند مبنا..."
+                disabled={disabled || isUsed}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    ),
+  };
+
+  // Task 93: وقتی فیلدهای سند مبنا در ردیف دوم نمایش داده می‌شوند، «مرکز فروش» و «وضعیت»
+  // در یک سلول دوستونه ترکیب می‌شوند تا گرید دوستونه هدر بدون ردیف ناقص بماند
+  const salesCenterAndStatusCell: FieldConfig = {
+    name: "SalesCenterAndStatus",
+    type: "custom",
+    noWrapper: true,
+    render: ({ disabled }) => (
+      <div className="grid grid-cols-2 gap-x-2 w-full items-center">
+        <SingleSelectDropDown
+          options={salesCenterOptions}
+          columns={refColumns}
+          value={values.SalesCenterRef || ""}
+          valueKey="id"
+          displayKey="title"
+          onChange={(sel: any) => {
+            if (!sel) {
+              setValues((prev) => ({ ...prev, SalesCenterRef: "" }));
+              return;
+            }
+            const refId = typeof sel === "object" ? sel.id : sel;
+            setValues((prev) => ({ ...prev, SalesCenterRef: refId ? Number(refId) : "" }));
+          }}
+          placeholder="انتخاب مرکز فروش..."
+          label="مرکز فروش :"
+          required
+          labelWidth="58px"
+          disabled={disabled || isUsed}
+        />
+        <StateListInput
+          label="وضعیت :"
+          required
+          value={values.Status}
+          onChange={(val) => handleChange("Status", val || DocumentState.InitialRegistration)}
+          allowedStates={[
+            DocumentState.InitialRegistration,
+            DocumentState.Approved,
+            DocumentState.Cancelled,
+          ]}
+          disabled={disabled || isUsed}
+          labelWidth="45px"
+        />
+      </div>
+    ),
+  };
+
   const fields: FieldConfig[] = [
     {
       name: "Customer",
@@ -952,6 +1131,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         </div>
       ),
     },
+    // Task 93: فیلدهای سند مبنا در ردیف دوم سمت راست — فقط وقتی «دارای سند مبنا» در تنظیمات فعال است
+    ...(showBaseDocFields ? [baseDocumentCell] : []),
     {
       name: "DeliveryDateAndSalesType",
       type: "custom",
@@ -1038,53 +1219,58 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         </div>
       ),
     },
-    {
-      // Task 80: «مرکز فروش» در هدر — همانند «نوع فروش»: دراپ‌داون تک‌انتخابی با اعتبارسنجی اجباری
-      name: "SalesCenter",
-      label: "مرکز فروش *",
-      type: "custom",
-      required: true,
-      render: ({ disabled }) => (
-        <SingleSelectDropDown
-          options={salesCenterOptions}
-          columns={refColumns}
-          value={values.SalesCenterRef || ""}
-          valueKey="id"
-          displayKey="title"
-          onChange={(sel: any) => {
-            if (!sel) {
-              setValues((prev) => ({ ...prev, SalesCenterRef: "" }));
-              return;
-            }
-            const refId = typeof sel === "object" ? sel.id : sel;
-            setValues((prev) => ({ ...prev, SalesCenterRef: refId ? Number(refId) : "" }));
-          }}
-          placeholder="انتخاب مرکز فروش..."
-          disabled={disabled || isUsed}
-        />
-      ),
-    },
-    {
-      // Task 81: «وضعیت» کنار «مرکز فروش» — همان سطر گرید دوستونه
-      name: "Status",
-      type: "custom",
-      noWrapper: true,
-      render: ({ disabled }) => (
-        <StateListInput
-          label="وضعیت :"
-          required
-          value={values.Status}
-          onChange={(val) => handleChange("Status", val || DocumentState.InitialRegistration)}
-          allowedStates={[
-            DocumentState.InitialRegistration,
-            DocumentState.Approved,
-            DocumentState.Cancelled,
-          ]}
-          disabled={disabled || isUsed}
-          labelWidth="45px"
-        />
-      ),
-    },
+    // Task 93: با نمایش فیلدهای سند مبنا، «مرکز فروش» و «وضعیت» در یک سلول ترکیب می‌شوند
+    ...(showBaseDocFields
+      ? [salesCenterAndStatusCell]
+      : [
+          {
+            // Task 80: «مرکز فروش» در هدر — همانند «نوع فروش»: دراپ‌داون تک‌انتخابی با اعتبارسنجی اجباری
+            name: "SalesCenter",
+            label: "مرکز فروش *",
+            type: "custom",
+            required: true,
+            render: ({ disabled }) => (
+              <SingleSelectDropDown
+                options={salesCenterOptions}
+                columns={refColumns}
+                value={values.SalesCenterRef || ""}
+                valueKey="id"
+                displayKey="title"
+                onChange={(sel: any) => {
+                  if (!sel) {
+                    setValues((prev) => ({ ...prev, SalesCenterRef: "" }));
+                    return;
+                  }
+                  const refId = typeof sel === "object" ? sel.id : sel;
+                  setValues((prev) => ({ ...prev, SalesCenterRef: refId ? Number(refId) : "" }));
+                }}
+                placeholder="انتخاب مرکز فروش..."
+                disabled={disabled || isUsed}
+              />
+            ),
+          },
+          {
+            // Task 81: «وضعیت» کنار «مرکز فروش» — همان سطر گرید دوستونه
+            name: "Status",
+            type: "custom",
+            noWrapper: true,
+            render: ({ disabled }) => (
+              <StateListInput
+                label="وضعیت :"
+                required
+                value={values.Status}
+                onChange={(val) => handleChange("Status", val || DocumentState.InitialRegistration)}
+                allowedStates={[
+                  DocumentState.InitialRegistration,
+                  DocumentState.Approved,
+                  DocumentState.Cancelled,
+                ]}
+                disabled={disabled || isUsed}
+                labelWidth="45px"
+              />
+            ),
+          },
+        ]),
     {
       // Task 81: «توضیحات» در ردیف آخر و تمام‌عرض (col-span-2)
       name: "Description",

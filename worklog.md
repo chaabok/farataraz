@@ -1617,3 +1617,35 @@ Stage Summary:
 - فهرست «روش های شماره گذاری» پایه‌های جدید را با عنوان فارسی رندر می‌کند (مثال: «سال مالی - نوع فروش»)
 - سایر فرم‌ها (انبارداری و غیره) بدون تغییر؛ رفتار انبار/رسید انبار/تگ انبارگردانی دست‌نخورده ماند
 - فایل‌های تغییر یافته: components/forms/common/FormNumbering.tsx، components/forms/common/EntityNumberingList.tsx
+---
+Task ID: 93
+Agent: Z.ai Code (main)
+Task: نمایش فیلدهای «مبنا» و «نوع سند مبنا» در هدر فرم‌های سفارش فروش و پیش فاکتور فروش — مشروط به تیک «دارای سند مبنا» در تنظیمات اسناد فروش (همانند فرم رسید انبار، ردیف دوم سمت راست) + مخفی شدن «مبنا» با انتخاب «بدون مبنا»
+
+Work Log:
+- ریشه‌یابی: تنظیمات اسناد فروش (Sle.SalesDocumentSettings) از قبل HasBaseDocument + BaseDocumentTypes (کدهای 0=بدون مبنا، 1-7 انواع سند فروش، 8=رسید انبار، 9=حواله انبار) را دارد و کاربر برای هر دو نوع 1 (سفارش) و 2 (پیش فاکتور) تیک زده بود؛ الگوی مرجع فرم رسید انبار: سلول «BaseAndGroup» با دراپ‌داون نوع + دراپ‌داون سند مشخص (w-1/2/w-full)
+- بک‌اند:
+  • entities: SalesOrder + SalesProformaInvoice — دو ستون جدید BaseDocumentTypeRef (int nullable) و BaseDocumentRef (bigint nullable)؛ چون DB_SYNCHRONIZE=false است ستون‌ها با ALTER TABLE دستی به Sle.SalesOrders و Sle.SalesProformaInvoices اضافه شدند
+  • DTOs + services هر دو فرم: persist BaseDocumentTypeRef/BaseDocumentRef (0/undefined = null بدون مبنا) در create و update
+  • endpoint جدید: GET /api/sle/base-documents/available?type=N (SleBaseDocumentService + SleBaseDocumentController در sle.module ثبت شدند) — خروجی نرمال [{id, number, date, customer}] فقط اسناد با وضعیت بازبینی‌شده (4) یا تاییدشده (5)، فیلتر bs/comp/fiscalYear؛ فعلاً type=1 (سفارش) و type=2 (پیش فاکتور) پیاده شده و سایر انواع خالی برمی‌گردانند
+  • اشکال‌زدایی: خطای «syntax error at or near ":"» — ناهماهنگی نام پارامتر :fy با { fiscalYearId } در andWhere؛ اصلاح شد
+- فرانت (SalesOrder.tsx و SalesProforma.tsx — متقارن):
+  • state جدید: baseDocSettings (hasBase + allowedTypes از Settings با SalesDocumentType=1/2 — اولیه از کش مشترک، به‌روزرسانی در fetchSalesDocumentSettings) + baseDocTypeList (از /api/sle/sales-document-settings/base-document-types)
+  • values جدید: BaseDocumentTypeRef: 0 (بدون مبنا) و BaseDocumentRef: ""
+  • سلول «BaseDocumentGroup» (همانند BaseAndGroup رسید انبار): دراپ‌داون «نوع سند مبنا :» (گزینه‌ها = بدون مبنا + انواع مجاز تنظیمات؛ وقتی بدون مبنا است w-full) + دراپ‌داون «مبنا:» (listApiUrl=/api/sle/base-documents/available?type=N؛ ستون‌های شماره/تاریخ (جلالی)/مشتری؛ فقط وقتی نوع ≠ بدون مبنا نمایش داده می‌شود)
+  • جایگذاری شرطی: ...(showBaseDocFields ? [baseDocumentCell] : []) دقیقاً قبل از سلول ردیف دوم (DeliveryDateAndSalesType در سفارش / SalesType در پیش فاکتور) → ردیف دوم سمت راست
+  • حفظ چیدمان دوستونه: وقتی فیلدهای مبنا نمایش داده می‌شوند «مرکز فروش» و «وضعیت» در یک سلول grid-cols-2 ترکیب می‌شوند (salesCenterAndStatusCell) تا «وضعیت» یتیم نماند؛ با غیرفعال بودن تیک، چیدمان قبلی (مرکز فروش | وضعیت) برمی‌گردد
+  • payload ذخیره + نگاشت لود + ریست فرم جدید برای دو فیلد جدید
+- eslint = پاک (فقط خطای از-before sidebar.tsx بی‌ربط)
+- E2E مرورگر (admin/1234):
+  • سفارش فروش (تنظیمات ON، انواع 0,2): «نوع سند مبنا» در ردیف دوم سمت راست (x=948,y=200 زیر مشتری)؛ پنل دراپ = [بدون مبنا، پیش فاکتور فروش]؛ انتخاب پیش فاکتور → «مبنا:» ظاهر شد (لیست خالی چون پیش فاکتور تاییده‌ای وجود ندارد)؛ فرم جدید/بدون مبنا → «مبنا» مخفی — t93-order-base-fields-visible.png، t93-order-base-doc-selected.png
+  • پیش فاکتور (انواع 0,1): انتخاب «سفارش فروش» → «مبنا» ظاهر شد و لیست سفارش تاییدشده (شماره 1، تاریخ جلالی ۱۴۰۵/۰۸/۰۲، علی جهانی) را نشان داد؛ انتخاب سند → ذخیره (نیازمند ردیف قلم) → DB: BaseDocumentTypeRef=1 و BaseDocumentRef=8 (رکورد SalesProformaID=5)؛ بازکردن مجدد رکورد → «سفارش فروش» + «1» بازیابی شد — t93-proforma-base-loaded.png
+  • تنظیمات OFF (HasBaseDocument=false برای نوع 2) + بازکردن مجدد فرم: هر دو فیلد حذف و چیدمان اصلی برگشت (نوع فروش ردیف ۲ راست، مرکز فروش | وضعیت ردیف ۳) — t93-proforma-settings-off.png؛ بازگردانی ON → فیلدها برگشتند (بدون مبنا پیش‌فرض، مبنا مخفی) — t93-proforma-settings-on.png
+  • سفارش فروش پس از reload تمیز: فیلد نوع سند مبنا ردیف ۲ راست، مبنا مخفی (بدون مبنا) — t93-order-final-on.png
+  • کنسول مرورگر: فقط warningهای از-before نمودار داشبورد؛ dev.log بدون خطا
+- نکته: نکات فنی — مقدار «مقدار» در پیش فاکتور با عامل ردیابی (Task 74) readOnly است؛ تست ذخیره با مقدار پیش‌فرض ۱ انجام شد. data source «مبنا» برای انواع 3-9 (قرارداد/مجوز/فاکتور فروش/برگشت/رسید و حواله انبار) فعلاً خالی است و در صورت نیاز قابل اتصال است
+
+Stage Summary:
+- اگر در «تنظیمات اسناد فروش» تیک «دارای سند مبنا» برای سفارش فروش یا پیش فاکتور فروش فعال باشد، دو فیلد «نوع سند مبنا» (دراپ‌داون: بدون مبنا + انواع مجاز ثبت‌شده در تنظیمات) و «مبنا» (دراپ‌داون اسناد واقعی همان نوع با شماره/تاریخ/مشتری) دقیقاً مثل فرم رسید انبار در ردیف دوم سمت راست هدر نمایش داده می‌شوند و انتخاب کاربر در ستون‌های جدید BaseDocumentTypeRef/BaseDocumentRef ذخیره و در بازکردن مجدد بازیابی می‌شود
+- با انتخاب «بدون مبنا» فیلد «مبنا» مخفی می‌شود (فیلد «نوع سند مبنا» با عرض کامل می‌ماند) و اگر تیک «دارای سند مبنا» در تنظیمات غیرفعال باشد هر دو فیلد از هدر حذف و چیدمان قبلی بازسازی می‌شود
+- فایل‌های تغییر یافته: frontend — components/forms/sle/SalesOrder.tsx و components/forms/sle/SalesProforma.tsx؛ backend — entities (sales-order، sales-proforma-invoice)، dtos و services همان دو، sle.module.ts، فایل‌های جدید base-document.service.ts و base-document.controller.ts؛ DB — ۴ ستون جدید (ALTER TABLE دستی)

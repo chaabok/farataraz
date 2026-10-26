@@ -47,6 +47,15 @@ export class SalesOrder extends AppBaseEntity {
   @Column({ type: 'varchar', length: 1000, nullable: true })
   Description?: string;
 
+  // Task 93: نوع سند مبنا — 0=بدون مبنا، 1-7=انواع سند فروش، 8=رسید انبار، 9=حواله انبار
+  // (همان کدهای BASE_DOCUMENT_TYPE_LABELS در تنظیمات اسناد فروش)
+  @Column({ type: 'int', nullable: true })
+  BaseDocumentTypeRef?: number;
+
+  // Task 93: ارجاع به سند مبنا مشخص (ID سند انتخاب‌شده از دراپ‌داون «مبنا») — در حالت بدون مبنا null
+  @Column({ type: 'bigint', nullable: true })
+  BaseDocumentRef?: number;
+
   @Column({ type: 'bigint', nullable: true })
   FiscalYearRef?: number;
 

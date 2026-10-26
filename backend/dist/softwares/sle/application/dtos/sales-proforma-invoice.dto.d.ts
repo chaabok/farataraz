@@ -29,6 +29,8 @@ export declare class CreateSalesProformaInvoiceDto {
     SettlementMethodRef?: any;
     Status?: any;
     Description?: any;
+    BaseDocumentTypeRef?: any;
+    BaseDocumentRef?: any;
     items?: SalesProformaInvoiceItemDto[];
     factors?: SalesProformaInvoiceFactorDto[];
 }

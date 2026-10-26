@@ -1,0 +1,92 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SleBaseDocumentService = void 0;
+const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const sales_order_entity_1 = require("../../domain/entities/sales-order.entity");
+const sales_proforma_invoice_entity_1 = require("../../domain/entities/sales-proforma-invoice.entity");
+const request_context_service_1 = require("../../../../core/services/request-context.service");
+let SleBaseDocumentService = class SleBaseDocumentService {
+    constructor(orderRepository, proformaRepository, requestContextService) {
+        this.orderRepository = orderRepository;
+        this.proformaRepository = proformaRepository;
+        this.requestContextService = requestContextService;
+    }
+    getScope() {
+        let bsId = this.requestContextService.getBusinessStructureId() ?? 2;
+        let compId = this.requestContextService.getCompanyId() ?? 2;
+        let fiscalYearId = this.requestContextService.getFiscalYearId() ?? 1;
+        if (bsId <= 1)
+            bsId = 2;
+        if (compId <= 1)
+            compId = 2;
+        return { bsId, compId, fiscalYearId };
+    }
+    async getAvailableBaseDocuments(type) {
+        const { bsId, compId, fiscalYearId } = this.getScope();
+        const t = Number(type);
+        if (t === 1) {
+            const qb = this.orderRepository
+                .createQueryBuilder('so')
+                .where('so.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(so.businessStructureRef = :bsId OR so.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(so.companyRef = :compId OR so.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(so.FiscalYearRef = :fiscalYearId OR so.FiscalYearRef IS NULL)', { fiscalYearId });
+            qb.orderBy('so.OrderNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesOrderID),
+                number: d.OrderNumber,
+                date: d.OrderDate || '',
+                customer: d.CustomerName || '',
+            }));
+        }
+        if (t === 2) {
+            const qb = this.proformaRepository
+                .createQueryBuilder('sp')
+                .where('sp.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(sp.businessStructureRef = :bsId OR sp.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(sp.companyRef = :compId OR sp.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(sp.FiscalYearRef = :fiscalYearId OR sp.FiscalYearRef IS NULL)', { fiscalYearId });
+            qb.orderBy('sp.ProformaNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesProformaID),
+                number: d.ProformaNumber,
+                date: d.ProformaDate || '',
+                customer: d.CustomerName || '',
+            }));
+        }
+        return [];
+    }
+};
+exports.SleBaseDocumentService = SleBaseDocumentService;
+SleBaseDocumentService.BASE_ELIGIBLE_STATUSES = [4, 5];
+exports.SleBaseDocumentService = SleBaseDocumentService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, typeorm_1.InjectRepository)(sales_order_entity_1.SalesOrder)),
+    __param(1, (0, typeorm_1.InjectRepository)(sales_proforma_invoice_entity_1.SalesProformaInvoice)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        request_context_service_1.RequestContextService])
+], SleBaseDocumentService);
+//# sourceMappingURL=base-document.service.js.map

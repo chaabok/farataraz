@@ -29,6 +29,8 @@ export declare class CreateSalesOrderDto {
     SettlementMethodRef?: any;
     Status?: any;
     Description?: any;
+    BaseDocumentTypeRef?: any;
+    BaseDocumentRef?: any;
     items?: SalesOrderItemDto[];
     factors?: SalesOrderFactorDto[];
 }

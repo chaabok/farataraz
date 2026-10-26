@@ -86,6 +86,13 @@ export class CreateSalesOrderDto {
   @IsOptional()
   Description?: any;
 
+  // Task 93: نوع سند مبنا (0=بدون مبنا) + ارجاع به سند مبنا مشخص
+  @IsOptional()
+  BaseDocumentTypeRef?: any;
+
+  @IsOptional()
+  BaseDocumentRef?: any;
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

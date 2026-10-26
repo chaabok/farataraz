@@ -66,6 +66,14 @@ __decorate([
     __metadata("design:type", String)
 ], SalesProformaInvoice.prototype, "Description", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], SalesProformaInvoice.prototype, "BaseDocumentTypeRef", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
+    __metadata("design:type", Number)
+], SalesProformaInvoice.prototype, "BaseDocumentRef", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
     __metadata("design:type", Number)
 ], SalesProformaInvoice.prototype, "FiscalYearRef", void 0);

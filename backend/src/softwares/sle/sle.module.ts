@@ -67,6 +67,9 @@ import { SalesProformaInvoiceItem } from './domain/entities/sales-proforma-invoi
 import { SalesProformaInvoiceFactor } from './domain/entities/sales-proforma-invoice-factor.entity';
 import { SalesProformaInvoiceController } from './presentation/controllers/sales-proforma-invoice.controller';
 import { SalesProformaInvoiceService } from './application/services/sales-proforma-invoice.service';
+// Task 93: سند مبنا فرم‌های فروش
+import { SleBaseDocumentController } from './presentation/controllers/base-document.controller';
+import { SleBaseDocumentService } from './application/services/base-document.service';
 import { CoreModule } from '../../core/core.module';
 import { CommonModule } from '../common/common.module';
 
@@ -111,6 +114,8 @@ import { CommonModule } from '../common/common.module';
     SalesOrderController,
     // Task 88: پیش فاکتور فروش
     SalesProformaInvoiceController,
+    // Task 93: سند مبنا فرم‌های فروش
+    SleBaseDocumentController,
   ],
   providers: [
     {
@@ -171,6 +176,8 @@ import { CommonModule } from '../common/common.module';
     SalesOrderService,
     // Task 88: پیش فاکتور فروش
     SalesProformaInvoiceService,
+    // Task 93: سند مبنا فرم‌های فروش
+    SleBaseDocumentService,
   ],
   exports: [
     CustomerGroupService,

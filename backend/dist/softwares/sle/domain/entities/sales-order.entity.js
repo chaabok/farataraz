@@ -66,6 +66,14 @@ __decorate([
     __metadata("design:type", String)
 ], SalesOrder.prototype, "Description", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], SalesOrder.prototype, "BaseDocumentTypeRef", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
+    __metadata("design:type", Number)
+], SalesOrder.prototype, "BaseDocumentRef", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
     __metadata("design:type", Number)
 ], SalesOrder.prototype, "FiscalYearRef", void 0);

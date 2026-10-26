@@ -14,6 +14,8 @@ export declare class SalesOrder extends AppBaseEntity {
     SettlementMethodRef?: number;
     Status: number;
     Description?: string;
+    BaseDocumentTypeRef?: number;
+    BaseDocumentRef?: number;
     FiscalYearRef?: number;
     items?: SalesOrderItem[];
     factors?: SalesOrderFactor[];
