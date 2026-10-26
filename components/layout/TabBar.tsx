@@ -131,6 +131,9 @@ export function TabBar() {
     setIsMenuOpen(false);
   };
 
+  // Task 96: تا وقتی کاربر فرمی باز نکرد، تب‌بار نمایش داده نمی‌شود (فقط داشبورد است)
+  if (tabs.length === 0) return null;
+
   return (
     <div className="relative flex h-10 w-full items-center bg-gray-50 px-2 py-1 border-b dark:border-gray-800 dark:bg-gray-950/80 shadow-sm z-40">
       {/* Scrollable Tabs Area */}

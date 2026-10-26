@@ -58,11 +58,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  // Task 96: لودر «در حال ورود به نرم افزار» — از ارسال فرم تا رندر شدن داشبورد نمایش می‌ماند
+  const [entering, setEntering] = useState(false);
   
   const [step, setStep] = useState<'login' | '2fa'>('login');
   const [twoFaMethod, setTwoFaMethod] = useState<'sms' | 'email' | 'app'>('sms');
   const [userId, setUserId] = useState<number | null>(null);
   const [twoFaToken, setTwoFaToken] = useState('');
+
+  React.useEffect(() => {
+    // Task 96: پیش‌بارگذاری داشبورد هنگام ورود به صفحه لاگین تا تأخیر بعد از لاگین کاهش یابد
+    router.prefetch('/');
+  }, [router]);
 
   React.useEffect(() => {
     const checkHealth = async () => {
@@ -84,6 +91,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    let navigating = false;
     try {
       const enUsername = toEnglishDigits(username.trim()).toLowerCase();
       const enPassword = toEnglishDigits(password);
@@ -100,7 +108,6 @@ export default function LoginPage() {
         setUserId(data.userId);
         setTwoFaMethod(data.twofa_method || 'app');
         setStep('2fa');
-        setLoading(false);
         return;
       }
 
@@ -121,6 +128,9 @@ export default function LoginPage() {
         console.error('Failed to parse token', e);
       }
 
+      // اورلی ورود تا پایان ناوبری و رندر داشبورد روی صفحه می‌ماند (صفحه لاگین آن‌مانت می‌شود)
+      navigating = true;
+      setEntering(true);
       router.push('/');
     } catch(err: any) {
       if (err.message && err.message !== 'ورود ناموفق' && !err.message.includes('Url:')) {
@@ -129,7 +139,8 @@ export default function LoginPage() {
          setErrorMsg('نام کاربری یا رمز عبور اشتباه است و یا ارتباط با سرور برقرار نشد.');
       }
     } finally {
-      setLoading(false);
+      // در مسیر موفق اورلی ورود باید بماند؛ لودینگ فقط برای مسیر خطا/دومرحله‌ای ریست می‌شود
+      if (!navigating) setLoading(false);
     }
   };
 
@@ -140,6 +151,7 @@ export default function LoginPage() {
 
     setLoading(true);
     setErrorMsg('');
+    let navigating = false;
     try {
       const res = await apiFetch('/api/auth/2fa/verify', {
         method: 'POST',
@@ -168,11 +180,13 @@ export default function LoginPage() {
         console.error('Failed to parse token', e);
       }
 
+      navigating = true;
+      setEntering(true);
       router.push('/');
     } catch(err: any) {
       setErrorMsg(err.message || 'کد وارد شده نامعتبر است.');
     } finally {
-      setLoading(false);
+      if (!navigating) setLoading(false);
     }
   };
 
@@ -365,6 +379,24 @@ export default function LoginPage() {
           ))}
         </div>
       </div>
+
+      {/* Task 96: اورلی «در حال ورود به نرم افزار» — از ارسال فرم تا رندر شدن داشبورد نمایش داده می‌شود */}
+      <AnimatePresence>
+        {(loading || entering) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-3 bg-white/85 dark:bg-slate-950/85 backdrop-blur-sm"
+            dir={direction}
+          >
+            <Loader2 className="w-12 h-12 animate-spin text-indigo-600 dark:text-indigo-400" />
+            <p className="text-base font-bold text-slate-700 dark:text-slate-200">در حال ورود به نرم افزار...</p>
+            <p className="text-xs text-slate-400">لطفاً چند لحظه صبر کنید</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
