@@ -1693,7 +1693,7 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
     },
     {
       name: "PriceAfterDiscount",
-      label: "بعد از تخفیف",
+      label: "مبلغ کل\nپس از تخفیف", // Task 111: همسان با سرستون فرم رسید انبار
       type: "text",
       width: "130px",
       render: (row) => (
@@ -1704,7 +1704,7 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
     },
     {
       name: "VatTax",
-      label: "ارزش افزوده",
+      label: "جمع مالیات و عوارض\nارزش افزوده", // Task 111: همسان با سرستون فرم رسید انبار
       type: "text",
       width: "110px",
       render: (row) => (
@@ -1715,7 +1715,7 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
     },
     {
       name: "NetPrice",
-      label: "خالص (ریال)",
+      label: "جمع کل با مالیات\nو عوارض ارزش افزوده", // Task 111: همسان با سرستون فرم رسید انبار
       type: "text",
       width: "140px",
       render: (row) => (
