@@ -1284,8 +1284,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
 
   // Items table columns
   const itemDropdownColumns: Column[] = [
-    { key: "ItemCode", label: "کد کالا", width: 120 },
-    { key: "ItemName", label: "عنوان کالا", width: 220 },
+    // Task 114: همسان‌سازی سرستون‌های پنجره انتخاب کالا با فاکتور خرید کالا
+    { key: "ItemCode", label: "کد کالا/خدمت", width: 120 },
+    { key: "ItemName", label: "عنوان کالا/خدمت", width: 220 },
     { key: "UnitName", label: "واحد سنجش", width: 120 },
   ];
 
@@ -1304,7 +1305,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
     {
       name: "ItemRef",
-      label: "کد کالا *",
+      // Task 114: همسان‌سازی سرستون‌های تب اقلام با فاکتور خرید کالا
+      label: "کد کالا/خدمت *",
       type: "custom",
       width: "240px",
       render: (row, rowIndex) => {
@@ -1377,7 +1379,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
     {
       name: "ItemName",
-      label: "عنوان کالا",
+      // Task 114: همسان‌سازی سرستون‌های تب اقلام با فاکتور خرید کالا
+      label: "عنوان کالا/خدمت",
       type: "text",
       width: "200px",
       render: (row) => (
@@ -1561,7 +1564,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
     {
       name: "UnitPrice",
-      label: "فی",
+      // Task 114: همسان‌سازی سرستون‌های تب اقلام با فاکتور خرید کالا
+      label: "فی (ریال) *",
       type: "custom",
       width: "130px",
       render: (row, rowIndex) => (
@@ -1588,7 +1592,8 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     },
     {
       name: "TotalPrice",
-      label: "مبلغ کل",
+      // Task 114: همسان‌سازی سرستون‌های تب اقلام با فاکتور خرید کالا
+      label: "مبلغ کل (ریال)",
       type: "custom",
       width: "130px",
       render: (row, rowIndex) => (
