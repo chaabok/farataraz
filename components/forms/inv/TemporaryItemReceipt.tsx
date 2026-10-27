@@ -2417,9 +2417,9 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
                     <table className="w-full text-xs text-right border-collapse table-fixed">
                       <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 z-10 shadow-2xs">
                         <tr className="bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
-                          <th className="p-1 text-center w-8">انتخاب</th>
-                          <th className="p-1 text-right w-[47%]">عنوان عامل</th>
-                          <th className="p-1 text-left w-[43%]">مبلغ</th>
+                          <th className="p-1 text-center w-7">انتخاب</th>
+                          <th className="p-1 text-right w-[60%]">عنوان عامل</th>
+                          <th className="p-1 text-left w-[40%]">مبلغ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2486,7 +2486,8 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
                     </table>
                   </div>
 
-                  <div className="flex items-center justify-start gap-1 pt-1 pb-0.5 border-t border-slate-100 dark:border-slate-800 shrink-0">
+                  {/* Task 110: همسان‌سازی باکس عوامل رسید با فرم رسید انبار (رسید خرید) — نوار دکمه‌ها فشرده مانند Task 109 */}
+                  <div className="flex items-center justify-start gap-1 border-t border-slate-100 dark:border-slate-800 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -2505,10 +2506,10 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
                         setSelectedFactorIndex((values.factors?.length || 0));
                       }}
                       disabled={isUsed || !hasValidItem}
-                      className="p-1 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="افزودن ردیف"
                     >
-                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <Plus className="w-3 h-3 stroke-[3]" />
                     </button>
                     <button
                       type="button"
@@ -2523,10 +2524,10 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
                         }
                       }}
                       disabled={isUsed || !hasValidItem || (values.factors || []).length === 0}
-                      className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="حذف ردیف"
                     >
-                      <X className="w-4 h-4 stroke-[3]" />
+                      <X className="w-3 h-3 stroke-[3]" />
                     </button>
                     <button
                       type="button"
@@ -2534,10 +2535,10 @@ export function TemporaryItemReceipt({ id, tabId }: TemporaryItemReceiptProps) {
                         showToast("ردیف عامل انتخاب شده آماده ویرایش است", "info");
                       }}
                       disabled={isUsed || !hasValidItem || selectedFactorIndex === null}
-                      className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
+                      className="p-0.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
                       title="ویرایش ردیف"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
