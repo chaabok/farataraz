@@ -671,7 +671,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     },
     {
       name: "ItemRef",
-      label: "کد / عنوان خدمت *",
+      label: "کد کالا/خدمت *", // Task 113: همسان با سرستون فاکتور خرید کالا
       type: "custom",
       width: "230px",
       render: (row, rowIndex) => {
@@ -743,7 +743,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     },
     {
       name: "ItemName",
-      label: "عنوان خدمت",
+      label: "عنوان کالا/خدمت", // Task 113: همسان با سرستون فاکتور خرید کالا
       type: "text",
       width: "200px",
       render: (row) => (
@@ -766,20 +766,19 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     {
       name: "UnitType",
       label: "نوع واحد",
-      type: "custom",
-      width: "90px",
-      render: (row, rowIndex) => (
-        <Select
-          value={row?.UnitType || 1}
-          options={UNIT_TYPE_OPTIONS}
-          onChange={(val) => {
-            const updatedItems = [...(values.items || [])];
-            updatedItems[rowIndex] = { ...updatedItems[rowIndex], UnitType: Number(val) };
-            setValues((prev) => ({ ...prev, items: updatedItems }));
-          }}
-          disabled={isUsed}
-        />
-      ),
+      // Task 113: ستون نوع واحد فقط‌خواندنی شد — دقیقاً منطق تب اقلام رسید انبار و فاکتور خرید کالا
+      type: "text",
+      width: "58px",
+      render: (row) => {
+        const unitTypeStr = typeof row?.UnitType === "number"
+          ? (row.UnitType === 2 ? "فرعی" : "اصلی")
+          : (row?.UnitType || "اصلی");
+        return (
+          <span className="flex items-center justify-center w-full h-[25px] px-1 text-xs font-medium text-slate-700 dark:text-slate-300 text-center select-none">
+            {unitTypeStr}
+          </span>
+        );
+      },
     },
     {
       name: "Quantity",
@@ -849,7 +848,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     },
     {
       name: "PriceAfterDiscount",
-      label: "بعد از تخفیف",
+      label: "مبلغ کل\nپس از تخفیف", // Task 113: همسان با سرستون فاکتور خرید کالا
       type: "text",
       width: "130px",
       render: (row) => (
@@ -860,7 +859,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     },
     {
       name: "VatTax",
-      label: "ارزش افزوده",
+      label: "جمع مالیات و عوارض\nارزش افزوده", // Task 113: همسان با سرستون فاکتور خرید کالا
       type: "text",
       width: "110px",
       render: (row) => (
@@ -871,7 +870,7 @@ export function ServicePurchaseInvoice({ id, tabId }: ServicePurchaseInvoiceProp
     },
     {
       name: "NetPrice",
-      label: "خالص (ریال)",
+      label: "جمع کل با مالیات\nو عوارض ارزش افزوده", // Task 113: همسان با سرستون فاکتور خرید کالا
       type: "text",
       width: "140px",
       render: (row) => (
