@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مشاوره بازطراحی صفحه لاگین — پارسا ERP</title>
+<style>
+  @font-face { font-family: 'Vazirmatn'; src: local('Vazirmatn'), local('Vazir'); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Vazirmatn', Tahoma, 'Segoe UI', sans-serif;
+    background: #070b14;
+    color: #e2e8f0;
+    line-height: 1.9;
+    min-height: 100vh;
+  }
+  .aurora {
+    position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  }
+  .aurora::before, .aurora::after {
+    content: ''; position: absolute; width: 60vw; height: 60vw; border-radius: 50%;
+    filter: blur(120px); opacity: .25;
+  }
+  .aurora::before { background: radial-gradient(circle, #10b981 0%, transparent 70%); top: -20vw; right: -10vw; }
+  .aurora::after { background: radial-gradient(circle, #8b5cf6 0%, transparent 70%); bottom: -20vw; left: -10vw; }
+  .wrap { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 48px 24px 80px; }
+  header.hero { text-align: center; margin-bottom: 56px; }
+  .badge {
+    display: inline-block; padding: 6px 18px; border-radius: 999px; font-size: 13px;
+    background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.35); margin-bottom: 16px;
+  }
+  h1 { font-size: clamp(26px, 4vw, 42px); font-weight: 900; margin-bottom: 10px;
+       background: linear-gradient(120deg, #ffffff 30%, #5eead4 70%, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: #94a3b8; max-width: 640px; margin: 0 auto; font-size: 15px; }
+  section { margin-bottom: 64px; }
+  h2 { font-size: 24px; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+  h2 .num {
+    width: 36px; height: 36px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(16,185,129,.2), rgba(139,92,246,.2));
+    border: 1px solid rgba(16,185,129,.35); color: #5eead4; font-size: 15px; flex-shrink: 0;
+  }
+  .grid { display: grid; gap: 24px; }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card {
+    background: rgba(15,23,42,.65); border: 1px solid rgba(148,163,184,.14);
+    border-radius: 24px; overflow: hidden; backdrop-filter: blur(14px);
+    transition: transform .3s ease, border-color .3s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(16,185,129,.4); }
+  .card img { width: 100%; display: block; aspect-ratio: 1344/768; object-fit: cover; }
+  .card .body { padding: 22px 24px 26px; }
+  .card h3 { font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 3px 12px; border-radius: 999px; margin: 0 0 10px 6px; border: 1px solid; }
+  .tag.t1 { color: #5eead4; border-color: rgba(94,234,212,.4); background: rgba(94,234,212,.08); }
+  .tag.t2 { color: #fbbf24; border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+  .tag.t3 { color: #a78bfa; border-color: rgba(167,139,250,.4); background: rgba(167,139,250,.08); }
+  .tag.t0 { color: #94a3b8; border-color: rgba(148,163,184,.4); background: rgba(148,163,184,.08); }
+  .card p { font-size: 14px; color: #aab6c8; }
+  ul.feats { list-style: none; margin-top: 12px; }
+  ul.feats li { font-size: 13.5px; color: #cbd5e1; padding: 4px 22px 4px 0; position: relative; }
+  ul.feats li::before { content: '◆'; position: absolute; right: 0; color: #34d399; font-size: 10px; top: 9px; }
+  ul.cons li::before { content: '✕'; color: #f87171; }
+  .critique { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .critique .item {
+    background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.18);
+    border-radius: 16px; padding: 14px 18px; font-size: 13.5px; color: #cbd5e1;
+  }
+  .critique .item b { color: #fca5a5; display: block; margin-bottom: 4px; font-size: 14px; }
+  .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .trend {
+    background: rgba(15,23,42,.65); border: 1px solid rgba(148,163,184,.14); border-radius: 20px; padding: 20px 22px;
+  }
+  .trend .ico { font-size: 26px; margin-bottom: 8px; }
+  .trend b { display: block; font-size: 15px; margin-bottom: 4px; color: #f1f5f9; }
+  .trend span { font-size: 13px; color: #94a3b8; }
+  .note {
+    background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25); border-radius: 16px;
+    padding: 16px 20px; font-size: 13.5px; color: #fcd34d; margin-top: 18px;
+  }
+  footer { text-align: center; color: #64748b; font-size: 13px; margin-top: 40px; }
+  .cta {
+    display: inline-block; margin-top: 24px; padding: 12px 34px; border-radius: 16px; font-weight: 800; font-size: 15px;
+    background: linear-gradient(120deg, #10b981, #14b8a6); color: #04120d; text-decoration: none;
+    box-shadow: 0 8px 30px rgba(16,185,129,.35);
+  }
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="badge">✦ پرونده مشاوره طراحی — ۲۰۲۶</div>
+    <h1>بازطراحی صفحه لاگین پارسا ERP</h1>
+    <p>پرونده مشاوره طراحی صفحه ورود — نسل دوم با رویکرد سازمانی و شرکتی، بر پایه ترندهای ۲۰۲۶ (مینیمالِ مجلل، بافت‌های ظریف، تایپوگرافی قوی) — در پیاده‌سازی واقعی، همه متون فارسی، راست‌چین و با فونت وزیرمتن اجرا خواهند شد.</p>
+  </header>
+
+  <section>
+    <h2><span class="num">✦</span> نسل دوم — سبک سازمانی و شرکتی (جدید)</h2>
+    <p style="color:#94a3b8; font-size:14px; margin-bottom:20px;">رویکرد کاملاً متفاوت: حذف افکت‌های فانتزی، تمرکز بر <b style="color:#5eead4">اعتماد، آرامش و حرفه‌ای بودن</b> — الهام از محصولات سازمانی برتر مثل Stripe و Linear. مینیمالِ مجلل با تایپوگرافی قوی و یک رنگ برند مطمئن.</p>
+    <div class="grid two">
+
+      <div class="card">
+        <img src="./concept-4-executive-minimal.png" alt="کانسپت ۴ — مینیمال اجرایی">
+        <div class="body">
+          <h3>کانسپت ۴ — مینیمال اجرایی 🏛</h3>
+          <span class="tag t1">لایت · شرکتی</span><span class="tag t1">پیشنهاد اول</span>
+          <p>کارت دونیم: پنل تیره با نقشه توپوگرافی ظریف و آیکون سپر امنیت + فرم روشن با دکمه زمردی؛ تیتر بزرگ و مطمئن.</p>
+          <ul class="feats">
+            <li>ساده، شیک و بی‌ادعا — تمرکز کامل روی فرم</li>
+            <li>حس «محصول جدی سازمانی» با فضای سفید سخاوتمندانه</li>
+            <li>پالت گرم خنثی + زمردی؛ چشم را خسته نمی‌کند</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="./concept-5-executive-dark.png" alt="کانسپت ۵ — اجرایی تیره">
+        <div class="body">
+          <h3>کانسپت ۵ — اجرایی تیره 🌍</h3>
+          <span class="tag t2">دارک · مجلل</span>
+          <p>اسلیت تیره با بافت خطوط توپوگرافی و نقشه جهانی نقطه‌ای؛ کارت با حاشیه زمردی هاله‌دار و دکمه سبز.</p>
+          <ul class="feats">
+            <li>حس پرستیژ و اقتدار برای ورود مدیران سازمان</li>
+            <li>نقشه جهانی = حس «سازمان بزرگ و یکپارچه»</li>
+            <li>مناسب سازمان‌هایی که داشبورد تیره دوست دارند</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="./concept-6-corporate-trust.png" alt="کانسپت ۶ — اعتماد شرکتی">
+        <div class="body">
+          <h3>کانسپت ۶ — اعتماد شرکتی 🤝</h3>
+          <span class="tag t3">دوگانه · برندمحور</span>
+          <p>پنل زمردی با مجسمه خطی سه‌بعدی و جای آیکون‌های اعتماد + فرم روشن با دکمه اسلیت تیره.</p>
+          <ul class="feats">
+            <li>بهترین تعادل «زیبایی + کاربرپسندی»</li>
+            <li>فضای اختصاصی برند: لوگو، شعار، نشان‌های اعتماد</li>
+            <li>دکمه تیره = کنتراست عالی و CTA واضح</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2 style="opacity:.55;"><span class="num" style="opacity:.55;">۱</span> وضعیت فعلی و نقد طراحی <span style="font-size:12px;color:#64748b;">(مرحله قبل)</span></h2>
+    <div class="card" style="max-width:100%;">
+      <img src="./current-login.png" alt="صفحه لاگین فعلی">
+      <div class="body">
+        <span class="tag t0">طراحی فعلی</span>
+        <div class="critique">
+          <div class="item"><b>قالبی و بی‌هویت</b>چیدمان دوستونه کلاسیک ۲۰۱۸؛ بنر تیره با سه آیکون، حس محصول عمومی می‌دهد نه ERP سازمانی</div>
+          <div class="item"><b>نبود عمق و بافت</b>سطوح تخت، بدون گرادیان، گلس، سایه‌های لایه‌ای یا جزئیات بصری</div>
+          <div class="item"><b>عدم تعادل بصری</b>کارت فرم ساده و ریز در برابر پنل تیره بزرگ؛ آیکون‌ها و متن‌ها نامتقارن</div>
+          <div class="item"><b>جزئیات فنی لو رفته</b>نمایش وضعیت سرور و مشخصات تست (admin/1234) روی کارت، حس غیرحرفه‌ای</div>
+          <div class="item"><b>فرم خسته‌کننده</b>اینپوت‌های معمولی بدون آیکون، بدون نمایش رمز، بدون میکرواینترکشن</div>
+          <div class="item"><b>برندینگ غایب</b>لوگو و نام محصول در صفحه ورود دیده نمی‌شود</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">۲</span> ترندهای کلیدی طراحی ۲۰۲۶ که استفاده می‌کنیم</h2>
+    <div class="trends">
+      <div class="trend"><div class="ico">🌌</div><b>گرادیان اورورا / مش</b><span>پس‌زمینه‌های چندرنگ سیال و آرام متحرک به‌جای رنگ تخت</span></div>
+      <div class="trend"><div class="ico">🧊</div><b>گلس‌مورفیسم ۲.۰</b><span>کارت‌های شیشه‌ای مات با هاله داخلی، حاشیه نورانی و بلور واقعی</span></div>
+      <div class="trend"><div class="ico">🍱</div><b>گرید بنتو</b><span>پنل‌های نامتقارن گردگوشه برای ترکیب فرم، برندینگ و آمار</span></div>
+      <div class="trend"><div class="ico">🫧</div><b>عمق سه‌بعدی نرم</b><span>اشکال شیشه‌ای شناور با پارالاکس ظریف و عمق میدان</span></div>
+      <div class="trend"><div class="ico">✨</div><b>میکرواینترکشن</b><span>هاله فوکوس اینپوت، افکت درخشش دکمه، انیمیشن‌های ظریف ورود</span></div>
+      <div class="trend"><div class="ico">🌙</div><b>دارک‌فرست حرفه‌ای</b><span>حالت تیره پیش‌فرض برای کار روزانه طولانی + حالت روشن لوکس</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 style="opacity:.55;"><span class="num" style="opacity:.55;">۳</span> نسل اول — کانسپت‌های قبلی <span style="font-size:12px;color:#f87171;">(رد شد — بیش از حد فانتزی)</span></h2>
+    <div class="grid two">
+
+      <div class="card">
+        <img src="./concept-1-aurora-glass.png" alt="کانسپت ۱ — شیشه اورورا">
+        <div class="body">
+          <h3>کانسپت ۱ — شیشه اورورا 🌌</h3>
+          <span class="tag t1">دارک · سینمایی</span><span class="tag t1">پیشنهاد اول</span>
+          <p>کارت گلس شناور در مرکز، پس‌زمینه اورورای زمردی-بنفش متحرک، مکعب‌های شیشه‌ای شناور با پارالاکس.</p>
+          <ul class="feats">
+            <li>مدرن‌ترین و «واو»ترین حس؛ مناسب هویت آینده‌نگر</li>
+            <li>انیمیشن اورورا با CSS خالص (بدون تصویر سنگین)</li>
+            <li>کنتراست بالا و فرم کاملاً خوانا</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="./concept-2-light-luxury.png" alt="کانسپت ۲ — لوکس روشن">
+        <div class="body">
+          <h3>کانسپت ۲ — لوکس روشن 🤍</h3>
+          <span class="tag t2">لایت · لوکس</span>
+          <p>پس‌زمینه عاجی با گرادیان‌های پاستلی، کارت سفید با لبه طلایی و دکمه زمردی؛ ابریشم سه‌بعدی در پس‌زمینه.</p>
+          <ul class="feats">
+            <li>حس شرکتی شیک و آرام؛ مناسب محیط‌های سنتی</li>
+            <li>خوانایی عالی در محیط‌های پرنور</li>
+            <li>ترکیب طلایی + زمردی حس اعتبار سازمانی</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <img src="./concept-3-bento-3d.png" alt="کانسپت ۳ — بنتو سه‌بعدی">
+        <div class="body">
+          <h3>کانسپت ۳ — بنتو داشبوردی 🍱</h3>
+          <span class="tag t3">دارک · داده‌محور</span>
+          <p>گرید بنتو از پنل‌های شیشه‌ای با ویجت‌های KPI و نمودار؛ فرم در پنل مرکزی با حاشیه نورانی.</p>
+          <ul class="feats">
+            <li>هویت «داده و هوش تجاری» — مرتبط با ذات ERP</li>
+            <li>فضای اضافه برای نشان‌دادن آمار زنده یا برندینگ</li>
+            <li>پیش‌نمایشی از فضای داشبورد پس از ورود</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+    <div class="note">⚠ تصاویر بالا پیش‌نمونه مفهومی (Mood) تولیدشده با هوش مصنوعی هستند؛ در پیاده‌سازی واقعی: متن کاملاً فارسی و راست‌چین با فونت وزیرمتن، فیلدها با آیکون و دکمه نمایش رمز، انیمیشن‌های نرم Framer Motion، حالت روشن/تیره، و حفظ کامل منطق فعلی (لاگین، وضعیت سرور، ورود دومرحله‌ای، سوییچ زبان) اجرا می‌شود.</div>
+    <div style="text-align:center;"><a class="cta" href="/">بازگشت به برنامه ←</a></div>
+  </section>
+
+  <footer>پرونده مشاوره طراحی صفحه ورود — پارسا ERP · ۲۰۲۶</footer>
+</div>
+</body>
+</html>

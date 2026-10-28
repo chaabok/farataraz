@@ -1,0 +1,15 @@
+node_modules
+.next
+backend/dist
+.git
+.github
+dev.log
+*.log
+*.tar.gz
+upload
+.claude
+.z-ai-config
+# License private key must never enter an image
+backend/keys/license_private_key.pem
+Dockerfile
+docker-compose.yml

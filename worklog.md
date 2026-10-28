@@ -2450,3 +2450,33 @@ Work Log:
 
 Stage Summary:
 - قانون واحد در همه ۷ فرم: ستون «جمع مالیات و عوارض ارزش افزوده» فقط با ثبت عامل نوع مالیات/عوارض در باکس عوامل پر می‌شود؛ در غیر این صورت صفر
+
+---
+Task ID: 122
+Agent: Z.ai Code (main)
+Task: رفع خطای ورود «نام کاربری یا رمز عبور اشتباه است و یا ارتباط با سرور برقرار نشد» پس از ری‌استارت sandbox
+
+Work Log:
+- علامت: پیش‌نمایش بالا بود و صفحه ورود رندر می‌شد، ولی ورود با پیام خطای عمومی شکست می‌خورد
+- عیب‌یابی:
+  * POST /api/auth/login روی بک‌اند مستقیماً 500 برمی‌گرداند → مشکل از سمت سرور/دیتابیس است نه اعتبارنامه کاربر
+  * پورت 5432 گوش نمی‌داد؛ لاگ PostgreSQL: «lock file postmaster.pid contains wrong PID» → خاموشی فوری پس از ری‌استارت sandbox
+  * تلاش اول برای استارت PG: خطای مجوز دایرکتوری داده (chmod 700 لازم بود) — اثر جانبی دیگر ری‌استارت sandbox
+  * پس از استارت موفق PG، اتصال بک‌اند باز هم شکست می‌خورد: «pg_attribute catalog is missing 1 attribute(s) for relation OID 2662» — خرابی کاتالوگ سیستم در parsaDb؛ پاک‌کردن pg_internal.init و ری‌استارت PG بی‌اثر بود
+  * نکته مهم استارت بک‌اند: متغیر DATABASE_URL سراسری sandbox (اشاره به custom.db) روی .env پروژه غلبه می‌کند → بک‌اند با SSL=true و آدرس اشتباه استارت می‌شد و به SQLite fallback می‌کرد (کرش timestamp). استارت صحیح: DATABASE_URL='postgresql://postgres:parsa@127.0.0.1:5432/parsaDb' node backend/dist/main.js
+- بازیابی:
+  * اتصال به دیتابیس مدیریتی postgres سالم بود → خرابی محدود به parsaDb
+  * جدیدترین بکاپ سالم: backups/parsa-db-latest.sql (امروز 13:41 — 179 جدول، 848 ردیف)
+  * node .zscripts/restore-database.js backups/parsa-db-latest.sql parsaDb drop → RESTORE_OK (179 جدول)
+  * ری‌استارت بک‌اند با DATABASE_URL صحیح → «Successfully connected to PostgreSQL (Local) - Database: parsaDb»
+- راستی‌آزمایی:
+  * curl POST /api/auth/login با admin/1234 → access_token ✓
+  * smoke test APIها: inv/tracking-factors، sle/sales-orders، inv/items/dropdown، inv/purchase-sales-parameters، sle/customers، base-settings/tab/4 → 200 ✓
+  * E2E با agent-browser (gateway :81): ورود موفق → داشبورد کامل (منوها، شرکت، کاربر مدیر سیستم)؛ بازشدن فرم «سفارش فروش جدید» بدون خطا
+  * خطای گذرای ChunkLoadError مربوط به ری‌کامپایل dev server بود؛ با کامپایل اجباری chunk و سشن مرورگر تازه حل شد
+  * اسکرین‌شات‌ها: .zscreenshots/t121-login-fixed.png (داشبورد پس از ورود)، t122-sales-order-after-restore.png
+  * کارهای قبلی (Task 121 مالیات/عوارض) دست‌نخورده و سالم؛ کد و منطق فرم‌ها متأثر از بازیابی دیتابیس نیست
+
+Stage Summary:
+- ریشه: ری‌استارت sandbox → خاموشی PG به‌دلیل PID قدیمی + خرابی کاتالوگ parsaDb؛ بازیابی کامل از بکاپ امروز و استارت مجدد سرویس‌ها با پیکربندی صحیح
+- ورود به سیستم و کل زنجیره فرانت/بک/دیتابیس اکنون سالم است؛ داده‌ها تا لحظه بکاپ 13:41 امروز حفظ شده‌اند
