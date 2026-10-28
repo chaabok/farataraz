@@ -2480,3 +2480,25 @@ Work Log:
 Stage Summary:
 - ریشه: ری‌استارت sandbox → خاموشی PG به‌دلیل PID قدیمی + خرابی کاتالوگ parsaDb؛ بازیابی کامل از بکاپ امروز و استارت مجدد سرویس‌ها با پیکربندی صحیح
 - ورود به سیستم و کل زنجیره فرانت/بک/دیتابیس اکنون سالم است؛ داده‌ها تا لحظه بکاپ 13:41 امروز حفظ شده‌اند
+
+---
+Task ID: 123
+Agent: Z.ai Code (main)
+Task: استخراج پرامپت کامل فرم مرکز هزینه (CostCenter)
+
+Work Log:
+- تحلیل کامل لایه‌های فرم مرکز هزینه:
+  * فرانت: components/forms/accounting/CostCenter.tsx (فرم ساده دو ردیفه SimpleFormTwoRow) + CostCenterList.tsx (گرید سرور-ساید MainDataGrid)
+  * بک: accounting/presentation/controllers/cost-center.controller.ts، services/cost-center.service.ts، dtos/create|update-cost-center.dto.ts، entities/cost-center.entity.ts + enum
+  * منو: حسابداری و مالی ← حسابداری ← اطلاعات پایه ← «مراکز هزینه جدید» (componentName: CostCenter) و فهرست‌ها ← «مراکز هزینه» (CostCenterList)
+- نقاط کلیدی استخراج‌شده:
+  * ۷ فیلد: کد (عددی، الزامی)، کد تفصیل (متن، الزامی)، عنوان (الزامی)، عنوان لاتین، نوع مرکز هزینه (۵ گزینه 1..5)، فعال (چک‌باکس پیش‌فرض فعال)، توضیحات
+  * /init: nextCode = max(code)+1 و detailedNumber از نوع تفصیلی کد «15» (مراکز هزینه) با DetailedAccountsNumberingService
+  * ذخیره: ایجاد خودکار حساب تفصیلی زیر نوع 15 با همان عنوان/کد تفصیل؛ اتصال detailedAccountId؛ اتصال به ساختار سازمانی/شرکت کاربر (fallback=2)
+  * ویرایش هم‌زمان حساب تفصیلی مرتبط؛ isUsed (usage-check جدول CostCenter) → فرم فقط-خواندنی
+  * حذف تکی/گروهی + حذف حساب تفصیلی مرتبط (best-effort)
+  * API: GET init، GET advanced (صفحه‌بندی/فیلتر/مرتب‌سازی)، GET :id، POST، PUT :id، DELETE :id، POST bulk-delete با دسترسی‌های ACC_COST_CENTER_CREATE/UPDATE/DELETE/VIEW
+  * جدول: Acc.CostCenter — Code varchar(20) NOT NULL + CHECK(length>0)، Title varchar(100)، Title_En، CostCenterType int enum(1..5)، DetailedAccountID → Acc.DetailedAccount (RESTRICT)، isActive default true، Description text؛ وراثت AppBaseEntity (چندمستأجری)
+
+Stage Summary:
+- پرامپت کامل فارسی فرم مرکز هزینه به کاربر تحویل شد؛ هیچ تغییری در کد اعمال نشد (فقط تحلیل و مستندسازی)
