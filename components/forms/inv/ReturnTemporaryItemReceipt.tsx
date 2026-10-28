@@ -222,6 +222,36 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
+            // -------------------------------------------------------------
+            // Task 121: نرخ مالیات فقط از «عوامل ثبت‌شده» نوع مالیات/عوارض سند ذخیره‌شده؛
+            // بدون چنین عاملی، ستون «جمع مالیات و عوارض ارزش افزوده» صفر است
+            // (رفع محاسبه ثابت ۹٪ در زمان بارگذاری)
+            // -------------------------------------------------------------
+            const loadedReceiptDate = data.ReceiptDate || data.InvoiceDate ? momentJalaali(data.ReceiptDate || data.InvoiceDate).format("jYYYY/jMM/jDD") : "";
+            const loadedFactors =
+              Array.isArray(data.factors) && data.factors.length > 0
+                ? data.factors.map((f: any, idx: number) => ({
+                    id: String(f.ReturnTemporaryItemReceiptFactorID || f.TemporaryItemReceiptFactorID || idx + 1),
+                    RowNo: f.RowNo || idx + 1,
+                    FactorTitle: f.FactorTitle || "",
+                    FactorType: f.FactorType ? Number(f.FactorType) : 1,
+                    Amount: Number(f.Amount || 0),
+                    Description: f.Description || "",
+                  }))
+                : [
+                    {
+                      id: "1",
+                      RowNo: 1,
+                      FactorTitle: "",
+                      FactorType: 1,
+                      Amount: 0,
+                      Description: "",
+                    },
+                  ];
+            const loadedVatRate = loadedFactors.reduce(
+              (acc: number, f: any) => acc + getFactorVatRate(findParamObj(f, parametersList), f, loadedReceiptDate),
+              0
+            );
             setValues({
               ReturnTemporaryItemReceiptID: data.ReturnTemporaryItemReceiptID || data.TemporaryItemReceiptID || activeId,
               BaseType: data.BaseType ? Number(data.BaseType) : ReturnTemporaryItemReceiptBaseType.None,
@@ -230,7 +260,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
               SupplierRef: data.SupplierRef ? Number(data.SupplierRef) : "",
               SupplierName: data.SupplierName || data.supplierParty?.title || "",
               ReceiptNumber: data.ReceiptNumber || data.InvoiceNumber || "",
-              ReceiptDate: data.ReceiptDate || data.InvoiceDate ? momentJalaali(data.ReceiptDate || data.InvoiceDate).format("jYYYY/jMM/jDD") : getTodayJalali(),
+              ReceiptDate: loadedReceiptDate || getTodayJalali(),
               BaseDocumentNumber: data.BaseDocumentNumber || "",
               Status: data.Status ? Number(data.Status) : DocumentState.InitialRegistration,
               CurrencyRef: data.CurrencyRef ? Number(data.CurrencyRef) : 1,
@@ -243,7 +273,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
                       const discount = Number(d.Discount || d.discount || 0);
                       const total = qty * price;
                       const afterDiscount = Math.max(0, total - discount);
-                      const vat = Math.round(afterDiscount * 0.09);
+                      const vat = Math.round(afterDiscount * loadedVatRate);
                       const net = afterDiscount + vat;
 
                       const matchedItem = availableItems.find(
@@ -303,26 +333,7 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
                         Currency: "ریال",
                       },
                     ],
-              factors:
-                Array.isArray(data.factors) && data.factors.length > 0
-                  ? data.factors.map((f: any, idx: number) => ({
-                      id: String(f.ReturnTemporaryItemReceiptFactorID || f.TemporaryItemReceiptFactorID || idx + 1),
-                      RowNo: f.RowNo || idx + 1,
-                      FactorTitle: f.FactorTitle || "",
-                      FactorType: f.FactorType ? Number(f.FactorType) : 1,
-                      Amount: Number(f.Amount || 0),
-                      Description: f.Description || "",
-                    }))
-                  : [
-                      {
-                        id: "1",
-                        RowNo: 1,
-                        FactorTitle: "",
-                        FactorType: 1,
-                        Amount: 0,
-                        Description: "",
-                      },
-                    ],
+              factors: loadedFactors,
             });
           }
         })
@@ -750,7 +761,16 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
       ManualAmount: false,
     };
 
-    setValues((prev) => ({ ...prev, factors: updatedFactors }));
+    setValues((prev) => {
+      // Task 121: بازمحاسبه ستون‌های مالی اقلام پس از ثبت/تغییر عامل (۰ تا ثبت عامل مالیاتی)
+      const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+        prev.items || [],
+        updatedFactors,
+        values.ReceiptDate,
+        parametersList || []
+      );
+      return { ...prev, factors: finalFactors, items: finalItems };
+    });
   };
 
   const recalculateInvoiceVatAndFactors = (
@@ -2106,14 +2126,23 @@ export function ReturnTemporaryItemReceipt({ id, tabId }: ReturnTemporaryItemRec
                     <button
                       type="button"
                       onClick={() => {
+                        let updatedFactors: any[] = [];
                         if (selectedFactorIndex !== null && selectedFactorIndex >= 0) {
-                          const updated = (values.factors || []).filter((_, i) => i !== selectedFactorIndex);
-                          setValues((prev) => ({ ...prev, factors: updated }));
+                          updatedFactors = (values.factors || []).filter((_, i) => i !== selectedFactorIndex);
                           setSelectedFactorIndex(null);
                         } else if ((values.factors || []).length > 0) {
-                          const updated = (values.factors || []).slice(0, -1);
-                          setValues((prev) => ({ ...prev, factors: updated }));
+                          updatedFactors = (values.factors || []).slice(0, -1);
                         }
+                        // Task 121: بازمحاسبه ستون‌های مالی اقلام پس از حذف عامل (۰ تا ثبت عامل جدید)
+                        setValues((prev) => {
+                          const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+                            prev.items || [],
+                            updatedFactors,
+                            values.ReceiptDate,
+                            parametersList || []
+                          );
+                          return { ...prev, factors: finalFactors, items: finalItems };
+                        });
                       }}
                       disabled={isUsed || !hasValidItem || (values.factors || []).length === 0}
                       className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"

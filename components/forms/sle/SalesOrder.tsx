@@ -931,21 +931,37 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       Amount: initialAmount > 0 ? initialAmount : updatedFactors[idx]?.Amount || 0,
     };
 
-    setValues((prev) => ({ ...prev, factors: updatedFactors }));
+    // Task 121: بازمحاسبه ستون‌های مالی تب اقلام پس از ثبت/تغییر عامل
+    setValues((prev) => ({
+      ...prev,
+      factors: updatedFactors,
+      items: (prev.items || []).map((row: any) => calcRowWithFactors(row, updatedFactors)),
+    }));
   };
 
   // ---------------------------------------------------------------------------
-  // Task 120: محاسبه ستون‌های مالی تب اقلام (تخفیف / مبلغ کل پس از تخفیف /
-  // جمع مالیات و عوارض ارزش افزوده / جمع کل با مالیات و عوارض) — دقیقاً همانند
-  // منطق فرم فاکتور خرید کالا؛ نرخ مالیات از پارامترهای خرید و فروش بر اساس تاریخ سند
+  // Task 121: نرخ مالیات و عوارض فقط از «عوامل ثبت‌شده» نوع مالیات/عوارض در باکس
+  // عوامل سفارش محاسبه می‌شود؛ تا زمانی که چنین عاملی انتخاب نشده باشد، ستون
+  // «جمع مالیات و عوارض ارزش افزوده» در تب اقلام مقدار ۰ نشان می‌دهد
+  // (رفع محاسبه مستقیم از پارامترهای خرید و فروش بدون توجه به عوامل ثبت‌شده)
   // ---------------------------------------------------------------------------
-  const calcSalesRowTotals = (row: any) => {
-    const vatParam = (parametersList || []).find((p: any) => {
-      const cat = Number(p.CategoryOther);
-      const tNorm = normalizePersianText(p.Title);
-      return cat === 1 || tNorm.includes("مالیات") || (tNorm.includes("ارزش افزوده") && !tNorm.includes("عوارض"));
+  const getSalesVatRateFromFactors = (factorsList: any[], dateStr: string) => {
+    let rate = 0;
+    (factorsList || []).forEach((f: any) => {
+      const paramObj =
+        f?.paramObj ||
+        (parametersList || []).find(
+          (p: any) => Number(p.PurchaseSalesParameterID || p.id) === Number(f.PurchaseSalesParameterRef)
+        ) ||
+        null;
+      // getFactorVatRate برای عوامل غیر مالیاتی/عوارض صفر برمی‌گرداند
+      rate += getFactorVatRate(paramObj, f, dateStr);
     });
-    const vatRate = vatParam ? getFactorVatRate(vatParam, { FactorTitle: vatParam.Title }, values.OrderDate) : 0;
+    return rate;
+  };
+
+  const calcRowWithFactors = (row: any, factorsList: any[]) => {
+    const vatRate = getSalesVatRateFromFactors(factorsList, values.OrderDate);
     const total = (Number(row.Quantity) || 0) * (Number(row.UnitPrice) || 0);
     const afterDiscount = Math.max(0, total - (Number(row.Discount) || 0));
     const vat = Math.round(afterDiscount * vatRate);
@@ -957,6 +973,9 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       NetPrice: afterDiscount + vat,
     };
   };
+
+  // Task 120: محاسبه ستون‌های مالی تب اقلام بر اساس عوامل ثبت‌شده فعلی
+  const calcSalesRowTotals = (row: any) => calcRowWithFactors(row, values.factors);
 
   // Header fields
   // ---------------------------------------------------------------------------
@@ -1999,14 +2018,19 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                           <button
                             type="button"
                             onClick={() => {
+                              let updatedFactorsAfterDelete: any[] = [];
                               if (selectedFactorIndex !== null && selectedFactorIndex >= 0) {
-                                const updated = (values.factors || []).filter((_: any, i: number) => i !== selectedFactorIndex);
-                                setValues((prev) => ({ ...prev, factors: updated }));
+                                updatedFactorsAfterDelete = (values.factors || []).filter((_: any, i: number) => i !== selectedFactorIndex);
                                 setSelectedFactorIndex(null);
                               } else if ((values.factors || []).length > 0) {
-                                const updated = (values.factors || []).slice(0, -1);
-                                setValues((prev) => ({ ...prev, factors: updated }));
+                                updatedFactorsAfterDelete = (values.factors || []).slice(0, -1);
                               }
+                              // Task 121: بازمحاسبه ستون‌های مالی اقلام پس از حذف عامل (۰ تا ثبت عامل جدید)
+                              setValues((prev) => ({
+                                ...prev,
+                                factors: updatedFactorsAfterDelete,
+                                items: (prev.items || []).map((row: any) => calcRowWithFactors(row, updatedFactorsAfterDelete)),
+                              }));
                             }}
                             disabled={isUsed || (values.factors || []).length === 0}
                             className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"

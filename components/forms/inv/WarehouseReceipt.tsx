@@ -579,6 +579,36 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
               }
             }
 
+            // -------------------------------------------------------------
+            // Task 121: نرخ مالیات فقط از «عوامل ثبت‌شده» نوع مالیات/عوارض سند ذخیره‌شده؛
+            // بدون چنین عاملی، ستون «جمع مالیات و عوارض ارزش افزوده» صفر است
+            // (رفع جایگزین ثابت ۹٪ در زمان بارگذاری)
+            // -------------------------------------------------------------
+            const loadedReceiptDate = data.ReceiptDate ? momentJalaali(data.ReceiptDate).format("jYYYY/jMM/jDD") : "";
+            const loadedFactors =
+              Array.isArray(data.factors) && data.factors.length > 0
+                ? data.factors.map((f: any, idx: number) => ({
+                    id: String(f.WarehouseReceiptFactorID || idx + 1),
+                    RowNo: f.RowNo || idx + 1,
+                    FactorTitle: f.FactorTitle || "",
+                    FactorType: f.FactorType ? Number(f.FactorType) : 1,
+                    Amount: Number(f.Amount || 0),
+                    Description: f.Description || "",
+                  }))
+                : [
+                    {
+                      id: "1",
+                      RowNo: 1,
+                      FactorTitle: "",
+                      FactorType: 1,
+                      Amount: 0,
+                      Description: "",
+                    },
+                  ];
+            const loadedVatRate = loadedFactors.reduce(
+              (acc: number, f: any) => acc + getFactorVatRate(findParamObj(f, parametersList), f, loadedReceiptDate),
+              0
+            );
             setValues({
               WarehouseReceiptID: data.WarehouseReceiptID || activeId,
               WarehouseDocumentTypeRef: data.WarehouseDocumentTypeRef ? Number(data.WarehouseDocumentTypeRef) : "",
@@ -606,7 +636,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                       const discount = Number(d.Discount || d.discount || 0);
                       const total = Number(d.TotalPrice ?? (qty * price));
                       const afterDiscount = Number(d.PriceAfterDiscount ?? Math.max(0, total - discount));
-                      const vat = Number(d.Additions ?? d.VatTax ?? Math.round(afterDiscount * 0.09));
+                      // Task 121: بدون عامل مالیاتی ثبت‌شده، مالیات صفر است (بدون جایگزین ۹٪)
+                      const vat = Number(d.Additions ?? d.VatTax ?? Math.round(afterDiscount * loadedVatRate));
                       const net = Number(d.NetPrice ?? (afterDiscount + vat));
 
                       const matchedItem = availableItems.find(
@@ -706,26 +737,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                         Currency: "ریال",
                       },
                     ],
-              factors:
-                Array.isArray(data.factors) && data.factors.length > 0
-                  ? data.factors.map((f: any, idx: number) => ({
-                      id: String(f.WarehouseReceiptFactorID || idx + 1),
-                      RowNo: f.RowNo || idx + 1,
-                      FactorTitle: f.FactorTitle || "",
-                      FactorType: f.FactorType ? Number(f.FactorType) : 1,
-                      Amount: Number(f.Amount || 0),
-                      Description: f.Description || "",
-                    }))
-                  : [
-                      {
-                        id: "1",
-                        RowNo: 1,
-                        FactorTitle: "",
-                        FactorType: 1,
-                        Amount: 0,
-                        Description: "",
-                      },
-                    ],
+              factors: loadedFactors,
             });
           }
         })
@@ -1635,7 +1647,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
               const discount = Number(it.Discount || 0);
               const total = qtyToUse * price;
               const afterDiscount = Math.max(0, total - discount);
-              const vat = Math.round(afterDiscount * 0.09);
+              // Task 121: مالیات صفر تا زمانی که عامل نوع مالیات/عوارض در باکس عوامل رسید ثبت شود
+              const vat = 0;
               const net = afterDiscount + vat;
               const itemRefVal = Number(it.ItemRef || it.ItemID || it.id);
               return {
@@ -1759,7 +1772,16 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       ManualAmount: false,
     };
 
-    setValues((prev) => ({ ...prev, factors: updatedFactors }));
+    setValues((prev) => {
+      // Task 121: بازمحاسبه ستون‌های مالی اقلام پس از ثبت/تغییر عامل (۰ تا ثبت عامل مالیاتی)
+      const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+        prev.items || [],
+        updatedFactors,
+        values.ReceiptDate,
+        parametersList || []
+      );
+      return { ...prev, factors: finalFactors, items: finalItems };
+    });
   };
 
   const recalculateInvoiceVatAndFactors = (
@@ -2483,12 +2505,13 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
 
   const showPurchaseSales = Boolean(selectedDocType?.ShowPurchaseSalesParameters);
 
-  const activeDetailTabConfig = React.useMemo(() => {
-    if (showPurchaseSales) return detailTabConfig;
-    return detailTabConfig.filter(
-      (col) => !["Discount", "PriceAfterDiscount", "VatTax", "NetPrice"].includes(col.name)
-    );
-  }, [detailTabConfig, showPurchaseSales]);
+  // Task 121: حذف useMemo دستی — آرایه detailTabConfig در هر رندر ساخته می‌شود و
+  // کامپایلر React خودش memoization را انجام می‌دهد
+  const activeDetailTabConfig = showPurchaseSales
+    ? detailTabConfig
+    : detailTabConfig.filter(
+        (col) => !["Discount", "PriceAfterDiscount", "VatTax", "NetPrice"].includes(col.name)
+      );
 
   // Factors Tab Config
   const factorsTabConfig: TabCellConfig[] = [
@@ -3078,6 +3101,11 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
         if (savedId) {
           const numId = Number(savedId);
           setActiveId(numId);
+          // Task 121: نرخ مالیات از عوامل ثبت‌شده فعلی — بدون عامل مالیاتی صفر
+          const savedVatRate = (values.factors || []).reduce(
+            (acc: number, f: any) => acc + getFactorVatRate(findParamObj(f, parametersList), f, values.ReceiptDate),
+            0
+          );
           if (data && Array.isArray(data.details) && data.details.length > 0) {
             const mappedItems = data.details.map((d: any, idx: number) => {
               const qty = Number(d.Quantity || d.quantity || 1);
@@ -3085,7 +3113,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
               const discount = Number(d.Discount || d.discount || 0);
               const total = Number(d.TotalPrice ?? (qty * price));
               const afterDiscount = Number(d.PriceAfterDiscount ?? Math.max(0, total - discount));
-              const vat = Number(d.Additions ?? d.VatTax ?? Math.round(afterDiscount * 0.09));
+              const vat = Number(d.Additions ?? d.VatTax ?? Math.round(afterDiscount * savedVatRate));
               const net = Number(d.NetPrice ?? (afterDiscount + vat));
 
               const matchedItem = availableItems.find(
@@ -3921,14 +3949,23 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                     <button
                       type="button"
                       onClick={() => {
+                        let updatedFactors: any[] = [];
                         if (selectedFactorIndex !== null && selectedFactorIndex >= 0) {
-                          const updated = (values.factors || []).filter((_, i) => i !== selectedFactorIndex);
-                          setValues((prev) => ({ ...prev, factors: updated }));
+                          updatedFactors = (values.factors || []).filter((_, i) => i !== selectedFactorIndex);
                           setSelectedFactorIndex(null);
                         } else if ((values.factors || []).length > 0) {
-                          const updated = (values.factors || []).slice(0, -1);
-                          setValues((prev) => ({ ...prev, factors: updated }));
+                          updatedFactors = (values.factors || []).slice(0, -1);
                         }
+                        // Task 121: بازمحاسبه ستون‌های مالی اقلام پس از حذف عامل (۰ تا ثبت عامل جدید)
+                        setValues((prev) => {
+                          const { finalItems, finalFactors } = recalculateInvoiceVatAndFactors(
+                            prev.items || [],
+                            updatedFactors,
+                            values.ReceiptDate,
+                            parametersList || []
+                          );
+                          return { ...prev, factors: finalFactors, items: finalItems };
+                        });
                       }}
                       disabled={isUsed || (values.factors || []).length === 0}
                       className="p-0.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-30 transition-colors drop-shadow-2xs"
