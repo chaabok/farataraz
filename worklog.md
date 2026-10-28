@@ -2352,3 +2352,28 @@ Work Log:
 
 Stage Summary:
 - برنامه ۱۰۰٪ سالم تأیید شد؛ به کاربر مراحل پاک‌سازی کش/بازگشایی پنل/Incognito پیشنهاد شد
+
+---
+Task ID: 118
+Agent: Z.ai Code (main)
+Task: رفع کامل مشکل «پیش نمایش اجرا نمی شود / صفحه سفید» + افزودن لایه‌های بازیابی خودکار
+
+Work Log:
+- عیب‌یابی سه‌لایه‌ای ریشه‌ای:
+  1) کش خراب .next پس از ری‌استارت‌های متوالی sandbox → chunk «PageContainer» برای همیشه 404 و صفحه سفید حتی با رفرش
+  2) کشف مهم: روتر واقعی پروژه «/app» (ریشه) است نه «/src/app» (اسکلت قدیمی Z.ai که Next نادیده می‌گیرد) — تغییرات layout اول در src/app بی‌اثر بود
+  3) کرش backend: پلتفرم متغیر global «DATABASE_URL=file:...custom.db» تزریق می‌کند و در app.module.ts env گلوبال بر .env اولویت دارد → SSL روشن → اتصال Postgres محلی شکست → fallback sqlite → DataTypeNotSupportedError؛ راه‌حل: استارت backend با DATABASE_URL از .env (سرپروایر همین کار را می‌کند)
+  4) OOM سه‌باره هنگام کامپایل سرد (پیک 2.5GB از 4GB) — با بستن chrome و استارت ترتیبی (اول backend بعد next) حل شد
+  5) درس مهم: استارت پس‌زمینه باید با الگوی subshell «( nohup ... & )» باشد وگرنه ابزار Bash در پایان فراخوانی فرزندان را می‌کشد
+- پیاده‌سازی لایه‌های بازیابی (Task 118):
+  * app/layout.tsx + src/app/layout.tsx: «Boot Guard» — اسکریپت vanilla قبل از باندل‌های Next؛ خطای منابع /_next/static و ChunkLoadError → یک رفرش خودکار (sessionStorage، حداکثر ۲ بار) → سپس صفحه بازیابی فارسی (بدون نیاز به React) با دکمه‌های «رفرش صفحه» و «پاک‌سازی کامل و شروع مجدد» (پاک کردن localStorage/sessionStorage/caches)
+  * app/global-error.tsx + app/error.tsx (و نسخه src/app): Error Boundary با UI فارسی، دکمه تلاش مجدد و پاک‌سازی کامل
+  * components/Providers.tsx: پس از مونت موفق شمارنده boot-reload صفر می‌شود + tryReload دیگر وقتی صفحه بازیابی باز است رفرش نمی‌کند (رفع تداخل دو مکانیزم ریکاوری که صفحه بازیابی را می‌بست)
+- راه‌اندازی مجدد تمیز: حذف .next، rebuild کامل backend (tsc قبلی نیمه‌کاره کشته شده و dist خراب بود)، استارت ترتیبی backend+next
+- راستی‌آزمایی E2E: کامپایل موفق 29.6s/4481 ماژول؛ boot guard در HTML ✓؛ chunk PageContainer حالا 200 ✓؛ ورود admin/1234 و داشبورد از مسیر گیت‌وی ✓؛ شبیه‌سازی خطای chunk → صفحه بازیابی ظاهر و پایدار ماند ✓؛ دکمه پاک‌سازی کامل → پاکسازی+رفرش+برگشت برنامه ✓؛ lint پاک (EXIT=0)
+- اسکرین‌شات: .zscreenshots/t118-recovery-screen.png
+
+Stage Summary:
+- صفحه سفید دیگر غیرممکن است: سه لایه دفاعی (Boot Guard قبل از هایدریشن، Error Boundary های React، ChunkRecovery موجود) اضافه شد
+- وضعیت اجرا: backend (پورت 3005، متصل به Postgres parsaDb) و next dev (پورت 3000) هر دو فعال و پایدار؛ server.js سرپروایر این بار در جریان نیست (استارت مستقیم) و در ریبوت بعدی sandbox خودکار برمی‌گردد
+- نکته حیاتی برای جلسات بعد: فایل‌های router واقعی در «/app» هستند؛ «/src/app» اسکلت مرده است؛ استارت بک‌گراند حتماً «( nohup ... & )»

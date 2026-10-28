@@ -80,6 +80,9 @@ function useChunkErrorAutoRecovery() {
 
     const tryReload = (reason: string) => {
       try {
+        // Task 118: اگر صفحه بازیابی Boot Guard نمایش داده شده، دیگر رفرش نکن
+        // (رفرش مجدد صفحه بازیابی را می‌بندد و کاربر را در حلقه می‌ماند)
+        if (document.getElementById('parsa-boot-recovery')) return;
         const last = Number(window.sessionStorage.getItem(RELOAD_KEY) || 0);
         if (Date.now() - last < COOLDOWN_MS) return; // already retried recently → stop loop
         window.sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
@@ -146,6 +149,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    // Task 118: برنامه با موفقیت مونت شد → شمارنده تلاش ریکاوری Boot Guard صفر می‌شود
+    try {
+      sessionStorage.setItem('parsa:boot-reload', '0');
+    } catch {
+      /* sessionStorage unavailable */
+    }
+
     apiFetch('/api/license/status')
       .then(res => res.json())
       .then(data => {
