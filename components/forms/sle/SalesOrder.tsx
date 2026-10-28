@@ -934,6 +934,30 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
     setValues((prev) => ({ ...prev, factors: updatedFactors }));
   };
 
+  // ---------------------------------------------------------------------------
+  // Task 120: محاسبه ستون‌های مالی تب اقلام (تخفیف / مبلغ کل پس از تخفیف /
+  // جمع مالیات و عوارض ارزش افزوده / جمع کل با مالیات و عوارض) — دقیقاً همانند
+  // منطق فرم فاکتور خرید کالا؛ نرخ مالیات از پارامترهای خرید و فروش بر اساس تاریخ سند
+  // ---------------------------------------------------------------------------
+  const calcSalesRowTotals = (row: any) => {
+    const vatParam = (parametersList || []).find((p: any) => {
+      const cat = Number(p.CategoryOther);
+      const tNorm = normalizePersianText(p.Title);
+      return cat === 1 || tNorm.includes("مالیات") || (tNorm.includes("ارزش افزوده") && !tNorm.includes("عوارض"));
+    });
+    const vatRate = vatParam ? getFactorVatRate(vatParam, { FactorTitle: vatParam.Title }, values.OrderDate) : 0;
+    const total = (Number(row.Quantity) || 0) * (Number(row.UnitPrice) || 0);
+    const afterDiscount = Math.max(0, total - (Number(row.Discount) || 0));
+    const vat = Math.round(afterDiscount * vatRate);
+    return {
+      ...row,
+      TotalPrice: total,
+      PriceAfterDiscount: afterDiscount,
+      VatTax: vat,
+      NetPrice: afterDiscount + vat,
+    };
+  };
+
   // Header fields
   // ---------------------------------------------------------------------------
   // Task 93: سند مبنا — فیلدهای «نوع سند مبنا» و «مبنا»
@@ -1468,6 +1492,23 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
       },
     },
     {
+      // Task 120: ستون «نوع واحد» — دقیقاً مشابه فاکتور خرید کالا (اصلی/فرعی)
+      name: "UnitType",
+      label: "نوع واحد",
+      type: "text",
+      width: "80px",
+      render: (row) => {
+        const unitTypeStr = typeof row?.UnitType === "number"
+          ? (row.UnitType === 2 ? "فرعی" : "اصلی")
+          : (row?.UnitType || "اصلی");
+        return (
+          <span className="flex items-center justify-center w-full h-[25px] px-1 text-xs font-medium text-gray-700 dark:text-gray-300 text-center select-none">
+            {unitTypeStr}
+          </span>
+        );
+      },
+    },
+    {
       // Task 74: ستون مقدار — برای کالاهای دارای عامل ردیابی (وقتی تنظیم فعال باشد) همانند
       // حواله انبار: ورود مستقیم مقدار مسدود و مودال «ثبت / انتخاب اطلاعات عوامل ردیابی» باز می‌شود
       name: "Quantity",
@@ -1529,14 +1570,11 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
                     return;
                   }
                   const updatedItems = [...(values.items || [])];
-                  updatedItems[rowIndex] = {
+                  // Task 120: محاسبه کامل ستون‌های مالی ردیف (مشابه فاکتور خرید کالا)
+                  updatedItems[rowIndex] = calcSalesRowTotals({
                     ...updatedItems[rowIndex],
                     Quantity: newVal,
-                    TotalPrice:
-                      updatedItems[rowIndex].UnitPrice !== "" && updatedItems[rowIndex].UnitPrice !== undefined
-                        ? Math.round(Number(newVal || 0) * Number(updatedItems[rowIndex].UnitPrice))
-                        : updatedItems[rowIndex].TotalPrice,
-                  };
+                  });
                   setValues((prev) => ({ ...prev, items: updatedItems }));
                 }}
                 disabled={isUsed}
@@ -1576,14 +1614,11 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
           integerOnly
           onChange={(newVal) => {
             const updatedItems = [...(values.items || [])];
-            updatedItems[rowIndex] = {
+            // Task 120: محاسبه کامل ستون‌های مالی ردیف (مشابه فاکتور خرید کالا)
+            updatedItems[rowIndex] = calcSalesRowTotals({
               ...updatedItems[rowIndex],
               UnitPrice: newVal,
-              TotalPrice:
-                updatedItems[rowIndex].Quantity !== "" && updatedItems[rowIndex].Quantity !== undefined
-                  ? Math.round(Number(updatedItems[rowIndex].Quantity || 0) * Number(newVal || 0))
-                  : updatedItems[rowIndex].TotalPrice,
-            };
+            });
             setValues((prev) => ({ ...prev, items: updatedItems }));
           }}
           disabled={isUsed}
@@ -1600,6 +1635,72 @@ export function SalesOrder({ id, tabId }: SalesOrderProps) {
         <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs font-semibold text-gray-800 dark:text-gray-200 text-center select-none">
           {row?.TotalPrice !== "" && row?.TotalPrice !== undefined && row?.TotalPrice !== null
             ? formatLocalizedNumber(Math.round(Number(row.TotalPrice)), language)
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      // Task 120: ستون «تخفیف (ریال)» — قابل ورود؛ دقیقاً مشابه فاکتور خرید کالا
+      name: "Discount",
+      label: "تخفیف (ریال)",
+      type: "custom",
+      width: "110px",
+      render: (row, rowIndex) => (
+        <NumberInput
+          value={row?.Discount || ""}
+          localizeDigits
+          thousandsSeparator
+          integerOnly
+          onChange={(newVal) => {
+            const updatedItems = [...(values.items || [])];
+            updatedItems[rowIndex] = calcSalesRowTotals({
+              ...updatedItems[rowIndex],
+              Discount: newVal,
+            });
+            setValues((prev) => ({ ...prev, items: updatedItems }));
+          }}
+          disabled={isUsed}
+        />
+      ),
+    },
+    {
+      // Task 120: ستون «مبلغ کل پس از تخفیف» — محاسبه‌شده؛ دقیقاً مشابه فاکتور خرید کالا
+      name: "PriceAfterDiscount",
+      label: "مبلغ کل\nپس از تخفیف",
+      type: "text",
+      width: "120px",
+      render: (row) => (
+        <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs font-semibold text-gray-700 dark:text-gray-300 text-center select-none">
+          {row?.PriceAfterDiscount !== "" && row?.PriceAfterDiscount !== undefined && row?.PriceAfterDiscount !== null
+            ? formatLocalizedNumber(Math.round(Number(row.PriceAfterDiscount)), language)
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      // Task 120: ستون «جمع مالیات و عوارض ارزش افزوده» — بر اساس نرخ پارامتر مالیات
+      name: "VatTax",
+      label: "جمع مالیات و عوارض\nارزش افزوده",
+      type: "text",
+      width: "130px",
+      render: (row) => (
+        <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs text-amber-600 dark:text-amber-400 text-center select-none">
+          {row?.VatTax !== "" && row?.VatTax !== undefined && row?.VatTax !== null
+            ? formatLocalizedNumber(Math.round(Number(row.VatTax)), language)
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      // Task 120: ستون «جمع کل با مالیات و عوارض ارزش افزوده» — همانند فاکتور خرید کالا
+      name: "NetPrice",
+      label: "جمع کل با مالیات\nو عوارض ارزش افزوده",
+      type: "text",
+      width: "130px",
+      render: (row) => (
+        <span className="flex items-center justify-center w-full h-[25px] px-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 text-center select-none">
+          {row?.NetPrice !== "" && row?.NetPrice !== undefined && row?.NetPrice !== null
+            ? formatLocalizedNumber(Math.round(Number(row.NetPrice)), language)
             : "-"}
         </span>
       ),
