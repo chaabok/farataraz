@@ -2,7 +2,7 @@
 -- Parsa ERP Full Database Backup
 -- Database : parsaDb
 -- Server   : PostgreSQL 17.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
--- Taken at : 2026-10-27T21:04:43.478Z
+-- Taken at : 2026-10-28T07:05:28.258Z
 -- Encoding : UTF8
 -- ============================================================
 SET client_encoding = 'UTF8';
@@ -4491,7 +4491,7 @@ INSERT INTO "Inv"."WarehouseDocumentTypes" ("Version", "Creator", "CreationDate"
 INSERT INTO "Inv"."WarehouseVouchers" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "WarehouseReceiptID", "BaseType", "WarehouseDocumentTypeRef", "WarehouseRef", "WarehouseName", "TemporaryReceiptRef", "SupplyRequestRef", "PurchaseInvoiceRef", "SupplierRef", "SupplierName", "ReceiptNumber", "ReceiptDate", "BaseDocumentNumber", "Status", "CurrencyRef", "Description", "FiscalYearRef") VALUES (2, '1', '2026-10-25 05:34:38.113', '05:34:38', '1', '2026-10-26 22:43:13.043', '22:43:13', '2', '2', NULL, NULL, '1', 4, '2', '2', 'انبار مواد اولیه', NULL, NULL, '1', '10', 'ذوب آهن اصفهان', '1', '2026-10-25 22:43:13.039', '1', 2, 1, '', '1');
 
 -- Data for Inv.WarehouseVouchersDetails (1 rows)
-INSERT INTO "Inv"."WarehouseVouchersDetails" ("WarehouseReceiptDetailID", "WarehouseReceiptRef", "RowNo", "ItemRef", "WarehouseRef", "BaseNumber", "UnitName", "UnitType", "Quantity", "UnitPrice", "Discount", "TotalPrice", "Description", "TrackingFactorValues") VALUES ('2', '1', 1, '6', '2', '1', 'عدد', 1, '5.0000', '0.0000', '0.0000', '0.0000', NULL, '{}');
+INSERT INTO "Inv"."WarehouseVouchersDetails" ("WarehouseReceiptDetailID", "WarehouseReceiptRef", "RowNo", "ItemRef", "WarehouseRef", "BaseNumber", "UnitName", "UnitType", "Quantity", "UnitPrice", "Discount", "TotalPrice", "Description", "TrackingFactorValues") VALUES ('2', '1', 1, '6', '2', '1', 'عدد', 1, '5.0000', '53454.0000', '26727.0000', '0.0000', NULL, '{}');
 
 -- Data for Inv.WarehouseVouchersFactors (3 rows)
 INSERT INTO "Inv"."WarehouseVouchersFactors" ("WarehouseReceiptFactorID", "WarehouseReceiptRef", "RowNo", "FactorTitle", "FactorType", "Amount", "Description") VALUES ('1', '1', 1, 'تخفیف درصدی', 2, '26727.0000', NULL);
