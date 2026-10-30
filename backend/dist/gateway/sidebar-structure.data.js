@@ -849,8 +849,10 @@ exports.SIDEBAR_STRUCTURE = [
                         title: "عملیات",
                         subItems: [
                             {
-                                id: "new_invoice",
-                                title: "فاکتور جدید"
+                                id: "SalesInvoiceForm",
+                                title: "فاکتور فروش جدید",
+                                componentName: "SalesInvoiceForm",
+                                path: "/forms/sle/sales-invoice-new"
                             },
                             {
                                 id: "SalesOrderForm",

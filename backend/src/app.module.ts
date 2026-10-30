@@ -361,6 +361,86 @@ import { GatewayModule } from './gateway/gateway.module';
                 console.warn('[Task128] Could not ensure SalesContracts tables:', contractErr.message);
               }
 
+              // -----------------------------------------------------------------
+              // Task 130: جداول فاکتور فروش — ساخت idempotent (فقط اگر وجود نداشته باشند)
+              // کلون جداول پیش فاکتور فروش بدون فیلد «تاریخ اعتبار» (ValidityDate حذف شده)
+              // -----------------------------------------------------------------
+              try {
+                await client.query(`
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoices" (
+                    "SalesInvoiceID" bigint PRIMARY KEY,
+                    "Version" bigint DEFAULT 1,
+                    "Creator" bigint DEFAULT 1,
+                    "CreationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "CreateTime" varchar(8) DEFAULT '00:00:00',
+                    "LastModifier" bigint DEFAULT 1,
+                    "LastModificationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "LastModificationTime" varchar(8) DEFAULT '00:00:00',
+                    "BusinessStructureRef" bigint DEFAULT 2,
+                    "CompanyRef" bigint,
+                    "BranchRef" bigint,
+                    "AgencyRef" bigint,
+                    "InvoiceNumber" integer NOT NULL,
+                    "InvoiceDate" varchar(10),
+                    "CustomerRef" bigint,
+                    "CustomerName" varchar(200),
+                    "SalesTypeRef" bigint,
+                    "SalesCenterRef" bigint,
+                    "DeliveryLocationRef" bigint,
+                    "SettlementMethodRef" bigint,
+                    "Status" integer DEFAULT 1,
+                    "Description" varchar(1000),
+                    "BaseDocumentTypeRef" integer,
+                    "BaseDocumentRef" bigint,
+                    "FiscalYearRef" bigint
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoiceItems" (
+                    "SalesInvoiceItemID" bigint PRIMARY KEY,
+                    "SalesInvoiceRef" bigint NOT NULL,
+                    "RowNo" integer NOT NULL,
+                    "ItemRef" bigint,
+                    "ItemCode" varchar(100),
+                    "ItemName" varchar(250),
+                    "UnitName" varchar(100),
+                    "Quantity" numeric(18,4) DEFAULT 0,
+                    "UnitPrice" numeric(18,2) DEFAULT 0,
+                    "TotalPrice" numeric(18,2) DEFAULT 0,
+                    "Description" varchar(500),
+                    "TrackingFactorValues" jsonb
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoiceFactors" (
+                    "SalesInvoiceFactorID" bigint PRIMARY KEY,
+                    "SalesInvoiceRef" bigint NOT NULL,
+                    "RowNo" integer DEFAULT 1,
+                    "FactorTitle" varchar(200),
+                    "FactorType" integer DEFAULT 1,
+                    "Amount" numeric(18,4) DEFAULT 0,
+                    "Description" varchar(500)
+                  );
+                `);
+                // کلیدهای خارجی با حذف آبشاری (در صورت نبود Constraint)
+                await client.query(`
+                  DO $$
+                  BEGIN
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesInvoiceItems_SalesInvoice'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesInvoiceItems" ADD CONSTRAINT "FK_SalesInvoiceItems_SalesInvoice"
+                        FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID") ON DELETE CASCADE;
+                    END IF;
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesInvoiceFactors_SalesInvoice'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesInvoiceFactors" ADD CONSTRAINT "FK_SalesInvoiceFactors_SalesInvoice"
+                        FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID") ON DELETE CASCADE;
+                    END IF;
+                  END $$;
+                `);
+                console.log('[Task130] SalesInvoices tables ensured.');
+              } catch (invoiceErr: any) {
+                console.warn('[Task130] Could not ensure SalesInvoices tables:', invoiceErr.message);
+              }
+
             // Drop all RESTRICT/blocking foreign keys that reference "Gnr"."BusinessStructure"
             console.log('Cleaning up self-referential or blocking foreign key constraints referencing BusinessStructure...');
             const dropFksQuery = `

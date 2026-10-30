@@ -2600,3 +2600,24 @@ Work Log:
 
 Stage Summary:
 - فیلد «نمایش قیمت در مجوز فروش» با تیک پیش‌فرض در تنظیمات پایه / تب فروش اضافه، ذخیره‌سازی در دیتابیس تایید و E2E انجام شد
+
+---
+Task ID: 130
+Agent: Z.ai Code (main)
+Task: ریفکتور «فاکتور فروش» در منوی فروش > عملیات همانند پیش فاکتور فروش — حذف «تاریخ اعتبار»، افزودن بقیه اجزای پیش فاکتور و پیاده‌سازی تنظیمات اسناد فروش نوع ۵
+
+Work Log:
+- فرانت‌اند: components/forms/sle/SalesInvoice.tsx (کلون کامل SalesProforma) — هدر کامل (مشتری، شماره، تاریخ، نوع/مبنا سند مبنا، نوع فروش، محل تحویل، روش تسویه، مرکز فروش، وضعیت، توضیحات)، تب «اقلام فاکتور فروش» با همه ستون‌های مالی، تب «عوامل فاکتور فروش»، فوتر خلاصه مبالغ
+- حذف فیلد «تاریخ اعتبار» (ValidityDate) از state، اعتبارسنجی، payload ذخیره و UI (ردیف شماره/تاریخ دو ستونی شد)
+- تنظیمات اسناد فروش: SalesDocumentType = 5 (فاکتور فروش) — پیش‌فرض‌های هدر (نوع فروش/محل تحویل/روش تسویه/مرکز فروش)، سند مبنا و باکس عوامل از getCachedSalesDocumentSettings(5) خوانده می‌شود
+- عامل ردیابی با کلید showTrackingFactorInSalesInvoice از تنظیمات پایه (تب فروش)
+- مسیر: app/forms/sle/sales-invoice-new/page.tsx + tab-registry (SalesInvoiceForm/SalesInvoice)
+- منوها: lib/sidebar-metadata.ts و backend/src/gateway/sidebar-structure.data.ts — آیتم placeholder «فاکتور جدید» (new_invoice) با «فاکتور فروش جدید» واقعی جایگزین شد
+- بک‌اند: entity های SalesInvoice/SalesInvoiceItem/SalesInvoiceFactor (Sle.SalesInvoices/SalesInvoiceItems/SalesInvoiceFactors بدون ستون ValidityDate) + DTO + Service (شماره‌گذاری MAX+1 به تفکیک ساختار/شرکت/سال مالی) + Controller (/api/sle/sales-invoices) + ثبت در SleModule
+- app.module.ts: ساخت idempotent جداول SalesInvoices/SalesInvoiceItems/SalesInvoiceFactors + FK آبشاری — لاگ [Task130] SalesInvoices tables ensured تایید شد
+- lint: فایل‌های تغییر یافته بدون خطا؛ خطای قبلی sidebar.tsx و sales-order-detail.entity.ts خارج از محدوده این تسک است
+- E2E (agent-browser): ورود → جستجوی منو «فاکتور فروش» → باز شدن فرم (بدون تاریخ اعتبار، شماره خودکار ۱، پیش‌فرض‌های تنظیمات نوع ۵ اعمال شد) → انتخاب مشتری «علی جهانی» → انتخاب کالا «نشاسته» → مقدار ۱ و فی ۵۰٬۰۰۰ → مبلغ کل ۵۰٬۰۰۰ محاسبه شد → ذخیره (POST 201) → ویرایش (PUT 200) → تایید API (GET شماره/مشتری/اقلام) → حذف رکورد تست (DELETE)
+- اسکرین‌شات: Reports/task130-sales-invoice-form.png
+
+Stage Summary:
+- فرم فاکتور فروش همانند پیش فاکتور فروش با همه اجزا (بدون تاریخ اعتبار)، تنظیمات اسناد فروش نوع ۵، API اختصاصی و جداول دیتابیس پیاده‌سازی و E2E تایید شد

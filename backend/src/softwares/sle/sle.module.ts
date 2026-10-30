@@ -73,6 +73,12 @@ import { SalesContractItem } from './domain/entities/sales-contract-item.entity'
 import { SalesContractFactor } from './domain/entities/sales-contract-factor.entity';
 import { SalesContractController } from './presentation/controllers/sales-contract.controller';
 import { SalesContractService } from './application/services/sales-contract.service';
+// Task 130: فاکتور فروش
+import { SalesInvoice } from './domain/entities/sales-invoice.entity';
+import { SalesInvoiceItem } from './domain/entities/sales-invoice-item.entity';
+import { SalesInvoiceFactor } from './domain/entities/sales-invoice-factor.entity';
+import { SalesInvoiceController } from './presentation/controllers/sales-invoice.controller';
+import { SalesInvoiceService } from './application/services/sales-invoice.service';
 // Task 93: سند مبنا فرم‌های فروش
 import { SleBaseDocumentController } from './presentation/controllers/base-document.controller';
 import { SleBaseDocumentService } from './application/services/base-document.service';
@@ -105,6 +111,10 @@ import { CommonModule } from '../common/common.module';
       SalesContract,
       SalesContractItem,
       SalesContractFactor,
+      // Task 130: فاکتور فروش
+      SalesInvoice,
+      SalesInvoiceItem,
+      SalesInvoiceFactor,
     ]),
     CoreModule,
     CommonModule,
@@ -126,6 +136,8 @@ import { CommonModule } from '../common/common.module';
     SalesProformaInvoiceController,
     // Task 128: قرارداد فروش
     SalesContractController,
+    // Task 130: فاکتور فروش
+    SalesInvoiceController,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentController,
   ],
@@ -190,6 +202,8 @@ import { CommonModule } from '../common/common.module';
     SalesProformaInvoiceService,
     // Task 128: قرارداد فروش
     SalesContractService,
+    // Task 130: فاکتور فروش
+    SalesInvoiceService,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentService,
   ],
@@ -210,6 +224,8 @@ import { CommonModule } from '../common/common.module';
     SalesProformaInvoiceService,
     // Task 128: قرارداد فروش
     SalesContractService,
+    // Task 130: فاکتور فروش
+    SalesInvoiceService,
   ],
 })
 export class SleModule {}
