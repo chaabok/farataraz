@@ -3,18 +3,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SalesOrder } from '../../domain/entities/sales-order.entity';
 import { SalesProformaInvoice } from '../../domain/entities/sales-proforma-invoice.entity';
+import { SalesContract } from '../../domain/entities/sales-contract.entity';
+import { SalesInvoice } from '../../domain/entities/sales-invoice.entity';
 import { RequestContextService } from '../../../../core/services/request-context.service';
 
 /**
  * Task 93: سرویس «سند مبنا» فرم‌های فروش
  *
- * فهرست اسناد قابل انتخاب به‌عنوان مبنا برای فرم‌های سفارش فروش / پیش فاکتور فروش.
+ * فهرست اسناد قابل انتخاب به‌عنوان مبنا برای فرم‌های سفارش فروش / پیش فاکتور فروش /
+ * قرارداد فروش / فاکتور فروش.
  * کد نوع سند مبنا همان کدهای BASE_DOCUMENT_TYPE_LABELS در تنظیمات اسناد فروش است:
  *   0=بدون مبنا، 1..7=انواع سند فروش، 8=رسید انبار، 9=حواله انبار
  *
  * خروجی نرمال‌شده برای SingleSelectDropDown:
- *   { id, number, date, customer }
+ *   { id, number, date, customer, customerRef }
  * فقط اسناد با وضعیت بازبینی‌شده (4) یا تاییدشده (5) به‌عنوان مبنا پیشنهاد می‌شوند.
+ *
+ * Task 131: فیلتر سخت‌گیرانه مشتری — پارامتر customerRef:
+ *   - ارسال‌نشده: رفتار قدیمی (بدون فیلتر مشتری) برای سازگاری قبلی
+ *   - customerRef = 0 یا نامعتبر: خروجی خالی (مشتری هنوز انتخاب نشده — هیچ سندی نباید نمایش داده شود)
+ *   - customerRef > 0: فقط اسنادی که CustomerRef آنها با مشتری انتخاب‌شده در فیلد «مشتری»
+ *     فرم یکی است (کد تفصیلی و کد مشتری یکسان) برگردانده می‌شود.
  */
 @Injectable()
 export class SleBaseDocumentService {
@@ -23,6 +32,12 @@ export class SleBaseDocumentService {
     private readonly orderRepository: Repository<SalesOrder>,
     @InjectRepository(SalesProformaInvoice)
     private readonly proformaRepository: Repository<SalesProformaInvoice>,
+    // Task 128: قرارداد فروش — قابل انتخاب به‌عنوان سند مبنا
+    @InjectRepository(SalesContract)
+    private readonly contractRepository: Repository<SalesContract>,
+    // Task 130: فاکتور فروش — قابل انتخاب به‌عنوان سند مبنا
+    @InjectRepository(SalesInvoice)
+    private readonly invoiceRepository: Repository<SalesInvoice>,
     private readonly requestContextService: RequestContextService,
   ) {}
 
@@ -111,9 +126,19 @@ export class SleBaseDocumentService {
     return closed;
   }
 
-  async getAvailableBaseDocuments(type: number, excludeProformaId?: number): Promise<any[]> {
+  async getAvailableBaseDocuments(
+    type: number,
+    excludeProformaId?: number,
+    customerRef?: number,
+  ): Promise<any[]> {
     const { bsId, compId, fiscalYearId } = this.getScope();
     const t = Number(type);
+
+    // Task 131: فیلتر سخت‌گیرانه مشتری — اگر پارامتر customerRef ارسال شده ولی مشتری
+    // معتبری انتخاب نشده (0/نامعتبر)، هیچ سندی نباید نمایش داده شود
+    if (customerRef !== undefined && (!Number.isFinite(customerRef) || customerRef <= 0)) {
+      return [];
+    }
 
     // سفارش فروش (1)
     if (t === 1) {
@@ -123,6 +148,8 @@ export class SleBaseDocumentService {
       if (bsId && bsId > 1) qb.andWhere('(so.businessStructureRef = :bsId OR so.businessStructureRef IS NULL)', { bsId });
       if (compId && compId > 1) qb.andWhere('(so.companyRef = :compId OR so.companyRef IS NULL)', { compId });
       if (fiscalYearId) qb.andWhere('(so.FiscalYearRef = :fiscalYearId OR so.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('so.CustomerRef = :customerRef', { customerRef });
       qb.orderBy('so.OrderNumber', 'DESC');
       let docs = await qb.getMany();
 
@@ -137,6 +164,7 @@ export class SleBaseDocumentService {
         number: d.OrderNumber,
         date: d.OrderDate || '',
         customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
       }));
     }
 
@@ -148,6 +176,8 @@ export class SleBaseDocumentService {
       if (bsId && bsId > 1) qb.andWhere('(sp.businessStructureRef = :bsId OR sp.businessStructureRef IS NULL)', { bsId });
       if (compId && compId > 1) qb.andWhere('(sp.companyRef = :compId OR sp.companyRef IS NULL)', { compId });
       if (fiscalYearId) qb.andWhere('(sp.FiscalYearRef = :fiscalYearId OR sp.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('sp.CustomerRef = :customerRef', { customerRef });
       qb.orderBy('sp.ProformaNumber', 'DESC');
       const docs = await qb.getMany();
       return docs.map((d) => ({
@@ -155,10 +185,53 @@ export class SleBaseDocumentService {
         number: d.ProformaNumber,
         date: d.ProformaDate || '',
         customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
       }));
     }
 
-    // سایر انواع (قرارداد فروش، مجوز فروش، فاکتور فروش، مجوز برگشت، فاکتور برگشت،
+    // قرارداد فروش (3) — Task 128 + Task 131
+    if (t === 3) {
+      const qb = this.contractRepository
+        .createQueryBuilder('sc')
+        .where('sc.Status IN (4, 5)'); // بازبینی‌شده (4) و تاییدشده (5)
+      if (bsId && bsId > 1) qb.andWhere('(sc.businessStructureRef = :bsId OR sc.businessStructureRef IS NULL)', { bsId });
+      if (compId && compId > 1) qb.andWhere('(sc.companyRef = :compId OR sc.companyRef IS NULL)', { compId });
+      if (fiscalYearId) qb.andWhere('(sc.FiscalYearRef = :fiscalYearId OR sc.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('sc.CustomerRef = :customerRef', { customerRef });
+      qb.orderBy('sc.ContractNumber', 'DESC');
+      const docs = await qb.getMany();
+      return docs.map((d) => ({
+        id: Number(d.SalesContractID),
+        number: d.ContractNumber,
+        date: d.DocumentDate || d.ContractDate || '',
+        customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+      }));
+    }
+
+    // فاکتور فروش (5) — Task 130 + Task 131
+    if (t === 5) {
+      const qb = this.invoiceRepository
+        .createQueryBuilder('si')
+        .where('si.Status IN (4, 5)'); // بازبینی‌شده (4) و تاییدشده (5)
+      if (bsId && bsId > 1) qb.andWhere('(si.businessStructureRef = :bsId OR si.businessStructureRef IS NULL)', { bsId });
+      if (compId && compId > 1) qb.andWhere('(si.companyRef = :compId OR si.companyRef IS NULL)', { compId });
+      if (fiscalYearId) qb.andWhere('(si.FiscalYearRef = :fiscalYearId OR si.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('si.CustomerRef = :customerRef', { customerRef });
+      qb.orderBy('si.InvoiceNumber', 'DESC');
+      const docs = await qb.getMany();
+      return docs.map((d) => ({
+        id: Number(d.SalesInvoiceID),
+        number: d.InvoiceNumber,
+        date: d.InvoiceDate || '',
+        customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+      }));
+    }
+
+    // سایر انواع (مجوز فروش، مجوز برگشت، فاکتور برگشت،
     // رسید انبار و حواله انبار) فعلاً فهرستی ندارند — خروجی خالی
     return [];
   }

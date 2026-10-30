@@ -1124,7 +1124,7 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
             <div className="flex-1">
               <SingleSelectDropDown
                 noWrapper={true}
-                listApiUrl={`/api/sle/base-documents/available?type=${selectedBaseType}`}
+                listApiUrl={`/api/sle/base-documents/available?type=${selectedBaseType}&customerRef=${Number(values.CustomerRef) || 0}`}
                 columns={[
                   { key: "number", label: "شماره", width: 90 },
                   {
@@ -1221,7 +1221,8 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
           displayKey="title"
           onChange={(sel: any) => {
             if (!sel) {
-              setValues((prev) => ({ ...prev, CustomerRef: "", CustomerName: "" }));
+              // Task 131: با پاک شدن مشتری، سند مبنا انتخاب‌شده هم نامعتبر است
+              setValues((prev) => ({ ...prev, CustomerRef: "", CustomerName: "", BaseDocumentRef: "" }));
               return;
             }
             if (typeof sel === "object") {
@@ -1229,6 +1230,11 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
                 ...prev,
                 CustomerRef: sel.id ? Number(sel.id) : "",
                 CustomerName: sel.title || "",
+                // Task 131: با تغییر مشتری، سند مبنا قبلی قابل قبول نیست — مشتری (کد تفصیلی/کد
+                // مشتری) سند مبنا باید با مشتری انتخاب‌شده یکی باشد؛ لیست مبنا فقط اسناد همین
+                // مشتری را نمایش می‌دهد
+                BaseDocumentRef:
+                  Number(prev.CustomerRef || 0) === Number(sel.id || 0) ? prev.BaseDocumentRef : "",
               }));
             } else {
               const found = customerOptions.find((c) => Number(c.id) === Number(sel));
@@ -1236,6 +1242,9 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
                 ...prev,
                 CustomerRef: sel ? Number(sel) : "",
                 CustomerName: found?.title || "",
+                // Task 131: با تغییر مشتری، سند مبنا قبلی قابل قبول نیست
+                BaseDocumentRef:
+                  Number(prev.CustomerRef || 0) === Number(sel || 0) ? prev.BaseDocumentRef : "",
               }));
             }
           }}

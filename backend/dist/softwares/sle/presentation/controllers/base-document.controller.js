@@ -20,8 +20,9 @@ let SleBaseDocumentController = class SleBaseDocumentController {
     constructor(service) {
         this.service = service;
     }
-    async getAvailable(type, excludeProformaId) {
-        const data = await this.service.getAvailableBaseDocuments(Number(type) || 0, Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined);
+    async getAvailable(type, excludeProformaId, customerRef) {
+        const hasCustomerFilter = customerRef !== undefined && customerRef !== '';
+        const data = await this.service.getAvailableBaseDocuments(Number(type) || 0, Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined, hasCustomerFilter ? Number(customerRef) || 0 : undefined);
         return { success: true, data };
     }
     async getDetail(type, id) {
@@ -34,8 +35,9 @@ __decorate([
     (0, common_1.Get)('available'),
     __param(0, (0, common_1.Query)('type')),
     __param(1, (0, common_1.Query)('excludeProformaId')),
+    __param(2, (0, common_1.Query)('customerRef')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], SleBaseDocumentController.prototype, "getAvailable", null);
 __decorate([

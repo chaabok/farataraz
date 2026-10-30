@@ -14,12 +14,21 @@ export class SleBaseDocumentController {
   constructor(private readonly service: SleBaseDocumentService) {}
 
   @Get('available')
-  async getAvailable(@Query('type') type: string, @Query('excludeProformaId') excludeProformaId?: string) {
+  async getAvailable(
+    @Query('type') type: string,
+    @Query('excludeProformaId') excludeProformaId?: string,
+    @Query('customerRef') customerRef?: string,
+  ) {
     // Task 98-b: excludeProformaId — هنگام ویرایش پیش فاکتور، مقادیر خود آن پیش فاکتور از
     // محاسبه «مانده باز» سفارش‌ها حذف می‌شود تا سند مبنا در لیست باقی بماند
+    // Task 131: customerRef — فیلتر سخت‌گیرانه مشتری؛ وقتی فرم این پارامتر را می‌فرستد:
+    //   customerRef > 0 → فقط اسناد همان مشتری (کد تفصیلی/کد مشتری یکسان با مشتری فرم)
+    //   customerRef = 0 → خروجی خالی (مشتری هنوز انتخاب نشده است)
+    const hasCustomerFilter = customerRef !== undefined && customerRef !== '';
     const data = await this.service.getAvailableBaseDocuments(
       Number(type) || 0,
       Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined,
+      hasCustomerFilter ? Number(customerRef) || 0 : undefined,
     );
     return { success: true, data };
   }

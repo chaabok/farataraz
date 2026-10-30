@@ -2,7 +2,7 @@ import { SleBaseDocumentService } from '../../application/services/base-document
 export declare class SleBaseDocumentController {
     private readonly service;
     constructor(service: SleBaseDocumentService);
-    getAvailable(type: string, excludeProformaId?: string): Promise<{
+    getAvailable(type: string, excludeProformaId?: string, customerRef?: string): Promise<{
         success: boolean;
         data: any[];
     }>;

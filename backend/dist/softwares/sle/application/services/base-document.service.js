@@ -18,11 +18,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const sales_order_entity_1 = require("../../domain/entities/sales-order.entity");
 const sales_proforma_invoice_entity_1 = require("../../domain/entities/sales-proforma-invoice.entity");
+const sales_contract_entity_1 = require("../../domain/entities/sales-contract.entity");
+const sales_invoice_entity_1 = require("../../domain/entities/sales-invoice.entity");
 const request_context_service_1 = require("../../../../core/services/request-context.service");
 let SleBaseDocumentService = class SleBaseDocumentService {
-    constructor(orderRepository, proformaRepository, requestContextService) {
+    constructor(orderRepository, proformaRepository, contractRepository, invoiceRepository, requestContextService) {
         this.orderRepository = orderRepository;
         this.proformaRepository = proformaRepository;
+        this.contractRepository = contractRepository;
+        this.invoiceRepository = invoiceRepository;
         this.requestContextService = requestContextService;
     }
     getScope() {
@@ -86,9 +90,12 @@ let SleBaseDocumentService = class SleBaseDocumentService {
         }
         return closed;
     }
-    async getAvailableBaseDocuments(type, excludeProformaId) {
+    async getAvailableBaseDocuments(type, excludeProformaId, customerRef) {
         const { bsId, compId, fiscalYearId } = this.getScope();
         const t = Number(type);
+        if (customerRef !== undefined && (!Number.isFinite(customerRef) || customerRef <= 0)) {
+            return [];
+        }
         if (t === 1) {
             const qb = this.orderRepository
                 .createQueryBuilder('so')
@@ -99,6 +106,8 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 qb.andWhere('(so.companyRef = :compId OR so.companyRef IS NULL)', { compId });
             if (fiscalYearId)
                 qb.andWhere('(so.FiscalYearRef = :fiscalYearId OR so.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('so.CustomerRef = :customerRef', { customerRef });
             qb.orderBy('so.OrderNumber', 'DESC');
             let docs = await qb.getMany();
             const excludeId = Number(excludeProformaId) > 0 ? Number(excludeProformaId) : undefined;
@@ -111,6 +120,7 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 number: d.OrderNumber,
                 date: d.OrderDate || '',
                 customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
             }));
         }
         if (t === 2) {
@@ -123,6 +133,8 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 qb.andWhere('(sp.companyRef = :compId OR sp.companyRef IS NULL)', { compId });
             if (fiscalYearId)
                 qb.andWhere('(sp.FiscalYearRef = :fiscalYearId OR sp.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('sp.CustomerRef = :customerRef', { customerRef });
             qb.orderBy('sp.ProformaNumber', 'DESC');
             const docs = await qb.getMany();
             return docs.map((d) => ({
@@ -130,6 +142,51 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 number: d.ProformaNumber,
                 date: d.ProformaDate || '',
                 customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+            }));
+        }
+        if (t === 3) {
+            const qb = this.contractRepository
+                .createQueryBuilder('sc')
+                .where('sc.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(sc.businessStructureRef = :bsId OR sc.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(sc.companyRef = :compId OR sc.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(sc.FiscalYearRef = :fiscalYearId OR sc.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('sc.CustomerRef = :customerRef', { customerRef });
+            qb.orderBy('sc.ContractNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesContractID),
+                number: d.ContractNumber,
+                date: d.DocumentDate || d.ContractDate || '',
+                customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+            }));
+        }
+        if (t === 5) {
+            const qb = this.invoiceRepository
+                .createQueryBuilder('si')
+                .where('si.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(si.businessStructureRef = :bsId OR si.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(si.companyRef = :compId OR si.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(si.FiscalYearRef = :fiscalYearId OR si.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('si.CustomerRef = :customerRef', { customerRef });
+            qb.orderBy('si.InvoiceNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesInvoiceID),
+                number: d.InvoiceNumber,
+                date: d.InvoiceDate || '',
+                customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
             }));
         }
         return [];
@@ -204,7 +261,11 @@ exports.SleBaseDocumentService = SleBaseDocumentService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(sales_order_entity_1.SalesOrder)),
     __param(1, (0, typeorm_1.InjectRepository)(sales_proforma_invoice_entity_1.SalesProformaInvoice)),
+    __param(2, (0, typeorm_1.InjectRepository)(sales_contract_entity_1.SalesContract)),
+    __param(3, (0, typeorm_1.InjectRepository)(sales_invoice_entity_1.SalesInvoice)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         request_context_service_1.RequestContextService])
 ], SleBaseDocumentService);
