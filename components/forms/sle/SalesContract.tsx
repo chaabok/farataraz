@@ -18,7 +18,7 @@ import { TrackingFactorModal } from "@/components/forms/inv/TrackingFactorModal"
 import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
 import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
 import { Calculator, Plus, Pencil, X } from "lucide-react";
-import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate } from "@/lib/utils";
+import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate, isFormDateBeforeBaseDocDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
@@ -257,6 +257,7 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
   const [salesCenterOptions, setSalesCenterOptions] = useState<any[]>([]);
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [baseDocDate, setBaseDocDate] = useState<string>(""); // Task 132: تاریخ سند مبنا انتخاب‌شده
 
   // تنظیمات سند فروش — تیک «نمایش پارامترهای خرید و فروش» تعیین می‌کند فوتر سه‌باکسه یا دو‌باکسه باشد
   // (SalesDocumentType = 3 مخصوص قرارداد فروش)
@@ -657,6 +658,16 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
                     }))
                   : [emptyRow()],
             });
+            // Task 132: واکشی تاریخ سند مبنا ذخیره‌شده برای کنترل تاریخ ثبت اطلاعات
+            if (Number(data.BaseDocumentTypeRef) > 0 && Number(data.BaseDocumentRef) > 0) {
+              apiFetch(`/api/sle/base-documents/date?type=${Number(data.BaseDocumentTypeRef)}&id=${Number(data.BaseDocumentRef)}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((j) => {
+                  const d = j?.date || j?.data?.date || "";
+                  if (d) setBaseDocDate(String(d));
+                })
+                .catch(() => {});
+            }
           }
         })
         .catch((err) => {
@@ -698,6 +709,8 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
       items: [emptyRow()],
       factors: [],
     });
+    // Task 132: ریست سند مبنا — پاک کردن تاریخ سند مبنا
+    setBaseDocDate("");
     fetchNextNumber();
     // اگر کش تنظیمات هنوز خالی است، پس از واکشی (در صورت دست‌نخورده ماندن فرم جدید) اعمال شود
     if (!settings) {
@@ -722,6 +735,25 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
     if (!isValidJalaliDate(values.DocumentDate)) {
       showToast("تاریخ وارد شده معتبر نیست *", "error");
       return false;
+    }
+    // Task 132: تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد
+    const bTypeForDate = Number(values.BaseDocumentTypeRef || 0);
+    if (bTypeForDate > 0 && Number(values.BaseDocumentRef || 0) > 0) {
+      let baseDateForCheck = baseDocDate;
+      if (!baseDateForCheck) {
+        try {
+          const resDate = await apiFetch(`/api/sle/base-documents/date?type=${bTypeForDate}&id=${Number(values.BaseDocumentRef)}`);
+          if (resDate.ok) {
+            const jd = await resDate.json();
+            baseDateForCheck = jd?.date || jd?.data?.date || "";
+            if (baseDateForCheck) setBaseDocDate(baseDateForCheck);
+          }
+        } catch {}
+      }
+      if (baseDateForCheck && isFormDateBeforeBaseDocDate(values.DocumentDate, baseDateForCheck)) {
+        showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد *", "error");
+        return false;
+      }
     }
     // کنترل صحت تاریخ قرارداد
     if (values.ContractDate && !isValidJalaliDate(values.ContractDate)) {
@@ -1021,6 +1053,9 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
       const data = json?.data || json;
       if (!data) return;
 
+      // Task 132: تاریخ سند مبنا برای کنترل تاریخ ثبت اطلاعات
+      if (data.date) setBaseDocDate(String(data.date));
+
       setValues((prev) => {
         // اگر کاربر در فاصله واکشی، سند مبنا یا نوع دیگری انتخاب کرده بود، اعمال نشود
         if (
@@ -1088,6 +1123,14 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
     }
   };
 
+  // Task 132: هشدار فوری هنگام انتخاب تاریخ ثبت اطلاعات قبل از تاریخ سند مبنا
+  const handleMainDateChange = (val: string) => {
+    handleChange("DocumentDate", val);
+    if (val && baseDocDate && isFormDateBeforeBaseDocDate(val, baseDocDate)) {
+      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+    }
+  };
+
   const baseDocumentCell: FieldConfig = {
     name: "BaseDocumentGroup",
     type: "custom",
@@ -1108,6 +1151,8 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
             onChange={(sel: any) => {
               const t = typeof sel === "object" ? Number(sel?.id ?? 0) : Number(sel ?? 0);
               setValues((prev) => ({ ...prev, BaseDocumentTypeRef: t || 0, BaseDocumentRef: "" }));
+              // Task 132: با تغییر نوع سند مبنا، تاریخ سند مبنا قبلی نامعتبر است
+              setBaseDocDate("");
             }}
             placeholder="انتخاب نوع سند مبنا..."
             label="نوع سند مبنا :"
@@ -1146,7 +1191,13 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
                 onChange={(sel: any) => {
                   const refId = typeof sel === "object" ? sel?.id : sel;
                   const refNum = refId ? Number(refId) : 0;
+                  // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد»
+                  const rowDate = typeof sel === "object" ? String(sel?.date || "") : "";
                   setValues((prev) => ({ ...prev, BaseDocumentRef: refNum || "" }));
+                  setBaseDocDate(refNum ? rowDate : "");
+                  if (refNum && rowDate && values.DocumentDate && isFormDateBeforeBaseDocDate(values.DocumentDate, rowDate)) {
+                    showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                  }
                   // با انتخاب شماره مبنا، اطلاعات سند مبنا به فرم منتقل می‌شود
                   if (refNum) applyBaseDocumentTransfer(selectedBaseType, refNum);
                 }}
@@ -1276,7 +1327,7 @@ export function SalesContract({ id, tabId }: SalesContractProps) {
             label="تاریخ :"
             required
             value={values.DocumentDate}
-            onChange={(val) => handleChange("DocumentDate", val)}
+            onChange={handleMainDateChange}
             disabled={disabled || isUsed}
             labelWidth="40px"
           />

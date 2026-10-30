@@ -191,6 +191,29 @@ let SleBaseDocumentService = class SleBaseDocumentService {
         }
         return [];
     }
+    async getBaseDocumentDate(type, id) {
+        const t = Number(type);
+        const docId = Number(id);
+        if (!docId || !Number.isFinite(docId))
+            return '';
+        if (t === 1) {
+            const doc = await this.orderRepository.findOne({ where: { SalesOrderID: docId } });
+            return doc?.OrderDate || '';
+        }
+        if (t === 2) {
+            const doc = await this.proformaRepository.findOne({ where: { SalesProformaID: docId } });
+            return doc?.ProformaDate || '';
+        }
+        if (t === 3) {
+            const doc = await this.contractRepository.findOne({ where: { SalesContractID: docId } });
+            return doc?.DocumentDate || doc?.ContractDate || '';
+        }
+        if (t === 5) {
+            const doc = await this.invoiceRepository.findOne({ where: { SalesInvoiceID: docId } });
+            return doc?.InvoiceDate || '';
+        }
+        return '';
+    }
     async getBaseDocumentDetail(type, id) {
         const t = Number(type);
         const docId = Number(id);

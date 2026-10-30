@@ -33,4 +33,5 @@ export declare class BaseDocumentService {
     private getUsedQuantities;
     getAvailableBaseDocuments(docType: string, targetDocType?: string): Promise<any[]>;
     getBaseDocumentDetails(docType: string, id: number, currentDocId?: number, targetDocType?: string): Promise<any>;
+    getBaseDocumentDate(docType: string, id: number): Promise<string>;
 }

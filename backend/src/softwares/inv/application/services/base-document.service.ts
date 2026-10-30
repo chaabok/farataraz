@@ -787,4 +787,50 @@ export class BaseDocumentService {
 
     return null;
   }
+
+  // ---------------------------------------------------------------------------
+  // Task 132: تاریخ سند مبنا — برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از
+  // تاریخ سند مبنا باشد» در اسناد انبار (رسید انبار/حواله انبار/رسید موقت).
+  // docType: PurchaseInvoice | SalesInvoice (هر دو = فاکتور خرید، نام قدیمی فرم
+  // حواله انبار) | TemporaryItemReceipt | ItemSupplyRequest | ItemRequest.
+  // خروجی: رشته ISO تاریخ یا '' در صورت نبود سند/تاریخ.
+  // ---------------------------------------------------------------------------
+  async getBaseDocumentDate(docType: string, id: number): Promise<string> {
+    const numId = Number(id);
+    if (!numId || !Number.isFinite(numId)) return '';
+    const iso = (v: any): string => {
+      if (!v) return '';
+      try {
+        return new Date(v).toISOString();
+      } catch {
+        return String(v);
+      }
+    };
+
+    if (docType === 'PurchaseInvoice' || docType === 'SalesInvoice') {
+      const doc = await this.piRepository.findOne({
+        where: [{ PurchaseInvoiceID: numId }, { InvoiceNumber: numId }],
+      });
+      return iso(doc?.InvoiceDate);
+    }
+    if (docType === 'TemporaryItemReceipt') {
+      const doc = await this.trRepository.findOne({
+        where: [{ TemporaryItemReceiptID: numId }, { ReceiptNumber: numId }],
+      });
+      return iso(doc?.ReceiptDate);
+    }
+    if (docType === 'ItemSupplyRequest') {
+      const doc = await this.srRepository.findOne({
+        where: [{ ItemSupplyRequestID: numId }, { RequestNumber: numId }],
+      });
+      return iso(doc?.RequestDate);
+    }
+    if (docType === 'ItemRequest') {
+      const doc = await this.irRepository.findOne({
+        where: [{ ItemRequestID: numId }, { RequestNumber: numId }],
+      });
+      return iso(doc?.RequestDate);
+    }
+    return '';
+  }
 }

@@ -32,6 +32,13 @@ let BaseDocumentController = class BaseDocumentController {
         const targetDocType = targetDocTypeQuery || 'WarehouseReceipt';
         return this.baseDocumentService.getBaseDocumentDetails(docType, id, currentDocId, targetDocType);
     }
+    async getBaseDocumentDate(docType, idStr) {
+        const id = Number(idStr);
+        if (!docType || !id)
+            return { success: true, date: '' };
+        const date = await this.baseDocumentService.getBaseDocumentDate(docType, id);
+        return { success: true, date };
+    }
 };
 exports.BaseDocumentController = BaseDocumentController;
 __decorate([
@@ -52,6 +59,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], BaseDocumentController.prototype, "getBaseDocumentDetails", null);
+__decorate([
+    (0, common_1.Get)('date'),
+    __param(0, (0, common_1.Query)('docType')),
+    __param(1, (0, common_1.Query)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], BaseDocumentController.prototype, "getBaseDocumentDate", null);
 exports.BaseDocumentController = BaseDocumentController = __decorate([
     (0, common_1.Controller)('inv/base-documents'),
     __metadata("design:paramtypes", [base_document_service_1.BaseDocumentService])

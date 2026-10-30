@@ -383,6 +383,24 @@ export function toEnglishDigits(str: string | number): string {
     .replace(/[０-９]/g, (d) => String(d.charCodeAt(0) - 0xff10));
 }
 
+// ---------------------------------------------------------------------------
+// Task 132: قاعده «تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد»
+// در اسناد انبار و اسناد فروش، وقتی سند مبنا انتخاب شده باشد، تاریخ ثبت اطلاعات
+// فرم نباید از تاریخ سند مبنا کوچک‌تر باشد.
+// هر دو ورودی می‌توانند شمسی (1300-1500) یا میلادی ('YYYY/MM/DD' یا ISO با T) باشند؛
+// اگر هرکدام قابل تجزیه نباشد یا خالی باشد، کنترل غیرفعال (false) در نظر گرفته می‌شود.
+// ---------------------------------------------------------------------------
+export function isFormDateBeforeBaseDocDate(
+  formDateJalali: string | null | undefined,
+  baseDocDateRaw: string | null | undefined,
+): boolean {
+  if (!formDateJalali || !baseDocDateRaw) return false;
+  const formKey = jalaliToGregorianISO(String(formDateJalali)).replace(/\//g, "");
+  const baseKey = jalaliToGregorianISO(toEnglishDigits(String(baseDocDateRaw)).trim()).replace(/\//g, "");
+  if (!/^\d{8}$/.test(formKey) || !/^\d{8}$/.test(baseKey)) return false;
+  return Number(formKey) < Number(baseKey);
+}
+
 /**
  * Task 63: اعتبارسنجی سخت‌گیرانه تاریخ شمسی (و میلادی) با چرخه بازگشتی
  * (جلوی رول‌اور moment برای روز/ماه نامعتبر مثل ۴۵ را می‌گیرد)

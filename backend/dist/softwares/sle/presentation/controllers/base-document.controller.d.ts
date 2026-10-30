@@ -10,4 +10,8 @@ export declare class SleBaseDocumentController {
         success: boolean;
         data: any;
     }>;
+    getDate(type: string, id: string): Promise<{
+        success: boolean;
+        date: string;
+    }>;
 }

@@ -701,6 +701,46 @@ let BaseDocumentService = class BaseDocumentService {
         }
         return null;
     }
+    async getBaseDocumentDate(docType, id) {
+        const numId = Number(id);
+        if (!numId || !Number.isFinite(numId))
+            return '';
+        const iso = (v) => {
+            if (!v)
+                return '';
+            try {
+                return new Date(v).toISOString();
+            }
+            catch {
+                return String(v);
+            }
+        };
+        if (docType === 'PurchaseInvoice' || docType === 'SalesInvoice') {
+            const doc = await this.piRepository.findOne({
+                where: [{ PurchaseInvoiceID: numId }, { InvoiceNumber: numId }],
+            });
+            return iso(doc?.InvoiceDate);
+        }
+        if (docType === 'TemporaryItemReceipt') {
+            const doc = await this.trRepository.findOne({
+                where: [{ TemporaryItemReceiptID: numId }, { ReceiptNumber: numId }],
+            });
+            return iso(doc?.ReceiptDate);
+        }
+        if (docType === 'ItemSupplyRequest') {
+            const doc = await this.srRepository.findOne({
+                where: [{ ItemSupplyRequestID: numId }, { RequestNumber: numId }],
+            });
+            return iso(doc?.RequestDate);
+        }
+        if (docType === 'ItemRequest') {
+            const doc = await this.irRepository.findOne({
+                where: [{ ItemRequestID: numId }, { RequestNumber: numId }],
+            });
+            return iso(doc?.RequestDate);
+        }
+        return '';
+    }
 };
 exports.BaseDocumentService = BaseDocumentService;
 exports.BaseDocumentService = BaseDocumentService = __decorate([

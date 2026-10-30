@@ -237,6 +237,37 @@ export class SleBaseDocumentService {
   }
 
   // ---------------------------------------------------------------------------
+  // Task 132: تاریخ سند مبنا — برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از
+  // تاریخ سند مبنا باشد» در فرم‌های فروش (سفارش/پیش فاکتور/قرارداد/فاکتور).
+  // کد نوع همان کدهای نوع سند مبنا است: 1=سفارش فروش، 2=پیش فاکتور،
+  // 3=قرارداد فروش، 5=فاکتور فروش. خروجی: رشته تاریخ (میلادی 'YYYY/MM/DD')
+  // یا '' در صورت نبود سند/تاریخ.
+  // ---------------------------------------------------------------------------
+  async getBaseDocumentDate(type: number, id: number): Promise<string> {
+    const t = Number(type);
+    const docId = Number(id);
+    if (!docId || !Number.isFinite(docId)) return '';
+
+    if (t === 1) {
+      const doc = await this.orderRepository.findOne({ where: { SalesOrderID: docId as any } });
+      return doc?.OrderDate || '';
+    }
+    if (t === 2) {
+      const doc = await this.proformaRepository.findOne({ where: { SalesProformaID: docId as any } });
+      return doc?.ProformaDate || '';
+    }
+    if (t === 3) {
+      const doc = await this.contractRepository.findOne({ where: { SalesContractID: docId as any } });
+      return doc?.DocumentDate || doc?.ContractDate || '';
+    }
+    if (t === 5) {
+      const doc = await this.invoiceRepository.findOne({ where: { SalesInvoiceID: docId as any } });
+      return doc?.InvoiceDate || '';
+    }
+    return '';
+  }
+
+  // ---------------------------------------------------------------------------
   // Task 94: جزئیات کامل سند مبنا (هدر + اقلام + عوامل + عوامل ردیابی) برای انتقال
   // اطلاعات به فرم پیش فاکتور فروش هنگام انتخاب «شماره مبنا» در هدر فرم.
   // خروجی شامل فیلدهای نوع فروش/مرکز فروش/محل تحویل/روش تسویه سند مبنا و همه اقلام

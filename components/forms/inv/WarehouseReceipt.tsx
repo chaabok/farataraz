@@ -16,7 +16,7 @@ import { StateListInput, DocumentState, DocumentStateLabels, isStatusApprovedOrR
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "@/components/Providers";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch, isFormDateBeforeBaseDocDate } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFooterPanelResize } from "@/hooks/useFooterPanelResize"; // Task 87: دستگیره ارتفاع فوتر
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
@@ -337,6 +337,9 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
 
   const [baseDocItems, setBaseDocItems] = useState<any[]>([]);
 
+  // Task 132: تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+  const [baseDocDate, setBaseDocDate] = useState<string>("");
+
   // Form Header Values
   const [values, setValues] = useState<Record<string, any>>({
     WarehouseReceiptID: activeId || "",
@@ -577,6 +580,17 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
               } catch (e) {
                 console.error("Error fetching base document details in activeId load:", e);
               }
+            }
+
+            // Task 132: واکشی تاریخ سند مبنا ذخیره‌شده برای کنترل تاریخ ثبت اطلاعات
+            if (docType && baseRef) {
+              apiFetch(`/api/inv/base-documents/date?docType=${docType}&id=${baseRef}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((j) => {
+                  const d = j?.date || j?.data?.date || "";
+                  if (d) setBaseDocDate(String(d));
+                })
+                .catch(() => {});
             }
 
             // -------------------------------------------------------------
@@ -1584,6 +1598,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
   const handleChange = (name: string, value: any) => {
     if (name === "BaseType") {
       setBaseDocItems([]);
+      setBaseDocDate(""); // Task 132: تغییر نوع مبنا، تاریخ سند مبنا قبلی را باطل می‌کند
       setValues((prev) => ({
         ...prev,
         BaseType: value,
@@ -1600,6 +1615,14 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       setBaseDocItems([]);
     }
     setValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Task 132: هشدار فوری هنگام انتخاب تاریخ ثبت اطلاعات قبل از تاریخ سند مبنا
+  const handleMainDateChange = (val: string) => {
+    handleChange("ReceiptDate", val);
+    if (val && baseDocDate && isFormDateBeforeBaseDocDate(val, baseDocDate)) {
+      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+    }
   };
 
   const calculateRowFields = (row: any, vatRate: number = 0) => {
@@ -1633,6 +1656,8 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
       if (response && response.ok) {
         const res = await response.json();
         if (res) {
+          // Task 132: تاریخ سند مبنا برای کنترل تاریخ ثبت اطلاعات
+          setBaseDocDate(String(res.InvoiceDate || res.ReceiptDate || res.RequestDate || ""));
           setBaseDocItems(res.items && Array.isArray(res.items) ? res.items : []);
           let formattedItems: any[] = [];
           const baseDocNo = String(res.code || res.InvoiceNumber || res.RequestNumber || res.ReceiptNumber || res.BaseDocumentNumber || refId || "");
@@ -2749,6 +2774,12 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id ?? selected?.TemporaryItemReceiptID ?? selected?.value : selected;
                     setValues((prev) => ({ ...prev, TemporaryItemReceiptRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && values.ReceiptDate && isFormDateBeforeBaseDocDate(values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails('TemporaryItemReceipt', refId);
                     }
@@ -2780,6 +2811,12 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id ?? selected?.ItemSupplyRequestID ?? selected?.value : selected;
                     setValues((prev) => ({ ...prev, SupplyRequestRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && values.ReceiptDate && isFormDateBeforeBaseDocDate(values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails('ItemSupplyRequest', refId);
                     }
@@ -2808,6 +2845,12 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id ?? selected?.PurchaseInvoiceID ?? selected?.InvoiceNumber ?? selected?.value : selected;
                     setValues((prev) => ({ ...prev, PurchaseInvoiceRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && values.ReceiptDate && isFormDateBeforeBaseDocDate(values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails('PurchaseInvoice', refId);
                     }
@@ -2854,7 +2897,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
             label="تاریخ رسید :"
             required
             value={values.ReceiptDate}
-            onChange={(val) => handleChange("ReceiptDate", val)}
+            onChange={handleMainDateChange}
             disabled={disabled || isUsed || isStocktakingSurplus}
             labelWidth="65px"
           />
@@ -3006,6 +3049,32 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
     if (!values.ReceiptDate) {
       showToast("لطفاً تاریخ رسید را وارد کنید *", "error");
       return false;
+    }
+
+    // Task 132: تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد
+    const bTypeForDate = Number(values.BaseType || 0);
+    const bRefForDate = Number(values.PurchaseInvoiceRef || values.TemporaryItemReceiptRef || values.TemporaryReceiptRef || values.SupplyRequestRef || 0);
+    const docTypeForDate =
+      bTypeForDate === WarehouseReceiptBaseType.TemporaryItemReceipt ? 'TemporaryItemReceipt' :
+      bTypeForDate === WarehouseReceiptBaseType.SupplyRequest ? 'ItemSupplyRequest' :
+      bTypeForDate === WarehouseReceiptBaseType.PurchaseInvoice ? 'PurchaseInvoice' : '';
+
+    if (docTypeForDate && bRefForDate > 0) {
+      let baseDateForCheck = baseDocDate;
+      if (!baseDateForCheck) {
+        try {
+          const resDate = await apiFetch(`/api/inv/base-documents/date?docType=${docTypeForDate}&id=${bRefForDate}`);
+          if (resDate.ok) {
+            const jd = await resDate.json();
+            baseDateForCheck = jd?.date || jd?.data?.date || "";
+            if (baseDateForCheck) setBaseDocDate(baseDateForCheck);
+          }
+        } catch {}
+      }
+      if (baseDateForCheck && isFormDateBeforeBaseDocDate(values.ReceiptDate, baseDateForCheck)) {
+        showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد *", "error");
+        return false;
+      }
     }
 
     const itemsWithProduct = (values.items || []).filter((item: any) => getItemRef(item) !== null);
@@ -3235,6 +3304,7 @@ export function WarehouseReceiptForm({ id, tabId }: WarehouseReceiptProps) {
 
   const handleNew = () => {
     setActiveId(undefined);
+    setBaseDocDate(""); // Task 132: پاک‌سازی تاریخ سند مبنا در سند جدید
     setValues({
       WarehouseReceiptID: "",
       DeliverWarehouseRef: "",

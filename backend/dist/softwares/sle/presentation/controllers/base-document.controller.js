@@ -29,6 +29,10 @@ let SleBaseDocumentController = class SleBaseDocumentController {
         const data = await this.service.getBaseDocumentDetail(Number(type) || 0, Number(id) || 0);
         return { success: true, data };
     }
+    async getDate(type, id) {
+        const date = await this.service.getBaseDocumentDate(Number(type) || 0, Number(id) || 0);
+        return { success: true, date };
+    }
 };
 exports.SleBaseDocumentController = SleBaseDocumentController;
 __decorate([
@@ -48,6 +52,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], SleBaseDocumentController.prototype, "getDetail", null);
+__decorate([
+    (0, common_1.Get)('date'),
+    __param(0, (0, common_1.Query)('type')),
+    __param(1, (0, common_1.Query)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], SleBaseDocumentController.prototype, "getDate", null);
 exports.SleBaseDocumentController = SleBaseDocumentController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('sle/base-documents'),

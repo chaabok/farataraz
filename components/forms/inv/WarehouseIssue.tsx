@@ -16,7 +16,7 @@ import { StateListInput, DocumentState, DocumentStateLabels, isStatusApprovedOrR
 import { useTabs } from "@/components/TabsProvider";
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "@/components/Providers";
-import { apiFetch, normalizePersianText } from "@/lib/utils";
+import { apiFetch, isFormDateBeforeBaseDocDate, normalizePersianText } from "@/lib/utils";
 import { useFormUpsert } from "@/hooks/useFormUpsert";
 import { useFooterPanelResize } from "@/hooks/useFooterPanelResize"; // Task 87: دستگیره ارتفاع فوتر
 import { useFormUsageCheck } from "@/hooks/useFormUsageCheck";
@@ -139,6 +139,9 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
   };
 
   const [baseDocItems, setBaseDocItems] = useState<any[]>([]);
+
+  // Task 132: تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+  const [baseDocDate, setBaseDocDate] = useState<string>("");
 
   // Form Header Values
   const [values, setValues] = useState<Record<string, any>>({
@@ -502,6 +505,17 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                 })
                 .catch(() => {});
             }
+
+            // Task 132: واکشی تاریخ سند مبنا ذخیره‌شده برای کنترل تاریخ ثبت اطلاعات
+            if (docType && bRef) {
+              apiFetch(`/api/inv/base-documents/date?docType=${docType}&id=${bRef}`)
+                .then((r) => (r.ok ? r.json() : null))
+                .then((j) => {
+                  const d = j?.date || j?.data?.date || "";
+                  if (d) setBaseDocDate(String(d));
+                })
+                .catch(() => {});
+            }
           }
         })
         .catch((err) => console.error("Error loading warehouse issue:", err));
@@ -669,6 +683,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               id: Number(r.ItemRequestID || r.id),
               code: String(r.RequestNumber || r.code || r.ItemRequestID || r.id),
               title: `درخواست ${r.RequestNumber || ""} - ${r.RequestDate || ""}`,
+              date: r.RequestDate || "", // Task 132: تاریخ سند مبنا
             }))
         );
       })
@@ -686,6 +701,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               id: Number(inv.PurchaseInvoiceID || inv.id),
               code: String(inv.InvoiceNumber || inv.code || inv.PurchaseInvoiceID || inv.id),
               title: `فاکتور ${inv.InvoiceNumber || ""} - ${inv.InvoiceDate || ""}`,
+              date: inv.InvoiceDate || "", // Task 132: تاریخ سند مبنا
             }))
         );
       })
@@ -703,6 +719,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               id: Number(r.ItemSupplyRequestID || r.id),
               code: String(r.RequestNumber || r.code || r.ItemSupplyRequestID || r.id),
               title: `درخواست تامین ${r.RequestNumber || ""} - ${r.RequestDate || ""}`,
+              date: r.RequestDate || "", // Task 132: تاریخ سند مبنا
             }))
         );
       })
@@ -1136,6 +1153,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
   const handleChange = (name: string, value: any) => {
     if (name === "BaseType") {
       setBaseDocItems([]);
+      setBaseDocDate(""); // Task 132: تغییر نوع مبنا، تاریخ سند مبنا قبلی را باطل می‌کند
       setValues((prev) => ({
         ...prev,
         BaseType: value,
@@ -1153,6 +1171,14 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Task 132: هشدار فوری هنگام انتخاب تاریخ ثبت اطلاعات قبل از تاریخ سند مبنا
+  const handleMainDateChange = (val: string) => {
+    handleChange("IssueDate", val);
+    if (val && baseDocDate && isFormDateBeforeBaseDocDate(val, baseDocDate)) {
+      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+    }
+  };
+
   const loadBaseDocumentDetails = async (docType: string, refId: number | string) => {
     if (!refId) {
       setBaseDocItems([]);
@@ -1167,6 +1193,8 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       if (response && response.ok) {
         const res = await response.json();
         if (res) {
+          // Task 132: تاریخ سند مبنا برای کنترل تاریخ ثبت اطلاعات
+          setBaseDocDate(String(res.InvoiceDate || res.ReceiptDate || res.RequestDate || ""));
           setBaseDocItems(res.items && Array.isArray(res.items) ? res.items : []);
           let formattedItems: any[] = [];
           const baseDocNo = String(res.code || res.InvoiceNumber || res.RequestNumber || res.ReceiptNumber || res.BaseDocumentNumber || refId || "");
@@ -2263,6 +2291,12 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id : selected;
                     setValues((prev) => ({ ...prev, ItemRequestRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && (values.IssueDate || values.ReceiptDate) && isFormDateBeforeBaseDocDate(values.IssueDate || values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails("ItemRequest", refId);
                     } else {
@@ -2295,6 +2329,12 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id : selected;
                     setValues((prev) => ({ ...prev, SalesInvoiceRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && (values.IssueDate || values.ReceiptDate) && isFormDateBeforeBaseDocDate(values.IssueDate || values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails("SalesInvoice", refId);
                     } else {
@@ -2327,6 +2367,12 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   onChange={(selected: any) => {
                     const refId = typeof selected === "object" ? selected?.id : selected;
                     setValues((prev) => ({ ...prev, SupplyRequestRef: refId ? Number(refId) : "" }));
+                    // Task 132: ثبت تاریخ سند مبنا انتخاب‌شده برای کنترل تاریخ ثبت اطلاعات
+                    const rowDate = selected && typeof selected === "object" ? String(selected.InvoiceDate || selected.ReceiptDate || selected.RequestDate || selected.date || "") : "";
+                    setBaseDocDate(refId ? rowDate : "");
+                    if (refId && rowDate && (values.IssueDate || values.ReceiptDate) && isFormDateBeforeBaseDocDate(values.IssueDate || values.ReceiptDate, rowDate)) {
+                      showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد", "warning");
+                    }
                     if (refId) {
                       loadBaseDocumentDetails("ItemSupplyRequest", refId);
                     } else {
@@ -2375,7 +2421,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             label="تاریخ حواله :"
             required
             value={values.IssueDate || values.ReceiptDate}
-            onChange={(val) => handleChange("IssueDate", val)}
+            onChange={handleMainDateChange}
             disabled={disabled || isUsed}
             labelWidth="65px"
           />
@@ -2625,6 +2671,32 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       return false;
     }
 
+    // Task 132: تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد
+    const bTypeForDate = Number(values.BaseType || 0);
+    const bRefForDate = Number(values.SalesInvoiceRef || values.ItemRequestRef || values.SupplyRequestRef || 0);
+    const docTypeForDate =
+      bTypeForDate === WarehouseIssueBaseType.ItemRequest ? 'ItemRequest' :
+      bTypeForDate === WarehouseIssueBaseType.SalesInvoice ? 'SalesInvoice' :
+      bTypeForDate === WarehouseIssueBaseType.SupplyRequest ? 'ItemSupplyRequest' : '';
+
+    if (docTypeForDate && bRefForDate > 0) {
+      let baseDateForCheck = baseDocDate;
+      if (!baseDateForCheck) {
+        try {
+          const resDate = await apiFetch(`/api/inv/base-documents/date?docType=${docTypeForDate}&id=${bRefForDate}`);
+          if (resDate.ok) {
+            const jd = await resDate.json();
+            baseDateForCheck = jd?.date || jd?.data?.date || "";
+            if (baseDateForCheck) setBaseDocDate(baseDateForCheck);
+          }
+        } catch {}
+      }
+      if (baseDateForCheck && isFormDateBeforeBaseDocDate(values.IssueDate || values.ReceiptDate, baseDateForCheck)) {
+        showToast("تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد *", "error");
+        return false;
+      }
+    }
+
     const itemsWithProduct = (values.items || []).filter((item: any) => getItemRef(item) !== null);
     if (itemsWithProduct.length === 0) {
       showToast("لطفاً حداقل یک کالا یا خدمت معتبر در جدول اقلام حواله انبار وارد کنید *", "warning");
@@ -2769,6 +2841,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
 
   const handleNew = () => {
     setActiveId(undefined);
+    setBaseDocDate(""); // Task 132: پاک‌سازی تاریخ سند مبنا در سند جدید
     setValues({
       WarehouseIssueID: "",
       WarehouseDocumentTypeRef: "",

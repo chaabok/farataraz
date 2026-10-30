@@ -15,6 +15,7 @@ export declare class SleBaseDocumentService {
     private static readonly BASE_ELIGIBLE_STATUSES;
     private getFullyCoveredOrderIds;
     getAvailableBaseDocuments(type: number, excludeProformaId?: number, customerRef?: number): Promise<any[]>;
+    getBaseDocumentDate(type: number, id: number): Promise<string>;
     getBaseDocumentDetail(type: number, id: number): Promise<any>;
     private normalizeBaseDetail;
 }

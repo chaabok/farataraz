@@ -4,4 +4,8 @@ export declare class BaseDocumentController {
     constructor(baseDocumentService: BaseDocumentService);
     getAvailableBaseDocuments(docType: string, targetDocType?: string): Promise<any[]>;
     getBaseDocumentDetails(docType: string, idStr: string, currentDocIdStr?: string, targetDocTypeQuery?: string): Promise<any>;
+    getBaseDocumentDate(docType: string, idStr: string): Promise<{
+        success: boolean;
+        date: string;
+    }>;
 }

@@ -43,4 +43,16 @@ export class SleBaseDocumentController {
     const data = await this.service.getBaseDocumentDetail(Number(type) || 0, Number(id) || 0);
     return { success: true, data };
   }
+
+  /**
+   * Task 132: تاریخ سند مبنا
+   * GET sle/base-documents/date?type=N&id=ID
+   * برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد» —
+   * هنگام ویرایش سند ذخیره‌شده که مبنا دارد، تاریخ مبنا از این سرویس خوانده می‌شود
+   */
+  @Get('date')
+  async getDate(@Query('type') type: string, @Query('id') id: string) {
+    const date = await this.service.getBaseDocumentDate(Number(type) || 0, Number(id) || 0);
+    return { success: true, date };
+  }
 }

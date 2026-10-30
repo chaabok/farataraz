@@ -27,4 +27,17 @@ export class BaseDocumentController {
     const targetDocType = targetDocTypeQuery || 'WarehouseReceipt';
     return this.baseDocumentService.getBaseDocumentDetails(docType, id, currentDocId, targetDocType);
   }
+
+  /**
+   * Task 132: تاریخ سند مبنا — برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از
+   * تاریخ سند مبنا باشد» در اسناد انبار؛ هنگام ویرایش سند ذخیره‌شده با مبنا،
+   * تاریخ مبنا از این سرویس خوانده می‌شود.
+   */
+  @Get('date')
+  async getBaseDocumentDate(@Query('docType') docType: string, @Query('id') idStr: string) {
+    const id = Number(idStr);
+    if (!docType || !id) return { success: true, date: '' };
+    const date = await this.baseDocumentService.getBaseDocumentDate(docType, id);
+    return { success: true, date };
+  }
 }
