@@ -2,7 +2,7 @@
 -- Parsa ERP Full Database Backup
 -- Database : parsaDb
 -- Server   : PostgreSQL 17.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
--- Taken at : 2026-10-30T15:05:12.833Z
+-- Taken at : 2026-10-30T16:21:05.611Z
 -- Encoding : UTF8
 -- ============================================================
 SET client_encoding = 'UTF8';
@@ -3670,6 +3670,59 @@ CREATE TABLE IF NOT EXISTS "Sle"."SalesDocumentSettings" (
   "DefaultSettlementMethodRef" bigint,
   PRIMARY KEY ("SalesDocumentSettingsID")
 );
+CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoiceFactors" (
+  "SalesInvoiceFactorID" bigint NOT NULL,
+  "SalesInvoiceRef" bigint NOT NULL,
+  "RowNo" integer DEFAULT 1,
+  "FactorTitle" varchar(200),
+  "FactorType" integer DEFAULT 1,
+  "Amount" numeric(18,4) DEFAULT 0,
+  "Description" varchar(500),
+  PRIMARY KEY ("SalesInvoiceFactorID")
+);
+CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoiceItems" (
+  "SalesInvoiceItemID" bigint NOT NULL,
+  "SalesInvoiceRef" bigint NOT NULL,
+  "RowNo" integer NOT NULL,
+  "ItemRef" bigint,
+  "ItemCode" varchar(100),
+  "ItemName" varchar(250),
+  "UnitName" varchar(100),
+  "Quantity" numeric(18,4) DEFAULT 0,
+  "UnitPrice" numeric(18,2) DEFAULT 0,
+  "TotalPrice" numeric(18,2) DEFAULT 0,
+  "Description" varchar(500),
+  "TrackingFactorValues" jsonb,
+  PRIMARY KEY ("SalesInvoiceItemID")
+);
+CREATE TABLE IF NOT EXISTS "Sle"."SalesInvoices" (
+  "SalesInvoiceID" bigint NOT NULL,
+  "Version" bigint DEFAULT 1,
+  "Creator" bigint DEFAULT 1,
+  "CreationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+  "CreateTime" varchar(8) DEFAULT '00:00:00'::character varying,
+  "LastModifier" bigint DEFAULT 1,
+  "LastModificationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+  "LastModificationTime" varchar(8) DEFAULT '00:00:00'::character varying,
+  "BusinessStructureRef" bigint DEFAULT 2,
+  "CompanyRef" bigint,
+  "BranchRef" bigint,
+  "AgencyRef" bigint,
+  "InvoiceNumber" integer NOT NULL,
+  "InvoiceDate" varchar(10),
+  "CustomerRef" bigint,
+  "CustomerName" varchar(200),
+  "SalesTypeRef" bigint,
+  "SalesCenterRef" bigint,
+  "DeliveryLocationRef" bigint,
+  "SettlementMethodRef" bigint,
+  "Status" integer DEFAULT 1,
+  "Description" varchar(1000),
+  "BaseDocumentTypeRef" integer,
+  "BaseDocumentRef" bigint,
+  "FiscalYearRef" bigint,
+  PRIMARY KEY ("SalesInvoiceID")
+);
 CREATE TABLE IF NOT EXISTS "Sle"."SalesItemGroupRelatedProducts" (
   "Version" integer DEFAULT 1,
   "Creator" bigint DEFAULT '1'::bigint,
@@ -3936,7 +3989,7 @@ INSERT INTO "Acc"."VoucherType" ("Version", "Creator", "CreationDate", "CreateTi
 INSERT INTO "Acc"."VoucherType" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "VoucherTypeID", "Code", "Title", "Title_En", "isActive") VALUES (1, '1', '2026-10-23 04:12:55.525', '04:12:55', '1', '2026-10-23 04:12:55.525', '04:12:55', '2', '2', NULL, NULL, '17', '8', 'حقوق و دستمزد', NULL, true);
 INSERT INTO "Acc"."VoucherType" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "VoucherTypeID", "Code", "Title", "Title_En", "isActive") VALUES (1, '1', '2026-10-23 04:12:55.527', '04:12:55', '1', '2026-10-23 04:12:55.527', '04:12:55', '2', '2', NULL, NULL, '18', '9', 'هزینه‌های عمومی', NULL, true);
 
--- Data for Gnr.ActivityLog (357 rows)
+-- Data for Gnr.ActivityLog (365 rows)
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-23 04:23:31.470', '04:23:31', '1', '2026-10-23 04:23:31.470', '04:23:31', '2', NULL, NULL, NULL, '1', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-23 04:27:46.877', '04:27:46', '1', '2026-10-23 04:27:46.877', '04:27:46', '2', NULL, NULL, NULL, '2', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-23 04:27:53.782', '04:27:53', '1', '2026-10-23 04:27:53.782', '04:27:53', '2', NULL, NULL, NULL, '3', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
@@ -4294,6 +4347,14 @@ INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTi
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 15:04:18.661', '15:04:18', '1', '2026-10-30 15:04:18.661', '15:04:18', '2', NULL, NULL, NULL, '354', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 15:04:24.958', '15:04:24', '1', '2026-10-30 15:04:24.958', '15:04:24', '2', NULL, NULL, NULL, '356', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
 INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 15:04:36.703', '15:04:36', '1', '2026-10-30 15:04:36.703', '15:04:36', '2', NULL, NULL, NULL, '357', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:05:56.610', '16:05:56', '1', '2026-10-30 16:05:56.610', '16:05:56', '2', NULL, NULL, NULL, '358', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:07:23.738', '16:07:23', '1', '2026-10-30 16:07:23.738', '16:07:23', '2', NULL, NULL, NULL, '359', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:16:15.065', '16:16:15', '1', '2026-10-30 16:16:15.065', '16:16:15', '2', NULL, NULL, NULL, '360', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:16:24.774', '16:16:24', '1', '2026-10-30 16:16:24.774', '16:16:24', '2', NULL, NULL, NULL, '361', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:17:17.820', '16:17:17', '1', '2026-10-30 16:17:17.820', '16:17:17', '2', NULL, NULL, NULL, '362', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:20:10.295', '16:20:10', '1', '2026-10-30 16:20:10.295', '16:20:10', '2', NULL, NULL, NULL, '363', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:20:24.135', '16:20:24', '1', '2026-10-30 16:20:24.135', '16:20:24', '2', NULL, NULL, NULL, '364', 'LOGIN', 'User', '1', NULL, NULL, '127.0.0.1', 'curl/8.14.1', '/api/auth/login', 'POST', 'کاربر admin وارد سیستم شد');
+INSERT INTO "Gnr"."ActivityLog" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "id", "Action", "EntityName", "EntityId", "OldValues", "NewValues", "IpAddress", "UserAgent", "Url", "Method", "Description") VALUES (1, '1', '2026-10-30 16:20:24.157', '16:20:24', '1', '2026-10-30 16:20:24.157', '16:20:24', '2', NULL, NULL, NULL, '365', 'DELETE', 'SalesInvoice', '1', '{"version":3,"creator":1,"creationDate":"2026-10-30T16:16:07.902Z","createTime":"16:16:07","lastModifier":1,"lastModificationDate":"2026-10-30T16:20:06.966Z","lastModificationTime":"16:20:06","businessStructureRef":2,"companyRef":2,"branchRef":null,"agencyRef":null,"SalesInvoiceID":"1","InvoiceNumber":1,"InvoiceDate":"2026/10/30","CustomerRef":"2","CustomerName":"علی جهانی","SalesTypeRef":"2","SalesCenterRef":"1","DeliveryLocationRef":"2","SettlementMethodRef":"4","Status":2,"Description":"","BaseDocumentTypeRef":null,"BaseDocumentRef":null,"FiscalYearRef":"1"}', NULL, '127.0.0.1', 'curl/8.14.1', '/api/sle/sales-invoices/1', 'DELETE', NULL);
 
 -- Data for Gnr.BaseSettings (76 rows)
 INSERT INTO "Gnr"."BaseSettings" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "BaseSettingsID", "TabRef", "Key", "Value") VALUES (1, '1', '2026-10-23 04:12:55.220', '04:12:55', '1', '2026-10-23 04:12:55.220', '04:12:55', '2', '2', NULL, NULL, '1', 2, 'detailedLevelsCount', '10');
@@ -4393,7 +4454,7 @@ INSERT INTO "Gnr"."FiscalYear" ("Version", "Creator", "CreationDate", "CreateTim
 INSERT INTO "Gnr"."GeoLocations" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "GeolocationID", "ParentRef", "GeographicType", "Code", "Title", "Title_En", "IsActive") VALUES (1, '1', '2026-10-23 04:12:55.295', '00:00:00', '1', '2026-10-23 04:12:55.295', '00:00:00', '2', '2', NULL, NULL, '1', '0', 1, 'IR', 'ایران', 'Iran', true);
 INSERT INTO "Gnr"."GeoLocations" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "GeolocationID", "ParentRef", "GeographicType", "Code", "Title", "Title_En", "IsActive") VALUES (1, '1', '2026-10-23 04:12:55.687', '00:00:00', '1', '2026-10-23 04:12:55.687', '00:00:00', '2', '3', NULL, NULL, '2', '0', 1, 'IR', 'ایران', 'Iran', true);
 
--- Data for Gnr.IDGeneration (54 rows)
+-- Data for Gnr.IDGeneration (56 rows)
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('14', 'FiscalYear', '1');
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('16', 'SalesItemGroups', '3');
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('3', 'Currency', '2');
@@ -4447,7 +4508,9 @@ INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUE
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('52', 'SalesContracts', '2');
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('53', 'SalesContractItems', '2');
 INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('6', 'BaseSettings', '76');
-INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('13', 'ActivityLog', '357');
+INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('55', 'SalesInvoices', '1');
+INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('56', 'SalesInvoiceItems', '3');
+INSERT INTO "Gnr"."IDGeneration" ("IDGenerationID", "TableName", "LastID") VALUES ('13', 'ActivityLog', '365');
 
 -- Data for Gnr.Parties (5 rows)
 INSERT INTO "Gnr"."Parties" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "PartyID", "Nature", "IsActive", "SubType", "Website", "EmailAddress", "FirstName", "LatinFirstName", "LastName", "LatinLastName", "DetailedAccountID", "EconomicCode", "NationalCode", "PassportNumber", "BirthDate", "MarriageDate", "NationalId", "RegistrationNumber", "IsSupplier", "Balance", "BalanceStatus", "IsCustomer", "CustomerBalance", "CustomerBalanceStatus", "IsSalesIntermediary", "SalesIntermediaryBalance", "SalesIntermediaryBalanceStatus") VALUES (1, '1', '2026-10-24 02:47:21.382', '02:47:21', '1', '2026-10-24 02:47:21.382', '02:47:21', '2', '2', NULL, NULL, '3', 'legal_entity', true, NULL, NULL, NULL, 'شرکت پارس داده', NULL, NULL, NULL, '3', '411223344', NULL, NULL, NULL, NULL, NULL, NULL, false, NULL, NULL, true, NULL, NULL, false, NULL, NULL);
@@ -4457,7 +4520,7 @@ INSERT INTO "Gnr"."Parties" ("Version", "Creator", "CreationDate", "CreateTime",
 INSERT INTO "Gnr"."Parties" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "PartyID", "Nature", "IsActive", "SubType", "Website", "EmailAddress", "FirstName", "LatinFirstName", "LastName", "LatinLastName", "DetailedAccountID", "EconomicCode", "NationalCode", "PassportNumber", "BirthDate", "MarriageDate", "NationalId", "RegistrationNumber", "IsSupplier", "Balance", "BalanceStatus", "IsCustomer", "CustomerBalance", "CustomerBalanceStatus", "IsSalesIntermediary", "SalesIntermediaryBalance", "SalesIntermediaryBalanceStatus") VALUES (1, '1', '2026-10-26 14:21:41.129', '14:21:41', '1', '2026-10-26 14:21:41.129', '14:21:41', '2', '2', NULL, NULL, '5', 'legal_entity', true, NULL, NULL, NULL, 'ذوب آهن اصفهان', NULL, '', '', '10', NULL, '', NULL, NULL, NULL, NULL, NULL, true, '890000000', 'creditor', false, '', '', false, NULL, NULL);
 
 -- Data for Iam.User (1 rows)
-INSERT INTO "Iam"."User" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "UserID", "username", "passwordHash", "firstName", "lastName", "isActive", "repeatChangePassword", "BusinessStructureID", "UserGroupRef", "refreshToken", "lastSeen", "twoFactorSecret", "isTwoFactorEnabled") VALUES (32790, '1', '2026-10-23 04:12:54.958', '04:12:54', '1', '2026-10-30 15:04:36.715', '04:12:54', '2', '2', NULL, NULL, '1', 'admin', '$2a$12$cv1x6..1PRuxod8tbCfqBuLXCYugySC0SIuvkuy5SI9FDZo9GNADS', 'مدیر', 'سیستم', true, 0, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoxLCJmaXJzdE5hbWUiOiLZhdiv24zYsSIsImxhc3ROYW1lIjoi2LPbjNiz2KrZhSIsInBlcm1pc3Npb25zIjpbIioiXSwiaWF0IjoxNzkzMzcyNjc2LCJleHAiOjE3OTM5Nzc0NzZ9.hNJRTzck5DXiA6Hq-NNqHyuq3ihxD7rjHAlqXUFI4jw', '2026-10-30 15:04:36.714', NULL, false);
+INSERT INTO "Iam"."User" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "UserID", "username", "passwordHash", "firstName", "lastName", "isActive", "repeatChangePassword", "BusinessStructureID", "UserGroupRef", "refreshToken", "lastSeen", "twoFactorSecret", "isTwoFactorEnabled") VALUES (32907, '1', '2026-10-23 04:12:54.958', '04:12:54', '1', '2026-10-30 16:20:24.166', '04:12:54', '2', '2', NULL, NULL, '1', 'admin', '$2a$12$cv1x6..1PRuxod8tbCfqBuLXCYugySC0SIuvkuy5SI9FDZo9GNADS', 'مدیر', 'سیستم', true, 0, NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwic3ViIjoxLCJmaXJzdE5hbWUiOiLZhdiv24zYsSIsImxhc3ROYW1lIjoi2LPbjNiz2KrZhSIsInBlcm1pc3Npb25zIjpbIioiXSwiaWF0IjoxNzkzMzc3MjI0LCJleHAiOjE3OTM5ODIwMjR9.IkdbjdM30nM2IMhbf5oVECu07qf342WGOQopSYLcZ1I', '2026-10-30 16:20:24.165', NULL, false);
 
 -- Data for Inv.ItemAccountCategories (2 rows)
 INSERT INTO "Inv"."ItemAccountCategories" ("Version", "Creator", "CreationDate", "CreateTime", "LastModifier", "LastModificationDate", "LastModificationTime", "BusinessStructureRef", "CompanyRef", "BranchRef", "AgencyRef", "ItemAccountCategoryID", "ItemAccountCategoryCode", "ItemAccountCategoryName", "ItemAccountCategoryName2", "PricingMethod", "StandardRate", "IsActive", "InventorySlAccountRef", "IndividualPurchaseSlAccountRef", "CorporatePurchaseSlAccountRef", "FreightSlAccountRef", "SuspensePurchaseSlAccountRef", "ForeignPurchaseSlAccountRef", "ScrapExpenseSlAccountRef", "ConsignmentOursSlAccountRef", "ConsignmentOthersSlAccountRef", "ConsignmentOffsetSlAccountRef", "IndividualPrepaymentSlAccountRef", "CorporatePrepaymentSlAccountRef", "ScrapIncomeSlAccountRef") VALUES (2, '1', '2026-10-24 13:15:00.581', '13:15:00', '1', '2026-10-24 13:15:06.460', '13:15:00', '2', '2', NULL, NULL, '3', 1, 'طبقه مواداولیه', 'طبقه مواداولیه', 1, 2, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
@@ -5093,6 +5156,8 @@ ALTER TABLE "Sle"."Customers" ADD CONSTRAINT "FK_5f9664aede3689afdd0cdd9bf26" FO
 ALTER TABLE "Sle"."Customers" ADD CONSTRAINT "FK_678873b67dd8b37b4589035fc19" FOREIGN KEY ("CurrencyRef") REFERENCES "Gnr"."Currency"("CurrencyID") ON DELETE RESTRICT;
 ALTER TABLE "Sle"."SalesContractFactors" ADD CONSTRAINT "FK_SalesContractFactors_SalesContract" FOREIGN KEY ("SalesContractRef") REFERENCES "Sle"."SalesContracts"("SalesContractID") ON DELETE CASCADE;
 ALTER TABLE "Sle"."SalesContractItems" ADD CONSTRAINT "FK_SalesContractItems_SalesContract" FOREIGN KEY ("SalesContractRef") REFERENCES "Sle"."SalesContracts"("SalesContractID") ON DELETE CASCADE;
+ALTER TABLE "Sle"."SalesInvoiceFactors" ADD CONSTRAINT "FK_SalesInvoiceFactors_SalesInvoice" FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID") ON DELETE CASCADE;
+ALTER TABLE "Sle"."SalesInvoiceItems" ADD CONSTRAINT "FK_SalesInvoiceItems_SalesInvoice" FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID") ON DELETE CASCADE;
 ALTER TABLE "Sle"."SalesItemGroupRelatedProducts" ADD CONSTRAINT "FK_1b745fc2c1cb02eeb3addfc6888" FOREIGN KEY ("SalesItemGroupRef") REFERENCES "Sle"."SalesItemGroups"("SalesItemGroupID") ON DELETE CASCADE;
 ALTER TABLE "Sle"."SalesItemGroups" ADD CONSTRAINT "FK_26db2faad142ac403d854677381" FOREIGN KEY ("ParentRef") REFERENCES "Sle"."SalesItemGroups"("SalesItemGroupID") ON DELETE CASCADE;
 ALTER TABLE "Sle"."SalesOrderFactors" ADD CONSTRAINT "FK_SalesOrderFactors_SalesOrder" FOREIGN KEY ("SalesOrderRef") REFERENCES "Sle"."SalesOrders"("SalesOrderID") ON DELETE CASCADE;
@@ -5447,6 +5512,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "SalesContracts_pkey" ON "Sle"."SalesContracts
 CREATE UNIQUE INDEX IF NOT EXISTS "PK_9b53aa3d992cb64b041b1fa754f" ON "Sle"."SalesDocumentSettings" USING btree ("SalesDocumentSettingsID");
 CREATE UNIQUE INDEX IF NOT EXISTS "SalesDocumentSettings_pkey" ON "Sle"."SalesDocumentSettings" USING btree ("SalesDocumentSettingsID");
 CREATE UNIQUE INDEX IF NOT EXISTS "UQ_SalesDocumentSettings_Type_BS" ON "Sle"."SalesDocumentSettings" USING btree ("SalesDocumentType", "BusinessStructureRef");
+CREATE UNIQUE INDEX IF NOT EXISTS "SalesInvoiceFactors_pkey" ON "Sle"."SalesInvoiceFactors" USING btree ("SalesInvoiceFactorID");
+CREATE UNIQUE INDEX IF NOT EXISTS "SalesInvoiceItems_pkey" ON "Sle"."SalesInvoiceItems" USING btree ("SalesInvoiceItemID");
+CREATE UNIQUE INDEX IF NOT EXISTS "SalesInvoices_pkey" ON "Sle"."SalesInvoices" USING btree ("SalesInvoiceID");
 CREATE UNIQUE INDEX IF NOT EXISTS "PK_e53d4502f27bf653eb446fa597a" ON "Sle"."SalesItemGroupRelatedProducts" USING btree ("SalesItemGroupRelatedProductID");
 CREATE UNIQUE INDEX IF NOT EXISTS "SalesItemGroupRelatedProducts_pkey" ON "Sle"."SalesItemGroupRelatedProducts" USING btree ("SalesItemGroupRelatedProductID");
 CREATE UNIQUE INDEX IF NOT EXISTS "PK_24a21d360a73e5ce9f0b300b977" ON "Sle"."SalesItemGroups" USING btree ("SalesItemGroupID");
@@ -5464,4 +5532,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS "SettlementMethods_pkey" ON "Sle"."SettlementM
 CREATE UNIQUE INDEX IF NOT EXISTS "PK_cf97676d62086901e0da802b320" ON "Sle"."Wallets" USING btree ("WalletID");
 CREATE UNIQUE INDEX IF NOT EXISTS "Wallets_pkey" ON "Sle"."Wallets" USING btree ("WalletID");
 
--- END OF BACKUP — 182 tables, 888 rows
+-- END OF BACKUP — 185 tables, 898 rows
