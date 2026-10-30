@@ -321,6 +321,12 @@ const tabsConfig: TabConfig[] = [
         defaultValue: 'true'
       },
       {
+        key: 'showPriceInSalesPermission',
+        label: 'نمایش قیمت در مجوز فروش',
+        type: 'checkbox-right-label',
+        defaultValue: 'true'
+      },
+      {
         key: 'showTrackingFactorInSalesDocumentsGroup',
         label: 'نمایش عامل ردیابی در اسناد فروش',
         type: 'group',

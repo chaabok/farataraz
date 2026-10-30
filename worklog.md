@@ -2584,3 +2584,19 @@ Work Log:
 
 Stage Summary:
 - فرم قرارداد فروش با تمام اقلام پیش فاکتور، برچسب‌های جدید «موضوع قرارداد» و «تاریخ قرارداد»، API اختصاصی و جداول دیتابیس ایجاد و E2E تایید شد
+
+---
+Task ID: 129
+Agent: Z.ai Code (main)
+Task: افزودن فیلد «نمایش قیمت در مجوز فروش» در تنظیمات پایه / تب فروش با تیک پیش‌فرض
+
+Work Log:
+- components/forms/common/BaseSettings.tsx — tabsConfig تب فروش (tabRef: 4): چک‌باکس جدید با key showPriceInSalesPermission، label «نمایش قیمت در مجوز فروش»، type 'checkbox-right-label' و defaultValue 'true' — رندر با CheckBoxRightLabel موجود؛ بلافاصله بعد از «کیف پول فعال باشد» و قبل از گروه «نمایش عامل ردیابی در اسناد فروش»
+- منطق تیک پیش‌فرض: چون کلید در BaseSettings ذخیره نشده باشد، defaultValue 'true' باعث تیک‌خورده بودن نمایش داده می‌شود (رفتار عمومی موجود کامپوننت)
+- ذخیره‌سازی بدون تغییر بک‌اند: PUT /api/common/base-settings/tab/4 به‌صورت key/value عمومی ذخیره می‌کند
+- lint: خطای قبلی sidebar.tsx (Math.random) خارج از محدوده این تسک است؛ فایل تغییر یافته بدون خطا
+- E2E (agent-browser): ورود admin → باز کردن فرم تنظیمات پایه → تب فروش → فیلد جدید با تیک پیش‌فرض (checked=true) نمایش داده شد → ذخیره موفق → تایید API با هدر x-company-id: 2 → مقدار showPriceInSalesPermission = "true" در پاسخ GET
+- اسکرین‌شات: Reports/task129-sales-tab-field.png
+
+Stage Summary:
+- فیلد «نمایش قیمت در مجوز فروش» با تیک پیش‌فرض در تنظیمات پایه / تب فروش اضافه، ذخیره‌سازی در دیتابیس تایید و E2E انجام شد
