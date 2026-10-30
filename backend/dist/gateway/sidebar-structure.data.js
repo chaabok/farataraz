@@ -863,6 +863,12 @@ exports.SIDEBAR_STRUCTURE = [
                                 title: "پیش فاکتور فروش جدید",
                                 componentName: "SalesProformaForm",
                                 path: "/forms/sle/sales-proforma-new"
+                            },
+                            {
+                                id: "SalesContractForm",
+                                title: "قرارداد فروش",
+                                componentName: "SalesContractForm",
+                                path: "/forms/sle/sales-contract-new"
                             }
                         ]
                     },

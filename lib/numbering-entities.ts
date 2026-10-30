@@ -40,6 +40,7 @@ export const NUMBERING_ENTITY_OPTIONS: NumberingEntityOption[] = [
   // فروش
   { label: 'سفارش فروش', value: 'sales_order', menu: 'فروش', hasHeaderNumberInput: true },
   { label: 'پیش فاکتور فروش', value: 'sales_proforma', menu: 'فروش', hasHeaderNumberInput: true },
+  { label: 'قرارداد فروش', value: 'sales_contract', menu: 'فروش', hasHeaderNumberInput: true },
   { label: 'فاکتور فروش', value: 'sales_invoice', menu: 'فروش', hasHeaderNumberInput: true },
 
   // دریافت و پرداخت

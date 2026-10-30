@@ -511,7 +511,9 @@ export const SIDEBAR_STRUCTURE: SidebarGroup[] = [
               { id: 'new_invoice', title: 'فاکتور جدید', icon: Plus },
               { id: 'SalesOrderForm', title: 'سفارش فروش جدید', icon: Plus, componentName: 'SalesOrderForm', path: '/forms/sle/sales-order-new' },
               // Task 88: پیش فاکتور فروش — فرم مشابه سفارش فروش + فیلد تاریخ اعتبار
-              { id: 'SalesProformaForm', title: 'پیش فاکتور فروش جدید', icon: Plus, componentName: 'SalesProformaForm', path: '/forms/sle/sales-proforma-new' }
+              { id: 'SalesProformaForm', title: 'پیش فاکتور فروش جدید', icon: Plus, componentName: 'SalesProformaForm', path: '/forms/sle/sales-proforma-new' },
+              // Task 128: قرارداد فروش — فرم مشابه پیش فاکتور فروش + «تاریخ قرارداد» و «موضوع قرارداد»
+              { id: 'SalesContractForm', title: 'قرارداد فروش', icon: Plus, componentName: 'SalesContractForm', path: '/forms/sle/sales-contract-new' }
             ]
           },
           {

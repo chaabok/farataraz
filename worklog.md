@@ -2563,3 +2563,24 @@ Work Log:
 
 Stage Summary:
 - فهرست فیلدهای هدر/آیتم/فوتر سند حسابداری با وضعیت الزامی و منبع دراپ‌داون‌ها به کاربر تحویل شد
+
+---
+Task ID: 128
+Agent: Z.ai Code (main)
+Task: ایجاد فرم «قرارداد فروش» در منوی فروش > عملیات — کلون کامل پیش فاکتور فروش با تغییر برچسب «توضیحات» به «موضوع قرارداد» و «تاریخ اعتبار» به «تاریخ قرارداد»
+
+Work Log:
+- فرانت‌اند: components/forms/sle/SalesContract.tsx (کلون کامل SalesProforma) — همه فیلدها/تب‌ها/فوترهای پیش فاکتور حفظ شد
+- تغییر برچسب‌ها: «توضیحات» → «موضوع قرارداد» (هدر + تب سایر اطلاعات) و «تاریخ اعتبار» → «تاریخ قرارداد» (ContractDate)
+- عنوان‌ها: قرارداد فروش جدید / ویرایش قرارداد فروش؛ تب‌ها: اقلام قرارداد فروش، عوامل قرارداد فروش، خلاصه مبالغ و محاسبات
+- تنظیمات اسناد فروش نوع ۳ (SalesContract) خوانده می‌شود؛ سند مبنا/عوامل ردیابی/واحد فرعی/پارامترهای خرید و فروش همانند پیش فاکتور
+- مسیر: app/forms/sle/sales-contract-new/page.tsx + ثبت در tab-registry (SalesContractForm/SalesContract)
+- منوها: lib/sidebar-metadata.ts و backend/src/gateway/sidebar-structure.data.ts — آیتم «قرارداد فروش» زیر فروش > عملیات
+- lib/numbering-entities.ts: ورودی «قرارداد فروش» (sales_contract) برای شمارش اسناد
+- بک‌اند: entity های SalesContract/SalesContractItem/SalesContractFactor (Sle.SalesContracts...) + DTO + Service + Controller (/api/sle/sales-contracts) + ثبت در SleModule
+- app.module.ts: ساخت idempotent جداول SalesContracts/SalesContractItems/SalesContractFactors + FK آبشاری
+- اصلاح: افزودن ستون‌های BaseDocumentTypeRef/BaseDocumentRef به SQL و ALTER TABLE روی دیتابیس جاری
+- E2E: ورود → منو → باز شدن فرم → انتخاب مشتری/کالا → ذخیره موفق → تایید API (GET/POST/DELETE) → حذف رکورد تست
+
+Stage Summary:
+- فرم قرارداد فروش با تمام اقلام پیش فاکتور، برچسب‌های جدید «موضوع قرارداد» و «تاریخ قرارداد»، API اختصاصی و جداول دیتابیس ایجاد و E2E تایید شد

@@ -289,6 +289,80 @@ exports.AppModule = AppModule = __decorate([
                                 catch (proformaErr) {
                                     console.warn('[Task88] Could not ensure SalesProformaInvoices tables:', proformaErr.message);
                                 }
+                                try {
+                                    await client.query(`
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesContracts" (
+                    "SalesContractID" bigint PRIMARY KEY,
+                    "Version" bigint DEFAULT 1,
+                    "Creator" bigint DEFAULT 1,
+                    "CreationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "CreateTime" varchar(8) DEFAULT '00:00:00',
+                    "LastModifier" bigint DEFAULT 1,
+                    "LastModificationDate" timestamp DEFAULT CURRENT_TIMESTAMP,
+                    "LastModificationTime" varchar(8) DEFAULT '00:00:00',
+                    "BusinessStructureRef" bigint DEFAULT 2,
+                    "CompanyRef" bigint,
+                    "BranchRef" bigint,
+                    "AgencyRef" bigint,
+                    "ContractNumber" integer NOT NULL,
+                    "DocumentDate" varchar(10),
+                    "ContractDate" varchar(10),
+                    "CustomerRef" bigint,
+                    "CustomerName" varchar(200),
+                    "SalesTypeRef" bigint,
+                    "SalesCenterRef" bigint,
+                    "DeliveryLocationRef" bigint,
+                    "SettlementMethodRef" bigint,
+                    "Status" integer DEFAULT 1,
+                    "ContractSubject" varchar(1000),
+                    "FiscalYearRef" bigint
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesContractItems" (
+                    "SalesContractItemID" bigint PRIMARY KEY,
+                    "SalesContractRef" bigint NOT NULL,
+                    "RowNo" integer NOT NULL,
+                    "ItemRef" bigint,
+                    "ItemCode" varchar(100),
+                    "ItemName" varchar(250),
+                    "UnitName" varchar(100),
+                    "Quantity" numeric(18,4) DEFAULT 0,
+                    "UnitPrice" numeric(18,2) DEFAULT 0,
+                    "TotalPrice" numeric(18,2) DEFAULT 0,
+                    "Description" varchar(500),
+                    "TrackingFactorValues" jsonb
+                  );
+                  CREATE TABLE IF NOT EXISTS "Sle"."SalesContractFactors" (
+                    "SalesContractFactorID" bigint PRIMARY KEY,
+                    "SalesContractRef" bigint NOT NULL,
+                    "RowNo" integer DEFAULT 1,
+                    "FactorTitle" varchar(200),
+                    "FactorType" integer DEFAULT 1,
+                    "Amount" numeric(18,4) DEFAULT 0,
+                    "Description" varchar(500)
+                  );
+                `);
+                                    await client.query(`
+                  DO $$
+                  BEGIN
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesContractItems_SalesContract'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesContractItems" ADD CONSTRAINT "FK_SalesContractItems_SalesContract"
+                        FOREIGN KEY ("SalesContractRef") REFERENCES "Sle"."SalesContracts"("SalesContractID") ON DELETE CASCADE;
+                    END IF;
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_SalesContractFactors_SalesContract'
+                    ) THEN
+                      ALTER TABLE "Sle"."SalesContractFactors" ADD CONSTRAINT "FK_SalesContractFactors_SalesContract"
+                        FOREIGN KEY ("SalesContractRef") REFERENCES "Sle"."SalesContracts"("SalesContractID") ON DELETE CASCADE;
+                    END IF;
+                  END $$;
+                `);
+                                    console.log('[Task128] SalesContracts tables ensured.');
+                                }
+                                catch (contractErr) {
+                                    console.warn('[Task128] Could not ensure SalesContracts tables:', contractErr.message);
+                                }
                                 console.log('Cleaning up self-referential or blocking foreign key constraints referencing BusinessStructure...');
                                 const dropFksQuery = `
               DO $$

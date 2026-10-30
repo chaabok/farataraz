@@ -67,6 +67,12 @@ import { SalesProformaInvoiceItem } from './domain/entities/sales-proforma-invoi
 import { SalesProformaInvoiceFactor } from './domain/entities/sales-proforma-invoice-factor.entity';
 import { SalesProformaInvoiceController } from './presentation/controllers/sales-proforma-invoice.controller';
 import { SalesProformaInvoiceService } from './application/services/sales-proforma-invoice.service';
+// Task 128: قرارداد فروش
+import { SalesContract } from './domain/entities/sales-contract.entity';
+import { SalesContractItem } from './domain/entities/sales-contract-item.entity';
+import { SalesContractFactor } from './domain/entities/sales-contract-factor.entity';
+import { SalesContractController } from './presentation/controllers/sales-contract.controller';
+import { SalesContractService } from './application/services/sales-contract.service';
 // Task 93: سند مبنا فرم‌های فروش
 import { SleBaseDocumentController } from './presentation/controllers/base-document.controller';
 import { SleBaseDocumentService } from './application/services/base-document.service';
@@ -95,6 +101,10 @@ import { CommonModule } from '../common/common.module';
       SalesProformaInvoice,
       SalesProformaInvoiceItem,
       SalesProformaInvoiceFactor,
+      // Task 128: قرارداد فروش
+      SalesContract,
+      SalesContractItem,
+      SalesContractFactor,
     ]),
     CoreModule,
     CommonModule,
@@ -114,6 +124,8 @@ import { CommonModule } from '../common/common.module';
     SalesOrderController,
     // Task 88: پیش فاکتور فروش
     SalesProformaInvoiceController,
+    // Task 128: قرارداد فروش
+    SalesContractController,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentController,
   ],
@@ -176,6 +188,8 @@ import { CommonModule } from '../common/common.module';
     SalesOrderService,
     // Task 88: پیش فاکتور فروش
     SalesProformaInvoiceService,
+    // Task 128: قرارداد فروش
+    SalesContractService,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentService,
   ],
@@ -194,6 +208,8 @@ import { CommonModule } from '../common/common.module';
     SalesOrderService,
     // Task 88: پیش فاکتور فروش
     SalesProformaInvoiceService,
+    // Task 128: قرارداد فروش
+    SalesContractService,
   ],
 })
 export class SleModule {}
