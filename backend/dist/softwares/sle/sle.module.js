@@ -85,6 +85,11 @@ const sales_invoice_item_entity_1 = require("./domain/entities/sales-invoice-ite
 const sales_invoice_factor_entity_1 = require("./domain/entities/sales-invoice-factor.entity");
 const sales_invoice_controller_1 = require("./presentation/controllers/sales-invoice.controller");
 const sales_invoice_service_1 = require("./application/services/sales-invoice.service");
+const sales_permission_entity_1 = require("./domain/entities/sales-permission.entity");
+const sales_permission_item_entity_1 = require("./domain/entities/sales-permission-item.entity");
+const sales_permission_factor_entity_1 = require("./domain/entities/sales-permission-factor.entity");
+const sales_permission_controller_1 = require("./presentation/controllers/sales-permission.controller");
+const sales_permission_service_1 = require("./application/services/sales-permission.service");
 const base_document_controller_1 = require("./presentation/controllers/base-document.controller");
 const base_document_service_1 = require("./application/services/base-document.service");
 const core_module_1 = require("../../core/core.module");
@@ -120,6 +125,9 @@ exports.SleModule = SleModule = __decorate([
                 sales_invoice_entity_1.SalesInvoice,
                 sales_invoice_item_entity_1.SalesInvoiceItem,
                 sales_invoice_factor_entity_1.SalesInvoiceFactor,
+                sales_permission_entity_1.SalesPermission,
+                sales_permission_item_entity_1.SalesPermissionItem,
+                sales_permission_factor_entity_1.SalesPermissionFactor,
             ]),
             core_module_1.CoreModule,
             common_module_1.CommonModule,
@@ -140,6 +148,7 @@ exports.SleModule = SleModule = __decorate([
             sales_proforma_invoice_controller_1.SalesProformaInvoiceController,
             sales_contract_controller_1.SalesContractController,
             sales_invoice_controller_1.SalesInvoiceController,
+            sales_permission_controller_1.SalesPermissionController,
             base_document_controller_1.SleBaseDocumentController,
         ],
         providers: [
@@ -202,6 +211,7 @@ exports.SleModule = SleModule = __decorate([
             sales_proforma_invoice_service_1.SalesProformaInvoiceService,
             sales_contract_service_1.SalesContractService,
             sales_invoice_service_1.SalesInvoiceService,
+            sales_permission_service_1.SalesPermissionService,
             base_document_service_1.SleBaseDocumentService,
         ],
         exports: [
@@ -220,6 +230,7 @@ exports.SleModule = SleModule = __decorate([
             sales_proforma_invoice_service_1.SalesProformaInvoiceService,
             sales_contract_service_1.SalesContractService,
             sales_invoice_service_1.SalesInvoiceService,
+            sales_permission_service_1.SalesPermissionService,
         ],
     })
 ], SleModule);

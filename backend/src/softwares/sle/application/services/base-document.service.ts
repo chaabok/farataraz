@@ -5,6 +5,7 @@ import { SalesOrder } from '../../domain/entities/sales-order.entity';
 import { SalesProformaInvoice } from '../../domain/entities/sales-proforma-invoice.entity';
 import { SalesContract } from '../../domain/entities/sales-contract.entity';
 import { SalesInvoice } from '../../domain/entities/sales-invoice.entity';
+import { SalesPermission } from '../../domain/entities/sales-permission.entity';
 import { RequestContextService } from '../../../../core/services/request-context.service';
 
 /**
@@ -38,6 +39,9 @@ export class SleBaseDocumentService {
     // Task 130: فاکتور فروش — قابل انتخاب به‌عنوان سند مبنا
     @InjectRepository(SalesInvoice)
     private readonly invoiceRepository: Repository<SalesInvoice>,
+    // Task 133: مجوز فروش — قابل انتخاب به‌عنوان سند مبنا
+    @InjectRepository(SalesPermission)
+    private readonly permissionRepository: Repository<SalesPermission>,
     private readonly requestContextService: RequestContextService,
   ) {}
 
@@ -231,16 +235,37 @@ export class SleBaseDocumentService {
       }));
     }
 
-    // سایر انواع (مجوز فروش، مجوز برگشت، فاکتور برگشت،
+    // مجوز فروش (4) — Task 133 + Task 131
+    if (t === 4) {
+      const qb = this.permissionRepository
+        .createQueryBuilder('spm')
+        .where('spm.Status IN (4, 5)'); // بازبینی‌شده (4) و تاییدشده (5)
+      if (bsId && bsId > 1) qb.andWhere('(spm.businessStructureRef = :bsId OR spm.businessStructureRef IS NULL)', { bsId });
+      if (compId && compId > 1) qb.andWhere('(spm.companyRef = :compId OR spm.companyRef IS NULL)', { compId });
+      if (fiscalYearId) qb.andWhere('(spm.FiscalYearRef = :fiscalYearId OR spm.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('spm.CustomerRef = :customerRef', { customerRef });
+      qb.orderBy('spm.PermissionNumber', 'DESC');
+      const docs = await qb.getMany();
+      return docs.map((d) => ({
+        id: Number(d.SalesPermissionID),
+        number: d.PermissionNumber,
+        date: d.PermissionDate || '',
+        customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+      }));
+    }
+
+    // سایر انواع (مجوز برگشت، فاکتور برگشت،
     // رسید انبار و حواله انبار) فعلاً فهرستی ندارند — خروجی خالی
     return [];
   }
 
   // ---------------------------------------------------------------------------
   // Task 132: تاریخ سند مبنا — برای کنترل «تاریخ ثبت اطلاعات نمی‌تواند قبل از
-  // تاریخ سند مبنا باشد» در فرم‌های فروش (سفارش/پیش فاکتور/قرارداد/فاکتور).
+  // تاریخ سند مبنا باشد» در فرم‌های فروش (سفارش/پیش فاکتور/قرارداد/مجوز/فاکتور).
   // کد نوع همان کدهای نوع سند مبنا است: 1=سفارش فروش، 2=پیش فاکتور،
-  // 3=قرارداد فروش، 5=فاکتور فروش. خروجی: رشته تاریخ (میلادی 'YYYY/MM/DD')
+  // 3=قرارداد فروش، 4=مجوز فروش، 5=فاکتور فروش. خروجی: رشته تاریخ (میلادی 'YYYY/MM/DD')
   // یا '' در صورت نبود سند/تاریخ.
   // ---------------------------------------------------------------------------
   async getBaseDocumentDate(type: number, id: number): Promise<string> {
@@ -263,6 +288,10 @@ export class SleBaseDocumentService {
     if (t === 5) {
       const doc = await this.invoiceRepository.findOne({ where: { SalesInvoiceID: docId as any } });
       return doc?.InvoiceDate || '';
+    }
+    if (t === 4) {
+      const doc = await this.permissionRepository.findOne({ where: { SalesPermissionID: docId as any } });
+      return doc?.PermissionDate || '';
     }
     return '';
   }

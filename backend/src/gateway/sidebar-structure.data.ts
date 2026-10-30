@@ -883,6 +883,12 @@ export const SIDEBAR_STRUCTURE: SidebarStructureNode[] = [
                 title: "قرارداد فروش",
                 componentName: "SalesContractForm",
                 path: "/forms/sle/sales-contract-new"
+              },
+              {
+                id: "SalesPermissionForm",
+                title: "مجوز فروش",
+                componentName: "SalesPermissionForm",
+                path: "/forms/sle/sales-permission-new"
               }
             ]
           },

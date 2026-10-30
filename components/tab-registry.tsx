@@ -199,6 +199,7 @@ const SalesProformaForm = lazyTab(() => import('@/components/forms/sle/SalesProf
 const SalesContractForm = lazyTab(() => import('@/components/forms/sle/SalesContract'), 'SalesContractForm', 'SalesContract');
 // Task 130: فاکتور فروش
 const SalesInvoiceForm = lazyTab(() => import('@/components/forms/sle/SalesInvoice'), 'SalesInvoiceForm', 'SalesInvoice');
+const SalesPermissionForm = lazyTab(() => import('@/components/forms/sle/SalesPermission'), 'SalesPermissionForm', 'SalesPermission');
 
 const WarehouseForm = lazyTab(() => import('@/components/forms/inv/Warehouse'), 'WarehouseForm');
 const ItemAccountCategoryForm = lazyTab(() => import('@/components/forms/inv/ItemAccountCategory'), 'ItemAccountCategoryForm', 'ItemAccountCategory');
@@ -352,6 +353,8 @@ export const TAB_COMPONENTS: Record<string, TabRegistryEntry> = {
   SalesContract: { component: SalesContractForm, getProps: withTabIdAfterProps },
   SalesInvoiceForm: { component: SalesInvoiceForm, getProps: withTabIdAfterProps },
   SalesInvoice: { component: SalesInvoiceForm, getProps: withTabIdAfterProps },
+  SalesPermissionForm: { component: SalesPermissionForm, getProps: withTabIdAfterProps },
+  SalesPermission: { component: SalesPermissionForm, getProps: withTabIdAfterProps },
   SalesTypeForm: { component: SalesTypeForm, getProps: withTabIdAfterProps },
   SalesType: { component: SalesTypeForm, getProps: withTabIdAfterProps },
   DeliveryLocationForm: { component: DeliveryLocationForm, getProps: withTabIdAfterProps },

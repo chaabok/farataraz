@@ -20,13 +20,15 @@ const sales_order_entity_1 = require("../../domain/entities/sales-order.entity")
 const sales_proforma_invoice_entity_1 = require("../../domain/entities/sales-proforma-invoice.entity");
 const sales_contract_entity_1 = require("../../domain/entities/sales-contract.entity");
 const sales_invoice_entity_1 = require("../../domain/entities/sales-invoice.entity");
+const sales_permission_entity_1 = require("../../domain/entities/sales-permission.entity");
 const request_context_service_1 = require("../../../../core/services/request-context.service");
 let SleBaseDocumentService = class SleBaseDocumentService {
-    constructor(orderRepository, proformaRepository, contractRepository, invoiceRepository, requestContextService) {
+    constructor(orderRepository, proformaRepository, contractRepository, invoiceRepository, permissionRepository, requestContextService) {
         this.orderRepository = orderRepository;
         this.proformaRepository = proformaRepository;
         this.contractRepository = contractRepository;
         this.invoiceRepository = invoiceRepository;
+        this.permissionRepository = permissionRepository;
         this.requestContextService = requestContextService;
     }
     getScope() {
@@ -189,6 +191,28 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
             }));
         }
+        if (t === 4) {
+            const qb = this.permissionRepository
+                .createQueryBuilder('spm')
+                .where('spm.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(spm.businessStructureRef = :bsId OR spm.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(spm.companyRef = :compId OR spm.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(spm.FiscalYearRef = :fiscalYearId OR spm.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('spm.CustomerRef = :customerRef', { customerRef });
+            qb.orderBy('spm.PermissionNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesPermissionID),
+                number: d.PermissionNumber,
+                date: d.PermissionDate || '',
+                customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+            }));
+        }
         return [];
     }
     async getBaseDocumentDate(type, id) {
@@ -211,6 +235,10 @@ let SleBaseDocumentService = class SleBaseDocumentService {
         if (t === 5) {
             const doc = await this.invoiceRepository.findOne({ where: { SalesInvoiceID: docId } });
             return doc?.InvoiceDate || '';
+        }
+        if (t === 4) {
+            const doc = await this.permissionRepository.findOne({ where: { SalesPermissionID: docId } });
+            return doc?.PermissionDate || '';
         }
         return '';
     }
@@ -286,7 +314,9 @@ exports.SleBaseDocumentService = SleBaseDocumentService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(sales_proforma_invoice_entity_1.SalesProformaInvoice)),
     __param(2, (0, typeorm_1.InjectRepository)(sales_contract_entity_1.SalesContract)),
     __param(3, (0, typeorm_1.InjectRepository)(sales_invoice_entity_1.SalesInvoice)),
+    __param(4, (0, typeorm_1.InjectRepository)(sales_permission_entity_1.SalesPermission)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

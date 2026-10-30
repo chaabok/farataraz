@@ -79,6 +79,12 @@ import { SalesInvoiceItem } from './domain/entities/sales-invoice-item.entity';
 import { SalesInvoiceFactor } from './domain/entities/sales-invoice-factor.entity';
 import { SalesInvoiceController } from './presentation/controllers/sales-invoice.controller';
 import { SalesInvoiceService } from './application/services/sales-invoice.service';
+// Task 133: مجوز فروش
+import { SalesPermission } from './domain/entities/sales-permission.entity';
+import { SalesPermissionItem } from './domain/entities/sales-permission-item.entity';
+import { SalesPermissionFactor } from './domain/entities/sales-permission-factor.entity';
+import { SalesPermissionController } from './presentation/controllers/sales-permission.controller';
+import { SalesPermissionService } from './application/services/sales-permission.service';
 // Task 93: سند مبنا فرم‌های فروش
 import { SleBaseDocumentController } from './presentation/controllers/base-document.controller';
 import { SleBaseDocumentService } from './application/services/base-document.service';
@@ -115,6 +121,10 @@ import { CommonModule } from '../common/common.module';
       SalesInvoice,
       SalesInvoiceItem,
       SalesInvoiceFactor,
+      // Task 133: مجوز فروش
+      SalesPermission,
+      SalesPermissionItem,
+      SalesPermissionFactor,
     ]),
     CoreModule,
     CommonModule,
@@ -138,6 +148,8 @@ import { CommonModule } from '../common/common.module';
     SalesContractController,
     // Task 130: فاکتور فروش
     SalesInvoiceController,
+    // Task 133: مجوز فروش
+    SalesPermissionController,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentController,
   ],
@@ -204,6 +216,8 @@ import { CommonModule } from '../common/common.module';
     SalesContractService,
     // Task 130: فاکتور فروش
     SalesInvoiceService,
+    // Task 133: مجوز فروش
+    SalesPermissionService,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentService,
   ],
@@ -226,6 +240,8 @@ import { CommonModule } from '../common/common.module';
     SalesContractService,
     // Task 130: فاکتور فروش
     SalesInvoiceService,
+    // Task 133: مجوز فروش
+    SalesPermissionService,
   ],
 })
 export class SleModule {}
