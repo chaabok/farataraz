@@ -877,6 +877,12 @@ exports.SIDEBAR_STRUCTURE = [
                                 title: "مجوز فروش",
                                 componentName: "SalesPermissionForm",
                                 path: "/forms/sle/sales-permission-new"
+                            },
+                            {
+                                id: "SalesReturnPermissionForm",
+                                title: "مجوز برگشت از فروش",
+                                componentName: "SalesReturnPermissionForm",
+                                path: "/forms/sle/sales-return-permission-new"
                             }
                         ]
                     },

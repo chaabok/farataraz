@@ -327,6 +327,13 @@ const tabsConfig: TabConfig[] = [
         defaultValue: 'true'
       },
       {
+        // Task 139: «نمایش قیمت در مجوز برگشت از فروش» — مشابه مجوز فروش
+        key: 'showPriceInSalesReturnPermission',
+        label: 'نمایش قیمت در مجوز برگشت از فروش',
+        type: 'checkbox-right-label',
+        defaultValue: 'true'
+      },
+      {
         key: 'showTrackingFactorInSalesDocumentsGroup',
         label: 'نمایش عامل ردیابی در اسناد فروش',
         type: 'group',

@@ -6,6 +6,7 @@ import { SalesProformaInvoice } from '../../domain/entities/sales-proforma-invoi
 import { SalesContract } from '../../domain/entities/sales-contract.entity';
 import { SalesInvoice } from '../../domain/entities/sales-invoice.entity';
 import { SalesPermission } from '../../domain/entities/sales-permission.entity';
+import { SalesReturnPermission } from '../../domain/entities/sales-return-permission.entity';
 import { RequestContextService } from '../../../../core/services/request-context.service';
 
 /**
@@ -42,6 +43,9 @@ export class SleBaseDocumentService {
     // Task 133: مجوز فروش — قابل انتخاب به‌عنوان سند مبنا
     @InjectRepository(SalesPermission)
     private readonly permissionRepository: Repository<SalesPermission>,
+    // Task 139: مجوز برگشت از فروش — قابل انتخاب به‌عنوان سند مبنا
+    @InjectRepository(SalesReturnPermission)
+    private readonly returnPermissionRepository: Repository<SalesReturnPermission>,
     private readonly requestContextService: RequestContextService,
   ) {}
 
@@ -256,7 +260,28 @@ export class SleBaseDocumentService {
       }));
     }
 
-    // سایر انواع (مجوز برگشت، فاکتور برگشت،
+    // مجوز برگشت از فروش (6) — Task 139
+    if (t === 6) {
+      const qb = this.returnPermissionRepository
+        .createQueryBuilder('srp')
+        .where('srp.Status IN (4, 5)'); // بازبینی‌شده (4) و تاییدشده (5)
+      if (bsId && bsId > 1) qb.andWhere('(srp.businessStructureRef = :bsId OR srp.businessStructureRef IS NULL)', { bsId });
+      if (compId && compId > 1) qb.andWhere('(srp.companyRef = :compId OR srp.companyRef IS NULL)', { compId });
+      if (fiscalYearId) qb.andWhere('(srp.FiscalYearRef = :fiscalYearId OR srp.FiscalYearRef IS NULL)', { fiscalYearId });
+      // Task 131: فقط اسناد فروش با همان مشتری انتخاب‌شده در فیلد «مشتری» فرم
+      if (customerRef) qb.andWhere('srp.CustomerRef = :customerRef', { customerRef });
+      qb.orderBy('srp.PermissionNumber', 'DESC');
+      const docs = await qb.getMany();
+      return docs.map((d) => ({
+        id: Number(d.SalesReturnPermissionID),
+        number: d.PermissionNumber,
+        date: d.PermissionDate || '',
+        customer: d.CustomerName || '',
+        customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+      }));
+    }
+
+    // سایر انواع (فاکتور برگشت،
     // رسید انبار و حواله انبار) فعلاً فهرستی ندارند — خروجی خالی
     return [];
   }
@@ -291,6 +316,10 @@ export class SleBaseDocumentService {
     }
     if (t === 4) {
       const doc = await this.permissionRepository.findOne({ where: { SalesPermissionID: docId as any } });
+      return doc?.PermissionDate || '';
+    }
+    if (t === 6) {
+      const doc = await this.returnPermissionRepository.findOne({ where: { SalesReturnPermissionID: docId as any } });
       return doc?.PermissionDate || '';
     }
     return '';
@@ -333,6 +362,16 @@ export class SleBaseDocumentService {
       );
     }
 
+    // مجوز برگشت از فروش (6) — Task 139
+    if (t === 6) {
+      const doc = await this.returnPermissionRepository.findOne({
+        where: { SalesReturnPermissionID: docId as any },
+        relations: ['items', 'factors'],
+      });
+      if (!doc) return null;
+      return this.normalizeBaseDetail(doc, doc.PermissionNumber, doc.PermissionDate, doc.items, doc.factors);
+    }
+
     return null;
   }
 
@@ -345,7 +384,7 @@ export class SleBaseDocumentService {
     factors: any[] | undefined,
   ) {
     return {
-      id: Number(header.SalesOrderID ?? header.SalesProformaID),
+      id: Number(header.SalesOrderID ?? header.SalesProformaID ?? header.SalesContractID ?? header.SalesInvoiceID ?? header.SalesPermissionID ?? header.SalesReturnPermissionID),
       number: number ?? null,
       date: date || '',
       customer: header.CustomerName || '',

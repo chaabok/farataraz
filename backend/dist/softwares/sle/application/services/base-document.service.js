@@ -21,14 +21,16 @@ const sales_proforma_invoice_entity_1 = require("../../domain/entities/sales-pro
 const sales_contract_entity_1 = require("../../domain/entities/sales-contract.entity");
 const sales_invoice_entity_1 = require("../../domain/entities/sales-invoice.entity");
 const sales_permission_entity_1 = require("../../domain/entities/sales-permission.entity");
+const sales_return_permission_entity_1 = require("../../domain/entities/sales-return-permission.entity");
 const request_context_service_1 = require("../../../../core/services/request-context.service");
 let SleBaseDocumentService = class SleBaseDocumentService {
-    constructor(orderRepository, proformaRepository, contractRepository, invoiceRepository, permissionRepository, requestContextService) {
+    constructor(orderRepository, proformaRepository, contractRepository, invoiceRepository, permissionRepository, returnPermissionRepository, requestContextService) {
         this.orderRepository = orderRepository;
         this.proformaRepository = proformaRepository;
         this.contractRepository = contractRepository;
         this.invoiceRepository = invoiceRepository;
         this.permissionRepository = permissionRepository;
+        this.returnPermissionRepository = returnPermissionRepository;
         this.requestContextService = requestContextService;
     }
     getScope() {
@@ -213,6 +215,28 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
             }));
         }
+        if (t === 6) {
+            const qb = this.returnPermissionRepository
+                .createQueryBuilder('srp')
+                .where('srp.Status IN (4, 5)');
+            if (bsId && bsId > 1)
+                qb.andWhere('(srp.businessStructureRef = :bsId OR srp.businessStructureRef IS NULL)', { bsId });
+            if (compId && compId > 1)
+                qb.andWhere('(srp.companyRef = :compId OR srp.companyRef IS NULL)', { compId });
+            if (fiscalYearId)
+                qb.andWhere('(srp.FiscalYearRef = :fiscalYearId OR srp.FiscalYearRef IS NULL)', { fiscalYearId });
+            if (customerRef)
+                qb.andWhere('srp.CustomerRef = :customerRef', { customerRef });
+            qb.orderBy('srp.PermissionNumber', 'DESC');
+            const docs = await qb.getMany();
+            return docs.map((d) => ({
+                id: Number(d.SalesReturnPermissionID),
+                number: d.PermissionNumber,
+                date: d.PermissionDate || '',
+                customer: d.CustomerName || '',
+                customerRef: d.CustomerRef != null ? Number(d.CustomerRef) : null,
+            }));
+        }
         return [];
     }
     async getBaseDocumentDate(type, id) {
@@ -240,6 +264,10 @@ let SleBaseDocumentService = class SleBaseDocumentService {
             const doc = await this.permissionRepository.findOne({ where: { SalesPermissionID: docId } });
             return doc?.PermissionDate || '';
         }
+        if (t === 6) {
+            const doc = await this.returnPermissionRepository.findOne({ where: { SalesReturnPermissionID: docId } });
+            return doc?.PermissionDate || '';
+        }
         return '';
     }
     async getBaseDocumentDetail(type, id) {
@@ -265,11 +293,20 @@ let SleBaseDocumentService = class SleBaseDocumentService {
                 return null;
             return this.normalizeBaseDetail(doc, doc.ProformaNumber, doc.ProformaDate, doc.items, doc.factors);
         }
+        if (t === 6) {
+            const doc = await this.returnPermissionRepository.findOne({
+                where: { SalesReturnPermissionID: docId },
+                relations: ['items', 'factors'],
+            });
+            if (!doc)
+                return null;
+            return this.normalizeBaseDetail(doc, doc.PermissionNumber, doc.PermissionDate, doc.items, doc.factors);
+        }
         return null;
     }
     normalizeBaseDetail(header, number, date, items, factors) {
         return {
-            id: Number(header.SalesOrderID ?? header.SalesProformaID),
+            id: Number(header.SalesOrderID ?? header.SalesProformaID ?? header.SalesContractID ?? header.SalesInvoiceID ?? header.SalesPermissionID ?? header.SalesReturnPermissionID),
             number: number ?? null,
             date: date || '',
             customer: header.CustomerName || '',
@@ -315,7 +352,9 @@ exports.SleBaseDocumentService = SleBaseDocumentService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(sales_contract_entity_1.SalesContract)),
     __param(3, (0, typeorm_1.InjectRepository)(sales_invoice_entity_1.SalesInvoice)),
     __param(4, (0, typeorm_1.InjectRepository)(sales_permission_entity_1.SalesPermission)),
+    __param(5, (0, typeorm_1.InjectRepository)(sales_return_permission_entity_1.SalesReturnPermission)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

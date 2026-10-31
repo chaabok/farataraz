@@ -90,6 +90,11 @@ const sales_permission_item_entity_1 = require("./domain/entities/sales-permissi
 const sales_permission_factor_entity_1 = require("./domain/entities/sales-permission-factor.entity");
 const sales_permission_controller_1 = require("./presentation/controllers/sales-permission.controller");
 const sales_permission_service_1 = require("./application/services/sales-permission.service");
+const sales_return_permission_entity_1 = require("./domain/entities/sales-return-permission.entity");
+const sales_return_permission_item_entity_1 = require("./domain/entities/sales-return-permission-item.entity");
+const sales_return_permission_factor_entity_1 = require("./domain/entities/sales-return-permission-factor.entity");
+const sales_return_permission_controller_1 = require("./presentation/controllers/sales-return-permission.controller");
+const sales_return_permission_service_1 = require("./application/services/sales-return-permission.service");
 const base_document_controller_1 = require("./presentation/controllers/base-document.controller");
 const base_document_service_1 = require("./application/services/base-document.service");
 const core_module_1 = require("../../core/core.module");
@@ -128,6 +133,9 @@ exports.SleModule = SleModule = __decorate([
                 sales_permission_entity_1.SalesPermission,
                 sales_permission_item_entity_1.SalesPermissionItem,
                 sales_permission_factor_entity_1.SalesPermissionFactor,
+                sales_return_permission_entity_1.SalesReturnPermission,
+                sales_return_permission_item_entity_1.SalesReturnPermissionItem,
+                sales_return_permission_factor_entity_1.SalesReturnPermissionFactor,
             ]),
             core_module_1.CoreModule,
             common_module_1.CommonModule,
@@ -149,6 +157,7 @@ exports.SleModule = SleModule = __decorate([
             sales_contract_controller_1.SalesContractController,
             sales_invoice_controller_1.SalesInvoiceController,
             sales_permission_controller_1.SalesPermissionController,
+            sales_return_permission_controller_1.SalesReturnPermissionController,
             base_document_controller_1.SleBaseDocumentController,
         ],
         providers: [
@@ -212,6 +221,7 @@ exports.SleModule = SleModule = __decorate([
             sales_contract_service_1.SalesContractService,
             sales_invoice_service_1.SalesInvoiceService,
             sales_permission_service_1.SalesPermissionService,
+            sales_return_permission_service_1.SalesReturnPermissionService,
             base_document_service_1.SleBaseDocumentService,
         ],
         exports: [
@@ -231,6 +241,7 @@ exports.SleModule = SleModule = __decorate([
             sales_contract_service_1.SalesContractService,
             sales_invoice_service_1.SalesInvoiceService,
             sales_permission_service_1.SalesPermissionService,
+            sales_return_permission_service_1.SalesReturnPermissionService,
         ],
     })
 ], SleModule);

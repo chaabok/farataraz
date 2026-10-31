@@ -85,6 +85,12 @@ import { SalesPermissionItem } from './domain/entities/sales-permission-item.ent
 import { SalesPermissionFactor } from './domain/entities/sales-permission-factor.entity';
 import { SalesPermissionController } from './presentation/controllers/sales-permission.controller';
 import { SalesPermissionService } from './application/services/sales-permission.service';
+// Task 139: مجوز برگشت از فروش
+import { SalesReturnPermission } from './domain/entities/sales-return-permission.entity';
+import { SalesReturnPermissionItem } from './domain/entities/sales-return-permission-item.entity';
+import { SalesReturnPermissionFactor } from './domain/entities/sales-return-permission-factor.entity';
+import { SalesReturnPermissionController } from './presentation/controllers/sales-return-permission.controller';
+import { SalesReturnPermissionService } from './application/services/sales-return-permission.service';
 // Task 93: سند مبنا فرم‌های فروش
 import { SleBaseDocumentController } from './presentation/controllers/base-document.controller';
 import { SleBaseDocumentService } from './application/services/base-document.service';
@@ -125,6 +131,10 @@ import { CommonModule } from '../common/common.module';
       SalesPermission,
       SalesPermissionItem,
       SalesPermissionFactor,
+      // Task 139: مجوز برگشت از فروش
+      SalesReturnPermission,
+      SalesReturnPermissionItem,
+      SalesReturnPermissionFactor,
     ]),
     CoreModule,
     CommonModule,
@@ -150,6 +160,7 @@ import { CommonModule } from '../common/common.module';
     SalesInvoiceController,
     // Task 133: مجوز فروش
     SalesPermissionController,
+    SalesReturnPermissionController,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentController,
   ],
@@ -218,6 +229,8 @@ import { CommonModule } from '../common/common.module';
     SalesInvoiceService,
     // Task 133: مجوز فروش
     SalesPermissionService,
+    // Task 139: مجوز برگشت از فروش
+    SalesReturnPermissionService,
     // Task 93: سند مبنا فرم‌های فروش
     SleBaseDocumentService,
   ],
@@ -242,6 +255,8 @@ import { CommonModule } from '../common/common.module';
     SalesInvoiceService,
     // Task 133: مجوز فروش
     SalesPermissionService,
+    // Task 139: مجوز برگشت از فروش
+    SalesReturnPermissionService,
   ],
 })
 export class SleModule {}

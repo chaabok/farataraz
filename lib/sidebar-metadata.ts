@@ -516,7 +516,9 @@ export const SIDEBAR_STRUCTURE: SidebarGroup[] = [
               // Task 128: قرارداد فروش — فرم مشابه پیش فاکتور فروش + «تاریخ قرارداد» و «موضوع قرارداد»
               { id: 'SalesContractForm', title: 'قرارداد فروش', icon: Plus, componentName: 'SalesContractForm', path: '/forms/sle/sales-contract-new' },
               // Task 133: مجوز فروش — فرم مشابه پیش فاکتور فروش بدون «تاریخ اعتبار» + تنظیمات اسناد فروش نوع ۴
-              { id: 'SalesPermissionForm', title: 'مجوز فروش', icon: Plus, componentName: 'SalesPermissionForm', path: '/forms/sle/sales-permission-new' }
+              { id: 'SalesPermissionForm', title: 'مجوز فروش', icon: Plus, componentName: 'SalesPermissionForm', path: '/forms/sle/sales-permission-new' },
+              // Task 139: مجوز برگشت از فروش — کلون مجوز فروش + تنظیمات اسناد فروش نوع ۶
+              { id: 'SalesReturnPermissionForm', title: 'مجوز برگشت از فروش', icon: Plus, componentName: 'SalesReturnPermissionForm', path: '/forms/sle/sales-return-permission-new' }
             ]
           },
           {
