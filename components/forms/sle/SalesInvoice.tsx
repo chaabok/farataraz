@@ -1096,6 +1096,22 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
     }
   };
 
+  // Task 137-2: مشاهده خروج انبار مرتبط با فاکتور فروش — باز شدن فرم حواله انبار در تب بار
+  const handleViewWarehouseExit = () => {
+    if (!linkedIssue) {
+      showToast("برای این فاکتور فروش هنوز خروج انباری صادر نشده است", "info");
+      return;
+    }
+    addTab({
+      id: `WarehouseIssue-${linkedIssue.id}`,
+      title: `حواله انبار (${linkedIssue.number || linkedIssue.id})`,
+      groupId: "warehouse_group",
+      componentName: "WarehouseIssueForm",
+      props: { id: linkedIssue.id },
+      closable: true,
+    });
+  };
+
   // Task 67: محاسبات مالی فوتر (جمع اقلام + اضافات/کسورات عوامل) — همانند فرم رسید انبار
   const totalItemsGross = (values.items || []).reduce((sum: number, item: any) => sum + (Number(item.TotalPrice) || 0), 0);
   const totalFactorAdditions = (values.factors || [])

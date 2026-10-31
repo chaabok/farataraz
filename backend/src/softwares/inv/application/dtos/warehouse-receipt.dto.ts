@@ -114,6 +114,10 @@ export class CreateWarehouseReceiptDto {
   @IsOptional()
   PurchaseInvoiceRef?: any;
 
+  // Task 136: فاکتور فروش مبنا — پیوند حواله انبار با Sle.SalesInvoices
+  @IsOptional()
+  SalesInvoiceRef?: any;
+
   @IsOptional()
   SupplierRef?: any;
 

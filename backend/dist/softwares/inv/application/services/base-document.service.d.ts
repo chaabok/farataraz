@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PurchaseInvoice } from '../../domain/entities/purchase-invoice.entity';
 import { PurchaseInvoiceDetail } from '../../domain/entities/purchase-invoice-detail.entity';
 import { PurchaseInvoiceFactor } from '../../domain/entities/purchase-invoice-factor.entity';
@@ -27,8 +27,11 @@ export declare class BaseDocumentService {
     private readonly wrRepository;
     private readonly wrDetailRepository;
     private readonly wrFactorRepository;
+    private readonly dataSource;
     private readonly requestContextService;
-    constructor(piRepository: Repository<PurchaseInvoice>, piDetailRepository: Repository<PurchaseInvoiceDetail>, piFactorRepository: Repository<PurchaseInvoiceFactor>, trRepository: Repository<TemporaryItemReceipt>, trDetailRepository: Repository<TemporaryItemReceiptDetail>, trFactorRepository: Repository<TemporaryItemReceiptFactor>, srRepository: Repository<ItemSupplyRequest>, srDetailRepository: Repository<ItemSupplyRequestDetail>, irRepository: Repository<ItemRequest>, irDetailRepository: Repository<ItemRequestDetail>, wrRepository: Repository<WarehouseReceipt>, wrDetailRepository: Repository<WarehouseReceiptDetail>, wrFactorRepository: Repository<WarehouseReceiptFactor>, requestContextService: RequestContextService);
+    constructor(piRepository: Repository<PurchaseInvoice>, piDetailRepository: Repository<PurchaseInvoiceDetail>, piFactorRepository: Repository<PurchaseInvoiceFactor>, trRepository: Repository<TemporaryItemReceipt>, trDetailRepository: Repository<TemporaryItemReceiptDetail>, trFactorRepository: Repository<TemporaryItemReceiptFactor>, srRepository: Repository<ItemSupplyRequest>, srDetailRepository: Repository<ItemSupplyRequestDetail>, irRepository: Repository<ItemRequest>, irDetailRepository: Repository<ItemRequestDetail>, wrRepository: Repository<WarehouseReceipt>, wrDetailRepository: Repository<WarehouseReceiptDetail>, wrFactorRepository: Repository<WarehouseReceiptFactor>, dataSource: DataSource, requestContextService: RequestContextService);
+    private getSleSalesInvoiceUsedQuantities;
+    private getSleSalesInvoiceDetailsById;
     private getScope;
     private getUsedQuantities;
     getAvailableBaseDocuments(docType: string, targetDocType?: string): Promise<any[]>;

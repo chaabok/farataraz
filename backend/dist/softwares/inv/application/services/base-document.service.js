@@ -45,7 +45,7 @@ function isStatusApprovedOrReviewed(status) {
         str.includes('تایید شده'));
 }
 let BaseDocumentService = class BaseDocumentService {
-    constructor(piRepository, piDetailRepository, piFactorRepository, trRepository, trDetailRepository, trFactorRepository, srRepository, srDetailRepository, irRepository, irDetailRepository, wrRepository, wrDetailRepository, wrFactorRepository, requestContextService) {
+    constructor(piRepository, piDetailRepository, piFactorRepository, trRepository, trDetailRepository, trFactorRepository, srRepository, srDetailRepository, irRepository, irDetailRepository, wrRepository, wrDetailRepository, wrFactorRepository, dataSource, requestContextService) {
         this.piRepository = piRepository;
         this.piDetailRepository = piDetailRepository;
         this.piFactorRepository = piFactorRepository;
@@ -59,7 +59,44 @@ let BaseDocumentService = class BaseDocumentService {
         this.wrRepository = wrRepository;
         this.wrDetailRepository = wrDetailRepository;
         this.wrFactorRepository = wrFactorRepository;
+        this.dataSource = dataSource;
         this.requestContextService = requestContextService;
+    }
+    async getSleSalesInvoiceUsedQuantities(invoiceId, currentDocId) {
+        const usedMap = {};
+        try {
+            const params = [invoiceId];
+            let excludeSql = '';
+            if (currentDocId && Number(currentDocId) > 0) {
+                params.push(Number(currentDocId));
+                excludeSql = ` AND h."WarehouseReceiptID" != $${params.length}`;
+            }
+            const rows = await this.dataSource.query(`SELECT d."ItemRef" AS "itemRef", COALESCE(SUM(d."Quantity"), 0) AS "totalQty"
+         FROM "Inv"."WarehouseVouchersDetails" d
+         INNER JOIN "Inv"."WarehouseVouchers" h ON d."WarehouseReceiptRef" = h."WarehouseReceiptID"
+         WHERE h."SalesInvoiceRef" = $1${excludeSql}
+         GROUP BY d."ItemRef"`, params);
+            for (const r of rows || []) {
+                const itemRef = Number(r.itemRef);
+                if (!itemRef)
+                    continue;
+                usedMap[itemRef] = (usedMap[itemRef] || 0) + Number(r.totalQty || 0);
+            }
+        }
+        catch {
+        }
+        return usedMap;
+    }
+    async getSleSalesInvoiceDetailsById(id) {
+        const numId = Number(id);
+        if (!numId || !Number.isFinite(numId))
+            return null;
+        const headers = await this.dataSource.query(`SELECT * FROM "Sle"."SalesInvoices" WHERE "SalesInvoiceID" = $1 LIMIT 1`, [numId]);
+        const doc = headers && headers[0];
+        if (!doc)
+            return null;
+        const details = await this.dataSource.query(`SELECT * FROM "Sle"."SalesInvoiceItems" WHERE "SalesInvoiceRef" = $1 ORDER BY "RowNo" ASC`, [numId]);
+        return { doc, details: details || [] };
     }
     getScope() {
         let bsId = this.requestContextService.getBusinessStructureId() ?? 2;
@@ -567,6 +604,49 @@ let BaseDocumentService = class BaseDocumentService {
                 })),
             };
         }
+        if (docType === 'SleSalesInvoice') {
+            const found = await this.getSleSalesInvoiceDetailsById(numId);
+            if (!found)
+                throw new common_1.NotFoundException(`فاکتور فروش ${id} یافت نشد`);
+            const { doc, details } = found;
+            const usedMap = await this.getSleSalesInvoiceUsedQuantities(numId, currentDocId);
+            const mappedItems = details.map((det) => {
+                const origQty = Number(det.Quantity || 0);
+                const itemRef = Number(det.ItemRef || 0);
+                const usedQty = usedMap[itemRef] || 0;
+                const remainingQty = Math.max(0, origQty - usedQty);
+                const qtyToUse = remainingQty > 0 ? remainingQty : origQty;
+                return {
+                    ItemRef: itemRef,
+                    ItemCode: det.ItemCode ? String(det.ItemCode) : '',
+                    ItemName: det.ItemName || '',
+                    UnitName: det.UnitName || 'عدد',
+                    UnitType: 1,
+                    originalQuantity: origQty,
+                    usedQuantity: usedQty,
+                    remainingQuantity: remainingQty,
+                    maxQuantity: qtyToUse,
+                    Quantity: qtyToUse,
+                    UnitPrice: 0,
+                    Discount: 0,
+                    Description: det.Description || '',
+                    TrackingFactorValues: det.TrackingFactorValues || null,
+                    trackingFactorValues: det.TrackingFactorValues || null,
+                };
+            });
+            return {
+                id: Number(doc.SalesInvoiceID),
+                docType,
+                InvoiceNumber: doc.InvoiceNumber,
+                InvoiceDate: doc.InvoiceDate,
+                CustomerRef: doc.CustomerRef,
+                CustomerName: doc.CustomerName,
+                CurrencyRef: doc.CurrencyRef || 1,
+                Description: doc.Description,
+                items: mappedItems,
+                factors: [],
+            };
+        }
         if (docType === 'TemporaryItemReceipt') {
             const tr = await this.trRepository.findOne({
                 where: [{ TemporaryItemReceiptID: numId }, { ReceiptNumber: numId }],
@@ -721,6 +801,10 @@ let BaseDocumentService = class BaseDocumentService {
             });
             return iso(doc?.InvoiceDate);
         }
+        if (docType === 'SleSalesInvoice') {
+            const rows = await this.dataSource.query(`SELECT "InvoiceDate" FROM "Sle"."SalesInvoices" WHERE "SalesInvoiceID" = $1 LIMIT 1`, [numId]);
+            return iso(rows && rows[0] ? rows[0].InvoiceDate : '');
+        }
         if (docType === 'TemporaryItemReceipt') {
             const doc = await this.trRepository.findOne({
                 where: [{ TemporaryItemReceiptID: numId }, { ReceiptNumber: numId }],
@@ -771,6 +855,7 @@ exports.BaseDocumentService = BaseDocumentService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
+        typeorm_2.DataSource,
         request_context_service_1.RequestContextService])
 ], BaseDocumentService);
 //# sourceMappingURL=base-document.service.js.map

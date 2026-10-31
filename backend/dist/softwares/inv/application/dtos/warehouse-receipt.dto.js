@@ -162,6 +162,10 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
+], CreateWarehouseReceiptDto.prototype, "SalesInvoiceRef", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
 ], CreateWarehouseReceiptDto.prototype, "SupplierRef", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

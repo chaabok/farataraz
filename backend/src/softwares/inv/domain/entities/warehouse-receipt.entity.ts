@@ -29,6 +29,10 @@ export class WarehouseReceipt extends AppBaseEntity {
   @Column({ type: 'bigint', nullable: true })
   PurchaseInvoiceRef?: number;
 
+  // Task 136: فاکتور فروش مبنا — پیوند حواله انبار با Sle.SalesInvoices
+  @Column({ type: 'bigint', nullable: true })
+  SalesInvoiceRef?: number;
+
   @Column({ type: 'bigint', nullable: true })
   SupplierRef?: number;
 

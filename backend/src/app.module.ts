@@ -442,6 +442,29 @@ import { GatewayModule } from './gateway/gateway.module';
               }
 
               // -----------------------------------------------------------------
+              // Task 136: پیوند حواله انبار با فاکتور فروش — ستون SalesInvoiceRef
+              // در Inv.WarehouseVouchers + کلید خارجی به Sle.SalesInvoices
+              // (idempotent — فقط در صورت نبود ستون/Constraint)
+              // -----------------------------------------------------------------
+              try {
+                await client.query(`
+                  ALTER TABLE "Inv"."WarehouseVouchers" ADD COLUMN IF NOT EXISTS "SalesInvoiceRef" bigint;
+                  DO $$
+                  BEGIN
+                    IF NOT EXISTS (
+                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_WarehouseVouchers_SalesInvoice'
+                    ) THEN
+                      ALTER TABLE "Inv"."WarehouseVouchers" ADD CONSTRAINT "FK_WarehouseVouchers_SalesInvoice"
+                        FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID");
+                    END IF;
+                  END $$;
+                `);
+                console.log('[Task136] WarehouseVouchers.SalesInvoiceRef column + FK ensured.');
+              } catch (issueLinkErr: any) {
+                console.warn('[Task136] Could not ensure WarehouseVouchers.SalesInvoiceRef:', issueLinkErr.message);
+              }
+
+              // -----------------------------------------------------------------
               // Task 133: جداول مجوز فروش — ساخت idempotent (فقط اگر وجود نداشته باشند)
               // کلون جداول فاکتور فروش (بدون فیلد «تاریخ اعتبار»)
               // -----------------------------------------------------------------

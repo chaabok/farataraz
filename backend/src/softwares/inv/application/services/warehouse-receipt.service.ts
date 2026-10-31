@@ -182,6 +182,7 @@ export class WarehouseReceiptService {
       TemporaryReceiptRef: this.parseRef(dto.TemporaryReceiptRef),
       SupplyRequestRef: this.parseRef(dto.SupplyRequestRef),
       PurchaseInvoiceRef: this.parseRef(dto.PurchaseInvoiceRef),
+      SalesInvoiceRef: this.parseRef(dto.SalesInvoiceRef), // Task 136: فاکتور فروش مبنا
       SupplierRef: this.parseRef(dto.SupplierRef),
       SupplierName: dto.SupplierName || undefined,
       ReceiptNumber: receiptNum,
@@ -312,6 +313,11 @@ export class WarehouseReceiptService {
 
     if (query?.ReceiptNumber) {
       qb.andWhere('wr.ReceiptNumber = :num', { num: query.ReceiptNumber });
+    }
+
+    // Task 136: یافتن حواله انبار صادرشده برای یک فاکتور فروش مشخص
+    if (query?.salesInvoiceRef) {
+      qb.andWhere('wr.SalesInvoiceRef = :salesInvoiceRef', { salesInvoiceRef: Number(query.salesInvoiceRef) });
     }
 
     if (query?.nature !== undefined && query?.nature !== null && query?.nature !== '') {
@@ -449,6 +455,7 @@ export class WarehouseReceiptService {
     record.TemporaryReceiptRef = this.parseRef(dto.TemporaryReceiptRef) ?? record.TemporaryReceiptRef;
     record.SupplyRequestRef = this.parseRef(dto.SupplyRequestRef) ?? record.SupplyRequestRef;
     record.PurchaseInvoiceRef = this.parseRef(dto.PurchaseInvoiceRef) ?? record.PurchaseInvoiceRef;
+    record.SalesInvoiceRef = this.parseRef(dto.SalesInvoiceRef) ?? record.SalesInvoiceRef; // Task 136
     record.SupplierRef = this.parseRef(dto.SupplierRef) ?? record.SupplierRef;
     record.SupplierName = dto.SupplierName !== undefined ? dto.SupplierName : record.SupplierName;
     record.ReceiptNumber = dto.ReceiptNumber ? Number(dto.ReceiptNumber) : record.ReceiptNumber;

@@ -487,6 +487,13 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             });
 
             const bType = data.BaseType ? Number(data.BaseType) : WarehouseIssueBaseType.None;
+            // Task 137-3: ثبت مقدار اصلی هر ردیف فاکتور فروش برای کنترل «مقدار مساوی یا کمتر»
+            originalInvoiceQtyRef.current = new Map(
+              (Array.isArray(data.details) ? data.details : []).map((d: any, idx: number) => [
+                idx,
+                Number(d.Quantity || 0),
+              ])
+            );
             const bRef = bType === WarehouseIssueBaseType.ItemRequest ? data.ItemRequestRef
               : bType === WarehouseIssueBaseType.SalesInvoice ? data.SalesInvoiceRef
               : bType === WarehouseIssueBaseType.SupplyRequest ? data.SupplyRequestRef
@@ -520,6 +527,8 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
         })
         .catch((err) => console.error("Error loading warehouse issue:", err));
     } else {
+      // Task 137-3: فرم جدید — سقف مقادیر فاکتور فروش قبلی پاک می‌شود
+      originalInvoiceQtyRef.current = new Map();
       apiFetch("/api/inv/warehouse-issues/next-number")
         .then((res) => (res.ok ? res.json() : apiFetch("/api/inv/warehouse-issue/next-number").then((r) => r.json())))
         .then((data) => {
@@ -689,17 +698,17 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       })
       .catch((err) => console.error("Error fetching item requests:", err));
 
-    // Sales Invoices
-    apiFetch("/api/inv/purchase-invoices")
+    // Sales Invoices — Task 137-1: فاکتور فروش ماژول فروش (Sle.SalesInvoices) به‌جای فاکتور خرید
+    apiFetch("/api/sle/sales-invoices")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
-        const list = Array.isArray(data) ? data : data?.data || [];
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
         setSalesInvoices(
-          list
+          (Array.isArray(list) ? list : [])
             .filter((inv: any) => isStatusApprovedOrReviewed(inv.Status || inv.status))
             .map((inv: any) => ({
-              id: Number(inv.PurchaseInvoiceID || inv.id),
-              code: String(inv.InvoiceNumber || inv.code || inv.PurchaseInvoiceID || inv.id),
+              id: Number(inv.SalesInvoiceID || inv.id),
+              code: String(inv.InvoiceNumber || inv.code || inv.SalesInvoiceID || inv.id),
               title: `فاکتور ${inv.InvoiceNumber || ""} - ${inv.InvoiceDate || ""}`,
               date: inv.InvoiceDate || "", // Task 132: تاریخ سند مبنا
             }))
@@ -890,6 +899,19 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       String(st).includes("تایید شده")
     );
   }, [values.Status]);
+
+  // Task 137-3: حواله صادرشده بر مبنای فاکتور فروش — وضعیت «تایید شده» و اطلاعات
+  // فقط‌خواندنی است؛ کاربر فقط می‌تواند «مقدار» را مساوی یا کمتر از مقدار فاکتور
+  // فروش کند (خروج جزئی). فی/مبلغ هم بعداً از فرم قیمت‌گذاری اسناد انبار تکمیل می‌شود.
+  const isInvoiceBasedIssue = React.useMemo(
+    () =>
+      Boolean(values.WarehouseIssueID) &&
+      Number(values.BaseType) === WarehouseIssueBaseType.SalesInvoice &&
+      !!values.SalesInvoiceRef,
+    [values.WarehouseIssueID, values.BaseType, values.SalesInvoiceRef]
+  );
+  // Task 137-3: مقدار اصلی هر ردیف فاکتور فروش (سقف مجاز مقدار) — هنگام بارگذاری حواله
+  const originalInvoiceQtyRef = React.useRef<Map<number, number>>(new Map());
 
   // Check if all valid items have unit price and total price greater than 0
   const isPriceValidForVoucher = React.useMemo(() => {
@@ -1102,6 +1124,37 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
     return WAREHOUSE_ISSUE_BASE_TYPE_OPTIONS;
   }, [selectedDocType, warehouseDocTypes, isStocktakingBase]);
 
+  // Task 137-1: وقتی حواله انبار ذخیره‌شده با BaseType=فاکتور فروش کالا باز می‌شود،
+  // گزینه «فاکتور فروش کالا» باید در فهرست مبنا حاضر بماند تا مقدار ذخیره‌شده
+  // توسط اثر همگام‌سازی به «بدون مبنا» بازنشانی نشود (حتی اگر تنظیمات نوع سند
+  // انبار اجازه سند مبنا نداشته باشد)
+  const baseTypeDisplayOptions = React.useMemo(() => {
+    const isSavedSalesInvoiceBase =
+      Boolean(values.WarehouseIssueID) &&
+      Number(values.BaseType) === WarehouseIssueBaseType.SalesInvoice &&
+      !!values.SalesInvoiceRef;
+    if (!isSavedSalesInvoiceBase) return availableBaseTypeOptions;
+    if (availableBaseTypeOptions.some((o) => Number(o.value) === WarehouseIssueBaseType.SalesInvoice)) {
+      return availableBaseTypeOptions;
+    }
+    return [
+      ...availableBaseTypeOptions,
+      { id: WarehouseIssueBaseType.SalesInvoice, title: "فاکتور فروش کالا", value: WarehouseIssueBaseType.SalesInvoice, label: "فاکتور فروش کالا" },
+    ];
+  }, [availableBaseTypeOptions, values.BaseType, values.SalesInvoiceRef, values.WarehouseIssueID]);
+
+  // Task 137-1: نمایش فاکتور فروش لینک‌شده در دراپ‌داون «فاکتور فروش» حتی اگر
+  // در فهرست فاکتورهای تاییدشده نباشد (مثلاً وضعیت ثبت اولیه)
+  const salesInvoiceDisplayOptions = React.useMemo(() => {
+    const ref = Number(values.SalesInvoiceRef || 0);
+    if (!ref || salesInvoices.some((o) => Number(o.id) === ref)) return salesInvoices;
+    const baseNo = values.BaseDocumentNumber ? String(values.BaseDocumentNumber) : String(ref);
+    return [
+      ...salesInvoices,
+      { id: ref, code: baseNo, title: `فاکتور ${baseNo}`, date: "" },
+    ];
+  }, [salesInvoices, values.SalesInvoiceRef, values.BaseDocumentNumber]);
+
   // Sync BaseType when selected document type changes
   useEffect(() => {
     if (!selectedDocType) return;
@@ -1112,16 +1165,22 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
       return;
     }
     if (!selectedDocType.HasBaseDocument) {
-      if (Number(values.BaseType) !== WarehouseIssueBaseType.None) {
+      // Task 137-1: حواله ذخیره‌شده با مبنا «فاکتور فروش کالا» نباید به «بدون مبنا» بازنشانی شود
+      const isSavedSalesInvoiceBase =
+        Boolean(values.WarehouseIssueID) &&
+        Number(values.BaseType) === WarehouseIssueBaseType.SalesInvoice &&
+        !!values.SalesInvoiceRef;
+      if (!isSavedSalesInvoiceBase && Number(values.BaseType) !== WarehouseIssueBaseType.None) {
         setValues((prev) => ({ ...prev, BaseType: WarehouseIssueBaseType.None }));
       }
     } else {
-      const validValues = availableBaseTypeOptions.map((opt) => Number(opt.value));
+      // Task 137-1: baseTypeDisplayOptions شامل گزینه مبنا ذخیره‌شده (فاکتور فروش کالا) است
+      const validValues = baseTypeDisplayOptions.map((opt) => Number(opt.value));
       if (!validValues.includes(Number(values.BaseType))) {
-        setValues((prev) => ({ ...prev, BaseType: availableBaseTypeOptions[0]?.value || WarehouseIssueBaseType.None }));
+        setValues((prev) => ({ ...prev, BaseType: baseTypeDisplayOptions[0]?.value || WarehouseIssueBaseType.None }));
       }
     }
-  }, [selectedDocType, availableBaseTypeOptions, isStocktakingBase]);
+  }, [selectedDocType, baseTypeDisplayOptions, isStocktakingBase]);
 
   const isDetailedEnabled = React.useMemo(() => {
     if (!selectedDocType) return true;
@@ -1589,7 +1648,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                     setValues((prev) => ({ ...prev, items: updatedItems }));
                   }}
                   placeholder="شماره مبنا..."
-                  disabled={isUsed || !isHeaderComplete}
+                  disabled={isUsed || !isHeaderComplete || isInvoiceBasedIssue}
                 />
               );
             },
@@ -1614,7 +1673,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             value={selectedObj}
             displayKey="ItemCode"
             placeholder="انتخاب کالا/خدمت..."
-            disabled={isUsed || !isHeaderComplete}
+            disabled={isUsed || !isHeaderComplete || isInvoiceBasedIssue}
             enableMultiSelection={true}
             addFormOptions={[
               { title: "افزودن کالا/خدمت جدید", componentName: "ProductServiceForm", groupId: "inv" }
@@ -1737,7 +1796,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             </span>
             <button
               type="button"
-              disabled={isUsed}
+              disabled={isUsed || isInvoiceBasedIssue}
               onClick={() => {
                 const subUnitsForModal = subUnitsList.map((u: any, idx: number) => ({
                   ItemSubUnitID: u.ItemSubUnitID || u.id || u.MeasurementUnitID || (idx + 1),
@@ -1942,7 +2001,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               factors: finalFactors,
             }));
           }}
-          disabled={isUsed}
+          disabled={isUsed || isInvoiceBasedIssue}
         />
       ),
     },
@@ -2048,7 +2107,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
           }}
           placeholder="انتخاب عنوان عامل..."
-          disabled={isUsed}
+          disabled={isUsed || isInvoiceBasedIssue}
           noWrapper
         />
       ),
@@ -2075,7 +2134,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
 
             setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
           }}
-          disabled={isUsed}
+          disabled={isUsed || isInvoiceBasedIssue}
         />
       ),
     },
@@ -2101,7 +2160,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
 
             setValues((prev) => ({ ...prev, items: finalItems, factors: finalFactors }));
           }}
-          disabled={isUsed}
+          disabled={isUsed || isInvoiceBasedIssue}
         />
       ),
     },
@@ -2120,7 +2179,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             setValues((prev) => ({ ...prev, factors: updatedFactors }));
           }}
           placeholder="توضیحات عامل..."
-          disabled={isUsed}
+          disabled={isUsed || isInvoiceBasedIssue}
         />
       ),
     },
@@ -2199,7 +2258,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   setValues((prev) => ({ ...prev, WarehouseDocumentTypeRef: Number(selected) }));
                 }
               }}
-              disabled={disabled || isUsed}
+              disabled={disabled || isUsed || isInvoiceBasedIssue}
               addFormOptions={[
                 { title: "تعریف نوع سند انبار جدید", componentName: "WarehouseDocumentTypeForm", groupId: "inv" },
               ]}
@@ -2243,7 +2302,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   setValues((prev) => ({ ...prev, DeliverWarehouseRef: Number(selected) }));
                 }
               }}
-              disabled={disabled || isUsed}
+              disabled={disabled || isUsed || isInvoiceBasedIssue}
               addFormOptions={[
                 { title: "تعریف انبار جدید", componentName: "WarehouseForm", groupId: "inv" },
               ]}
@@ -2265,8 +2324,8 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               required
               value={values.BaseType || WarehouseIssueBaseType.None}
               onChange={(val) => handleChange("BaseType", Number(val))}
-              disabled={disabled || isUsed || isStocktakingBase || Boolean(selectedDocType && !selectedDocType.HasBaseDocument)}
-              options={availableBaseTypeOptions}
+              disabled={disabled || isUsed || isInvoiceBasedIssue || isStocktakingBase || Boolean(selectedDocType && !selectedDocType.HasBaseDocument)}
+              options={baseTypeDisplayOptions}
               labelWidth="80px"
             />
           </div>
@@ -2303,7 +2362,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                       setBaseDocItems([]);
                     }
                   }}
-                  disabled={disabled || isUsed || isStocktakingBase}
+                  disabled={disabled || isUsed || isInvoiceBasedIssue || isStocktakingBase}
                 />
               </div>
             </div>
@@ -2314,8 +2373,8 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               <div className="flex-1">
                 <SingleSelectDropDown
                   noWrapper={true}
-                  options={salesInvoices}
-                  data={salesInvoices}
+                  options={salesInvoiceDisplayOptions}
+                  data={salesInvoiceDisplayOptions}
                   columns={[
                     { key: "code", label: "شماره فاکتور", width: 120 },
                     { key: "title", label: "عنوان/تاریخ", width: 220 },
@@ -2341,7 +2400,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                       setBaseDocItems([]);
                     }
                   }}
-                  disabled={disabled || isUsed || isStocktakingBase}
+                  disabled={disabled || isUsed || isInvoiceBasedIssue || isStocktakingBase}
                 />
               </div>
             </div>
@@ -2379,7 +2438,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                       setBaseDocItems([]);
                     }
                   }}
-                  disabled={disabled || isUsed || isStocktakingBase}
+                  disabled={disabled || isUsed || isInvoiceBasedIssue || isStocktakingBase}
                 />
               </div>
             </div>
@@ -2391,7 +2450,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   label="شماره مبنا :"
                   value={values.BaseDocumentNumber || ""}
                   onChange={(val) => handleChange("BaseDocumentNumber", val)}
-                  disabled={disabled || isUsed || isStocktakingBase}
+                  disabled={disabled || isUsed || isInvoiceBasedIssue || isStocktakingBase}
                   placeholder="شماره سند مبنا..."
                   labelWidth="75px"
                 />
@@ -2412,7 +2471,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             required
             value={values.IssueNumber || values.ReceiptNumber || ""}
             onChange={(val) => handleChange("IssueNumber", val)}
-            disabled={disabled || isUsed}
+            disabled={disabled || isUsed || isInvoiceBasedIssue}
             placeholder="شماره حواله"
             labelWidth="75px"
             integerOnly={true}
@@ -2422,7 +2481,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             required
             value={values.IssueDate || values.ReceiptDate}
             onChange={handleMainDateChange}
-            disabled={disabled || isUsed}
+            disabled={disabled || isUsed || isInvoiceBasedIssue}
             labelWidth="65px"
           />
         </div>
@@ -2490,7 +2549,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   setValues((prev) => ({ ...prev, ReceiverRef: Number(selected), SupplierRef: Number(selected) }));
                 }
               }}
-              disabled={disabled || isUsed || !isDetailedEnabled}
+              disabled={disabled || isUsed || isInvoiceBasedIssue || !isDetailedEnabled}
               addFormOptions={[
                 { title: "تعریف طرف حساب/تحویل‌گیرنده جدید", componentName: "PartyForm", groupId: "common" },
               ]}
@@ -2510,14 +2569,14 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
             label="وضعیت :"
             value={values.Status || DocumentState.InitialRegistration}
             onChange={(val) => handleChange("Status", Number(val))}
-            disabled={disabled || isUsed}
+            disabled={disabled || isUsed || isInvoiceBasedIssue}
             labelWidth="75px"
           />
           <Select
             label="نوع ارز :"
             value={values.CurrencyRef || 1}
             onChange={(val) => handleChange("CurrencyRef", Number(val))}
-            disabled={disabled || isUsed}
+            disabled={disabled || isUsed || isInvoiceBasedIssue}
             options={CURRENCY_OPTIONS}
             labelWidth="65px"
           />
@@ -2669,6 +2728,24 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
     if (!values.IssueDate && !values.ReceiptDate) {
       showToast("لطفاً تاریخ حواله را وارد کنید *", "error");
       return false;
+    }
+
+    // Task 137-3: خروج انبار مبتنی بر فاکتور فروش — افزودن ردیف مجاز نیست و مقدار
+    // هر ردیف فقط می‌تواند مساوی یا کمتر از مقدار همان ردیف در فاکتور فروش باشد
+    if (isInvoiceBasedIssue) {
+      const rows = (values.items || []).filter((it: any) => it.ItemRef || it.ItemCode);
+      const originalCount = originalInvoiceQtyRef.current.size;
+      if (rows.length > originalCount) {
+        showToast("برای خروج انبار صادرشده از فاکتور فروش، افزودن ردیف جدید مجاز نیست *", "error");
+        return false;
+      }
+      for (let i = 0; i < rows.length; i++) {
+        const cap = originalInvoiceQtyRef.current.get(i);
+        if (cap !== undefined && Number(rows[i].Quantity || 0) > cap) {
+          showToast(`مقدار کالای "${rows[i].ItemName || ""}" نمی‌تواند بیشتر از مقدار فاکتور فروش (${cap}) باشد *`, "error");
+          return false;
+        }
+      }
     }
 
     // Task 132: تاریخ ثبت اطلاعات نمی‌تواند قبل از تاریخ سند مبنا باشد
@@ -3145,9 +3222,9 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                     }
                   }}
                   hideHeader={false}
-                  hideAddButton={isUsed || !isHeaderComplete}
-                  disableAddButton={isUsed || !isHeaderComplete}
-                  hideDeleteButton={isUsed || !isHeaderComplete}
+                  hideAddButton={isUsed || !isHeaderComplete || isInvoiceBasedIssue}
+                  disableAddButton={isUsed || !isHeaderComplete || isInvoiceBasedIssue}
+                  hideDeleteButton={isUsed || !isHeaderComplete || isInvoiceBasedIssue}
                   isReadonly={isUsed || !isHeaderComplete}
                 />
               </div>
@@ -3544,7 +3621,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
                   label="توضیحات :"
                   value={values.Description || ""}
                   onChange={(val) => setValues((prev) => ({ ...prev, Description: val }))}
-                  disabled={isUsed}
+                  disabled={isUsed || isInvoiceBasedIssue}
                   placeholder="توضیحات حواله انبار..."
                   rows={6}
                   labelWidth="80px"

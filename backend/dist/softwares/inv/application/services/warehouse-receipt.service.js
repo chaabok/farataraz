@@ -173,6 +173,7 @@ let WarehouseReceiptService = class WarehouseReceiptService {
             TemporaryReceiptRef: this.parseRef(dto.TemporaryReceiptRef),
             SupplyRequestRef: this.parseRef(dto.SupplyRequestRef),
             PurchaseInvoiceRef: this.parseRef(dto.PurchaseInvoiceRef),
+            SalesInvoiceRef: this.parseRef(dto.SalesInvoiceRef),
             SupplierRef: this.parseRef(dto.SupplierRef),
             SupplierName: dto.SupplierName || undefined,
             ReceiptNumber: receiptNum,
@@ -290,6 +291,9 @@ let WarehouseReceiptService = class WarehouseReceiptService {
             .andWhere('wr.FiscalYearRef = :fiscalYearId', { fiscalYearId });
         if (query?.ReceiptNumber) {
             qb.andWhere('wr.ReceiptNumber = :num', { num: query.ReceiptNumber });
+        }
+        if (query?.salesInvoiceRef) {
+            qb.andWhere('wr.SalesInvoiceRef = :salesInvoiceRef', { salesInvoiceRef: Number(query.salesInvoiceRef) });
         }
         if (query?.nature !== undefined && query?.nature !== null && query?.nature !== '') {
             const nat = Number(query.nature);
@@ -410,6 +414,7 @@ let WarehouseReceiptService = class WarehouseReceiptService {
         record.TemporaryReceiptRef = this.parseRef(dto.TemporaryReceiptRef) ?? record.TemporaryReceiptRef;
         record.SupplyRequestRef = this.parseRef(dto.SupplyRequestRef) ?? record.SupplyRequestRef;
         record.PurchaseInvoiceRef = this.parseRef(dto.PurchaseInvoiceRef) ?? record.PurchaseInvoiceRef;
+        record.SalesInvoiceRef = this.parseRef(dto.SalesInvoiceRef) ?? record.SalesInvoiceRef;
         record.SupplierRef = this.parseRef(dto.SupplierRef) ?? record.SupplierRef;
         record.SupplierName = dto.SupplierName !== undefined ? dto.SupplierName : record.SupplierName;
         record.ReceiptNumber = dto.ReceiptNumber ? Number(dto.ReceiptNumber) : record.ReceiptNumber;
