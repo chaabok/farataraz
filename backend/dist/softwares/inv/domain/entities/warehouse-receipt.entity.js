@@ -52,6 +52,10 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
     __metadata("design:type", Number)
+], WarehouseReceipt.prototype, "SalesInvoiceRef", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'bigint', nullable: true }),
+    __metadata("design:type", Number)
 ], WarehouseReceipt.prototype, "SupplierRef", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 200, nullable: true }),

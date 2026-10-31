@@ -33,6 +33,7 @@ export declare class CreateWarehouseReceiptDto {
     TemporaryReceiptRef?: any;
     SupplyRequestRef?: any;
     PurchaseInvoiceRef?: any;
+    SalesInvoiceRef?: any;
     SupplierRef?: any;
     SupplierName?: string;
     ReceiptNumber?: any;

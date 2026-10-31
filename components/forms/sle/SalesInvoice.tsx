@@ -17,7 +17,9 @@ import { SubUnitModal } from "@/components/inputs/SubUnitModal";
 import { TrackingFactorModal } from "@/components/forms/inv/TrackingFactorModal";
 import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
 import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
-import { Calculator, Plus, Pencil, X } from "lucide-react";
+import { Calculator, Plus, Pencil, X, PackageOpen, PackageX } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog"; // Task 136: تایید حذف خروج انبار
+import { ActionButton } from "@/components/buttons/ActionButton"; // Task 136: آیکون‌های اکشن بار
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate, isFormDateBeforeBaseDocDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/stores/languageStore";
 import { formatLocalizedNumber } from "@/lib/digitLocale";
@@ -255,6 +257,11 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
   const [settlementMethodOptions, setSettlementMethodOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [baseDocDate, setBaseDocDate] = useState<string>(""); // Task 132: تاریخ سند مبنا انتخاب‌شده
+
+  // Task 136: خروج انبار صادرشده برای این فاکتور فروش — آیکون‌های «صدور خروج انبار» و «حذف خروج انبار»
+  const [linkedIssue, setLinkedIssue] = useState<{ id: number; number: number } | null>(null);
+  const [issueBusy, setIssueBusy] = useState(false);
+  const [deleteExitOpen, setDeleteExitOpen] = useState(false);
 
   // Task 67: تنظیمات سند فروش — تیک «نمایش پارامترهای خرید و فروش» تعیین می‌کند فوتر سه‌باکسه یا دو‌باکسه باشد
   // Task 71: مقداردهی اولیه همزمان از کش مشترک — تا باکس «عوامل فاکتور فروش» هماهنگ با بقیه باکس‌های فوتر
@@ -679,6 +686,26 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
     }
   }, [activeId]);
 
+  // Task 136: بازخوانی حواله انبار صادرشده برای این فاکتور (BaseType=3 + SalesInvoiceRef)
+  useEffect(() => {
+    if (!activeId) {
+      setLinkedIssue(null);
+      return;
+    }
+    apiFetch(`/api/inv/warehouse-issues?salesInvoiceRef=${Number(activeId)}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.data || [];
+        const row = list[0];
+        setLinkedIssue(
+          row
+            ? { id: Number(row.WarehouseReceiptID || row.id), number: Number(row.ReceiptNumber || 0) }
+            : null
+        );
+      })
+      .catch(() => {});
+  }, [activeId]);
+
   const handleChange = (name: string, value: any) => {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
@@ -889,6 +916,180 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
     const selectedId = item.SalesInvoiceID || item.id;
     if (selectedId) {
       setActiveId(Number(selectedId));
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Task 136: صدور خروج انبار از فاکتور فروش — با کلیک آیکون «صدور خروج انبار» یک
+  // حواله انبار (نوع کاهشی) بر اساس اقلام این فاکتور ساخته می‌شود؛ BaseType=3
+  // (فاکتور فروش کالا) + SalesInvoiceRef تا حذف خروج انبار بعداً ممکن باشد.
+  // ---------------------------------------------------------------------------
+  const handleIssueWarehouseExit = async () => {
+    if (!activeId) {
+      showToast("ابتدا فاکتور فروش را ذخیره کنید و سپس خروج انبار صادر کنید *", "warning");
+      return;
+    }
+    if (linkedIssue) {
+      showToast(`برای این فاکتور قبلاً خروج انبار شماره ${linkedIssue.number} صادر شده است`, "info");
+      return;
+    }
+    if (!values.CustomerRef) {
+      showToast("لطفاً مشتری فاکتور فروش را انتخاب کنید *", "error");
+      return;
+    }
+    const warehouseId = Number(defaultWarehouseRef || 0);
+    if (!warehouseId) {
+      showToast("انبار پیش‌فرض در تنظیمات اسناد فروش (فاکتور فروش) تعریف نشده است *", "error");
+      return;
+    }
+    const validItems = (values.items || []).filter(
+      (item: any) => item.ItemRef && Number(item.Quantity) > 0
+    );
+    if (validItems.length === 0) {
+      showToast("فاکتور فروش کالای معتبری برای صدور خروج انبار ندارد *", "error");
+      return;
+    }
+
+    setIssueBusy(true);
+    try {
+      // نوع سند انبار کاهشی (نوع = ۲)
+      const dtRes = await apiFetch("/api/inv/warehouse-document-types?nature=2");
+      const dtData = dtRes.ok ? await dtRes.json() : [];
+      const dtList = Array.isArray(dtData) ? dtData : dtData?.data || [];
+      const decreasing = dtList.filter(
+        (dt: any) => Number(dt.WarehouseDocumentNature ?? dt.nature) === 2
+      );
+      if (decreasing.length === 0) {
+        showToast("هیچ نوع سند انبار کاهشی برای صدور خروج انبار تعریف نشده است *", "error");
+        return;
+      }
+      const docType = decreasing[0];
+
+      // شماره بعدی حواله انبار
+      const numRes = await apiFetch("/api/inv/warehouse-issues/next-number");
+      const numData = numRes.ok ? await numRes.json() : {};
+      const issueNumber = Number(numData?.documentNumber) || 1001;
+
+      // کنترل موجودی منفی (مشابه فرم حواله انبار — تنظیمات پایه انبار)
+      let controlNegativeStock = true;
+      try {
+        const bsRes = await apiFetch("/api/common/base-settings/tab/3");
+        if (bsRes.ok) {
+          const bsData = await bsRes.json();
+          const settings = bsData?.data || {};
+          controlNegativeStock =
+            settings.controlNegativeStock === undefined ||
+            settings.controlNegativeStock === "" ||
+            settings.controlNegativeStock === "true" ||
+            settings.controlNegativeStock === true;
+        }
+      } catch {}
+      if (controlNegativeStock) {
+        const itemTotals = new Map<number, { itemName: string; totalQty: number }>();
+        for (const item of validItems) {
+          const ref = Number(item.ItemRef);
+          const q = Number(item.Quantity) || 0;
+          const current = itemTotals.get(ref) || { itemName: item.ItemName || "کالا", totalQty: 0 };
+          itemTotals.set(ref, { itemName: item.ItemName || current.itemName, totalQty: current.totalQty + q });
+        }
+        for (const [itemRef, info] of itemTotals.entries()) {
+          try {
+            const stockRes = await apiFetch(`/api/inv/items/${itemRef}/stock-summary?warehouseId=${warehouseId}`);
+            const stockData = stockRes && typeof stockRes.json === "function" ? await stockRes.json() : stockRes;
+            const availableStock = Number(stockData?.mainUnit?.warehouseStock ?? 0);
+            const itemName = stockData?.itemName || info.itemName;
+            if (info.totalQty > availableStock) {
+              showToast(
+                `امکان صدور خروج انبار وجود ندارد! موجودی کالای "${itemName}" در انبار (${availableStock}) کمتر از مقدار فاکتور (${info.totalQty}) است.`,
+                "error"
+              );
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      const selectedCustomer = customerOptions.find(
+        (c) => Number(c.id) === Number(values.CustomerRef)
+      );
+      const customerName = values.CustomerName || selectedCustomer?.title || "";
+      const issueDateIso = jalaliToGregorianISO(values.InvoiceDate || getTodayJalali());
+
+      const payload = {
+        WarehouseDocumentTypeRef: Number(docType.WarehouseDocumentTypeID || docType.id),
+        DeliverWarehouseRef: warehouseId,
+        WarehouseRef: warehouseId,
+        WarehouseName: "",
+        BaseType: 3, // فاکتور فروش کالا
+        SalesInvoiceRef: Number(activeId),
+        ReceiverRef: Number(values.CustomerRef),
+        ReceiverName: customerName,
+        SupplierRef: Number(values.CustomerRef),
+        SupplierName: customerName,
+        IssueNumber: issueNumber,
+        ReceiptNumber: issueNumber,
+        IssueDate: issueDateIso,
+        ReceiptDate: issueDateIso,
+        BaseDocumentNumber: values.InvoiceNumber ? String(values.InvoiceNumber) : "",
+        Status: 1,
+        CurrencyRef: 1,
+        Description: `خروج انبار صادر شده از فاکتور فروش شماره ${values.InvoiceNumber || ""}`,
+        details: validItems.map((item: any, idx: number) => ({
+          RowNo: idx + 1,
+          ItemRef: Number(item.ItemRef),
+          BaseNumber: values.InvoiceNumber ? String(values.InvoiceNumber) : "",
+          UnitName: item.UnitName || "عدد",
+          Quantity: Number(item.Quantity),
+          UnitPrice: Math.round(Number(item.UnitPrice || 0)),
+          Discount: Math.round(Number(item.Discount || 0)),
+          UnitType: 1,
+          Description: item.Description || "",
+          trackingFactorValues: item.trackingFactorValues || null,
+        })),
+        factors: [],
+      };
+
+      const res = await apiFetch("/api/inv/warehouse-issues", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.WarehouseReceiptID || data.WarehouseIssueID || data.id || data.success)) {
+        const newId = Number(data.WarehouseReceiptID || data.WarehouseIssueID || data.id || data.data?.WarehouseReceiptID);
+        setLinkedIssue({ id: newId, number: issueNumber });
+        showToast(`خروج انبار با شماره ${issueNumber} برای فاکتور فروش صادر شد`, "success");
+      } else {
+        showToast(data?.message || "خطا در صدور خروج انبار", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("خطا در ارتباط با سرور هنگام صدور خروج انبار", "error");
+    } finally {
+      setIssueBusy(false);
+    }
+  };
+
+  // Task 136: حذف خروج انبار صادرشده برای این فاکتور — پس از تایید در ConfirmDialog
+  const confirmDeleteWarehouseExit = async () => {
+    if (!linkedIssue) return;
+    setIssueBusy(true);
+    try {
+      const res = await apiFetch(`/api/inv/warehouse-issues/${linkedIssue.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setLinkedIssue(null);
+        setDeleteExitOpen(false);
+        showToast(`خروج انبار شماره ${linkedIssue.number} حذف شد`, "success");
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData?.message || "خطا در حذف خروج انبار", "error");
+      }
+    } catch {
+      showToast("خطا در ارتباط با سرور هنگام حذف خروج انبار", "error");
+    } finally {
+      setIssueBusy(false);
     }
   };
 
@@ -2005,6 +2206,27 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
         onSaveNew={handleSaveNew}
         onNew={handleNew}
         onDelete={handleDelete}
+        // Task 136: دو آیکون «صدور خروج انبار» و «حذف خروج انبار» در اکشن بار فاکتور فروش
+        actionbar={
+          <div className="flex flex-nowrap items-center gap-1.5 shrink-0">
+            <ActionButton
+              onClick={handleIssueWarehouseExit}
+              disabled={!activeId || !!linkedIssue || issueBusy || isUsed}
+              icon={<PackageOpen className="h-[1.2rem] w-[1.2rem] shrink-0" />}
+              variant="info"
+              tooltip="صدور خروج انبار"
+              hideLabel
+            />
+            <ActionButton
+              onClick={() => setDeleteExitOpen(true)}
+              disabled={!linkedIssue || issueBusy}
+              icon={<PackageX className="h-[1.2rem] w-[1.2rem] shrink-0" />}
+              variant="warning"
+              tooltip="حذف خروج انبار"
+              hideLabel
+            />
+          </div>
+        }
         onListSelect={handleListSelect}
         listApiUrl="/api/sle/sales-invoices"
         listDisplayKey="InvoiceNumber"
@@ -2534,6 +2756,14 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
           }
           setTfModalState((prev) => ({ ...prev, isOpen: false }));
         }}
+      />
+      {/* Task 136: تایید حذف خروج انبار صادرشده برای این فاکتور فروش */}
+      <ConfirmDialog
+        isOpen={deleteExitOpen}
+        title="حذف خروج انبار"
+        message={`آیا از حذف خروج انبار شماره ${linkedIssue?.number ?? ""} مربوط به این فاکتور فروش اطمینان دارید؟`}
+        onConfirm={confirmDeleteWarehouseExit}
+        onCancel={() => setDeleteExitOpen(false)}
       />
     </>
   );
