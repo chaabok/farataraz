@@ -1196,7 +1196,9 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
   }, [selectedDocType]);
 
   useEffect(() => {
-    if (selectedDocType && !isDetailedEnabled) {
+    // Task 138: در حواله مبتنی بر فاکتور فروش، تحویل گیرنده (مشتری فاکتور) حفظ می‌شود
+    // حتی اگر نوع سند انبار تفصیلی نداشته باشد
+    if (selectedDocType && !isDetailedEnabled && !isInvoiceBasedIssue) {
       if (values.ReceiverRef || values.ReceiverName || values.SupplierRef || values.SupplierName) {
         setValues((prev) => ({
           ...prev,
@@ -1207,7 +1209,7 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
         }));
       }
     }
-  }, [selectedDocType, isDetailedEnabled]);
+  }, [selectedDocType, isDetailedEnabled, isInvoiceBasedIssue]);
 
   const handleChange = (name: string, value: any) => {
     if (name === "BaseType") {
@@ -2510,7 +2512,9 @@ export function WarehouseIssueForm({ id, tabId }: WarehouseIssueProps) {
               searchKeys={["code", "title", "title2"]}
               placeholder={isDetailedEnabled ? `انتخاب ${receiverLabel}...` : "فاقد تفصیلی"}
               renderSelection={(item: any) => {
-                if (!item) return "";
+                // Task 138: اگر رکورد در فهرست یافت نشد، نام ذخیره‌شده تحویل گیرنده
+                // (مشتری فاکتور فروش) نمایش داده شود
+                if (!item) return values.ReceiverName || values.SupplierName || "";
                 const code = item.code || item.Code || item.detailedAccount?.code || "";
                 const title =
                   item.title ||

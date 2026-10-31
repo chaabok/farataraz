@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiFetch, getPersianEntityName } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
 export function useFormUsageCheck(tableName: string, id: string | number | null | undefined) {
   const [isUsed, setIsUsed] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
+  // Task 138: امکان بازبینی فوری وضعیت استفاده (مثلاً پس از حذف/صدور خروج انبار)
+  const [usageCheckNonce, setUsageCheckNonce] = useState(0);
+  const recheck = useCallback(() => setUsageCheckNonce((n) => n + 1), []);
 
   useEffect(() => {
     // We only check if there is an ID (it's an existing record, not a new one)
@@ -43,7 +46,7 @@ export function useFormUsageCheck(tableName: string, id: string | number | null 
     return () => {
       isMounted = false;
     };
-  }, [tableName, id]);
+  }, [tableName, id, usageCheckNonce]);
 
-  return { isUsed, loadingUsage };
+  return { isUsed, loadingUsage, recheck };
 }

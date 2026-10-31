@@ -229,7 +229,7 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
   // Task 62: زبان انتخاب‌شده کاربر برای نمایش اعداد (فی/مقدار/مبلغ کل) در همان زبان
   const { language } = useLanguage();
   const { activeId, setActiveId, method, getUrl, handleResponse } = useFormUpsert(id);
-  const { isUsed } = useFormUsageCheck("SalesInvoices", activeId);
+  const { isUsed, recheck: recheckUsage } = useFormUsageCheck("SalesInvoices", activeId);
 
   const [values, setValues] = useState<Record<string, any>>({
     SalesInvoiceID: "",
@@ -963,7 +963,13 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
         showToast("هیچ نوع سند انبار کاهشی برای صدور خروج انبار تعریف نشده است *", "error");
         return;
       }
-      const docType = decreasing[0];
+      // Task 138: نوع سند انبار باید «تحویل فروش» باشد؛ در نبود آن اولین نوع کاهشی
+      const normTitle = (s: any) =>
+        String(s || "").replace(/ك/g, "ک").replace(/ي/g, "ی").trim();
+      const deliveryDocType = decreasing.find(
+        (dt: any) => normTitle(dt.WarehouseDocumentTypeTitle || dt.title) === "تحویل فروش"
+      );
+      const docType = deliveryDocType || decreasing[0];
 
       // شماره بعدی حواله انبار
       const numRes = await apiFetch("/api/inv/warehouse-issues/next-number");
@@ -1061,6 +1067,7 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
       if (res.ok && (data.WarehouseReceiptID || data.WarehouseIssueID || data.id || data.success)) {
         const newId = Number(data.WarehouseReceiptID || data.WarehouseIssueID || data.id || data.data?.WarehouseReceiptID);
         setLinkedIssue({ id: newId, number: issueNumber });
+        recheckUsage(); // Task 138: قفل فاکتور (usage-check) بلافاصله پس از صدور به‌روز شود
         showToast(`خروج انبار با شماره ${issueNumber} برای فاکتور فروش صادر شد`, "success");
       } else {
         showToast(data?.message || "خطا در صدور خروج انبار", "error");
@@ -1084,6 +1091,7 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
       if (res.ok) {
         setLinkedIssue(null);
         setDeleteExitOpen(false);
+        recheckUsage(); // Task 138: آزادسازی قفل فاکتور بلافاصله پس از حذف خروج انبار
         showToast(`خروج انبار شماره ${linkedIssue.number} حذف شد`, "success");
       } else {
         const errData = await res.json().catch(() => ({}));

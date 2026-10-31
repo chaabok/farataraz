@@ -465,6 +465,35 @@ import { GatewayModule } from './gateway/gateway.module';
               }
 
               // -----------------------------------------------------------------
+              // Task 138: صدور خروج انبار بر مبنای فاکتور فروش —
+              // ۱) نوع سند انبار «تحویل فروش» باید تفصیلی «تحویل گیرنده» داشته باشد
+              //    تا نام مشتری فاکتور در فیلد تحویل گیرنده درج و نمایش داده شود
+              // ۲) حواله‌های انبارِ صادرشده بر مبنای فاکتور فروش (BaseType=3 +
+              //    SalesInvoiceRef) به نوع سند «تحویل فروش» بازگردانی می‌شوند
+              // (idempotent — فقط در صورت نبود تفصیلی / اختلاف نوع سند)
+              // -----------------------------------------------------------------
+              try {
+                await client.query(`
+                  UPDATE "Inv"."WarehouseDocumentTypes"
+                  SET "DetailedName" = 'تحویل گیرنده',
+                      "RelatedDetailedTypeRefs" = '[{"id":6,"code":"6","title":"اشخاص حقیقی"},{"id":7,"code":"7","title":"اشخاص حقوقی"}]'::json
+                  WHERE "WarehouseDocumentTypeTitle" = N'تحویل فروش'
+                    AND ("DetailedName" IS NULL OR "DetailedName" = '');
+                  UPDATE "Inv"."WarehouseVouchers" w
+                  SET "WarehouseDocumentTypeRef" = t."WarehouseDocumentTypeID"
+                  FROM "Inv"."WarehouseDocumentTypes" t
+                  WHERE t."WarehouseDocumentTypeTitle" = N'تحویل فروش'
+                    AND w."BaseType" = 3
+                    AND w."SalesInvoiceRef" IS NOT NULL
+                    AND w."WarehouseDocumentTypeRef" <> t."WarehouseDocumentTypeID"
+                    AND (t."CompanyRef" = w."CompanyRef" OR (t."CompanyRef" IS NULL AND w."CompanyRef" IS NULL));
+                `);
+                console.log('[Task138] Sales-delivery (تحویل فروش) detailed settings + invoice-based voucher backfill ensured.');
+              } catch (task138Err: any) {
+                console.warn('[Task138] Could not ensure sales-delivery doc type settings:', task138Err.message);
+              }
+
+              // -----------------------------------------------------------------
               // Task 133: جداول مجوز فروش — ساخت idempotent (فقط اگر وجود نداشته باشند)
               // کلون جداول فاکتور فروش (بدون فیلد «تاریخ اعتبار»)
               // -----------------------------------------------------------------
