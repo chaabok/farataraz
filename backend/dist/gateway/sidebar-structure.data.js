@@ -849,6 +849,12 @@ exports.SIDEBAR_STRUCTURE = [
                         title: "عملیات",
                         subItems: [
                             {
+                                id: "SalesInvoiceForm",
+                                title: "فاکتور فروش جدید",
+                                componentName: "SalesInvoiceForm",
+                                path: "/forms/sle/sales-invoice-new"
+                            },
+                            {
                                 id: "SalesOrderForm",
                                 title: "سفارش فروش جدید",
                                 componentName: "SalesOrderForm",
@@ -871,12 +877,6 @@ exports.SIDEBAR_STRUCTURE = [
                                 title: "مجوز فروش",
                                 componentName: "SalesPermissionForm",
                                 path: "/forms/sle/sales-permission-new"
-                            },
-                            {
-                                id: "SalesInvoiceForm",
-                                title: "فاکتور فروش جدید",
-                                componentName: "SalesInvoiceForm",
-                                path: "/forms/sle/sales-invoice-new"
                             }
                         ]
                     },

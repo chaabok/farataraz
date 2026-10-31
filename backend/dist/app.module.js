@@ -442,24 +442,6 @@ exports.AppModule = AppModule = __decorate([
                                 }
                                 try {
                                     await client.query(`
-                  ALTER TABLE "Inv"."WarehouseVouchers" ADD COLUMN IF NOT EXISTS "SalesInvoiceRef" bigint;
-                  DO $$
-                  BEGIN
-                    IF NOT EXISTS (
-                      SELECT 1 FROM pg_constraint WHERE conname = 'FK_WarehouseVouchers_SalesInvoice'
-                    ) THEN
-                      ALTER TABLE "Inv"."WarehouseVouchers" ADD CONSTRAINT "FK_WarehouseVouchers_SalesInvoice"
-                        FOREIGN KEY ("SalesInvoiceRef") REFERENCES "Sle"."SalesInvoices"("SalesInvoiceID");
-                    END IF;
-                  END $$;
-                `);
-                                    console.log('[Task136] WarehouseVouchers.SalesInvoiceRef column + FK ensured.');
-                                }
-                                catch (issueLinkErr) {
-                                    console.warn('[Task136] Could not ensure WarehouseVouchers.SalesInvoiceRef:', issueLinkErr.message);
-                                }
-                                try {
-                                    await client.query(`
                   CREATE TABLE IF NOT EXISTS "Sle"."SalesPermissions" (
                     "SalesPermissionID" bigint PRIMARY KEY,
                     "Version" bigint DEFAULT 1,

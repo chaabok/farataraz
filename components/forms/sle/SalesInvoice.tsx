@@ -17,7 +17,7 @@ import { SubUnitModal } from "@/components/inputs/SubUnitModal";
 import { TrackingFactorModal } from "@/components/forms/inv/TrackingFactorModal";
 import { PurchaseSalesParameterDropDown } from "@/components/inputs/PurchaseSalesParameterDropDown";
 import { StockSummaryBox } from "@/components/forms/inv/StockSummaryModal";
-import { Calculator, Plus, Pencil, X, PackageOpen, PackageX } from "lucide-react";
+import { Calculator, Plus, Pencil, X, PackageOpen, PackageX, Eye } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"; // Task 136: تایید حذف خروج انبار
 import { ActionButton } from "@/components/buttons/ActionButton"; // Task 136: آیکون‌های اکشن بار
 import { apiFetch, jalaliToGregorianISO, gregorianToJalaliDisplay, isValidJalaliDate, isFormDateBeforeBaseDocDate } from "@/lib/utils";
@@ -224,7 +224,7 @@ const getParameterValueForDate = (paramObj: any, dateStr: string): number => {
 };
 
 export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
-  const { removeTab } = useTabs();
+  const { removeTab, addTab } = useTabs();
   const { showToast } = useToast();
   // Task 62: زبان انتخاب‌شده کاربر برای نمایش اعداد (فی/مقدار/مبلغ کل) در همان زبان
   const { language } = useLanguage();
@@ -1031,7 +1031,8 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
         IssueDate: issueDateIso,
         ReceiptDate: issueDateIso,
         BaseDocumentNumber: values.InvoiceNumber ? String(values.InvoiceNumber) : "",
-        Status: 1,
+        // Task 137-3: خروج انبار صادرشده بر مبنای فاکتور فروش، وضعیت «تایید شده» دارد
+        Status: DocumentState.Approved,
         CurrencyRef: 1,
         Description: `خروج انبار صادر شده از فاکتور فروش شماره ${values.InvoiceNumber || ""}`,
         details: validItems.map((item: any, idx: number) => ({
@@ -1040,8 +1041,10 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
           BaseNumber: values.InvoiceNumber ? String(values.InvoiceNumber) : "",
           UnitName: item.UnitName || "عدد",
           Quantity: Number(item.Quantity),
-          UnitPrice: Math.round(Number(item.UnitPrice || 0)),
-          Discount: Math.round(Number(item.Discount || 0)),
+          // Task 137-4: فی و مبلغ فاکتور کپی نمی‌شود — قیمت‌گذاری بعداً توسط کاربر
+          // از طریق فرم «قیمت‌گذاری اسناد انبار» تکمیل می‌گردد
+          UnitPrice: 0,
+          Discount: 0,
           UnitType: 1,
           Description: item.Description || "",
           trackingFactorValues: item.trackingFactorValues || null,
@@ -2223,6 +2226,15 @@ export function SalesInvoice({ id, tabId }: SalesInvoiceProps) {
               icon={<PackageX className="h-[1.2rem] w-[1.2rem] shrink-0" />}
               variant="warning"
               tooltip="حذف خروج انبار"
+              hideLabel
+            />
+            {/* Task 137-2: مشاهده خروج انبار مرتبط با فاکتور فروش در تب بار */}
+            <ActionButton
+              onClick={handleViewWarehouseExit}
+              disabled={!linkedIssue || issueBusy}
+              icon={<Eye className="h-[1.2rem] w-[1.2rem] shrink-0" />}
+              variant="secondary"
+              tooltip="مشاهده خروج انبار"
               hideLabel
             />
           </div>

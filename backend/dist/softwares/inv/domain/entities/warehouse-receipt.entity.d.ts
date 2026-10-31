@@ -10,7 +10,6 @@ export declare class WarehouseReceipt extends AppBaseEntity {
     TemporaryReceiptRef?: number;
     SupplyRequestRef?: number;
     PurchaseInvoiceRef?: number;
-    SalesInvoiceRef?: number;
     SupplierRef?: number;
     SupplierName?: string;
     ReceiptNumber: number;

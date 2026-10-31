@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PurchaseInvoice } from '../../domain/entities/purchase-invoice.entity';
 import { PurchaseInvoiceDetail } from '../../domain/entities/purchase-invoice-detail.entity';
 import { PurchaseInvoiceFactor } from '../../domain/entities/purchase-invoice-factor.entity';
@@ -66,8 +66,63 @@ export class BaseDocumentService {
     @InjectRepository(WarehouseReceiptFactor)
     private readonly wrFactorRepository: Repository<WarehouseReceiptFactor>,
 
+    private readonly dataSource: DataSource,
+
     private readonly requestContextService: RequestContextService,
   ) {}
+
+  // ---------------------------------------------------------------------------
+  // Task 137: فاکتور فروش ماژول فروش (Sle.SalesInvoices) به‌عنوان سند مبنا حواله انبار —
+  // BaseType=3 + SalesInvoiceRef به رکورد Sle.SalesInvoices اشاره می‌کند (نه فاکتور خرید).
+  // Task 137-4: فی و مبلغ فاکتور هرگز کپی نمی‌شود (UnitPrice=0/Discount=0) — قیمت‌گذاری
+  // بعداً توسط کاربر از طریق فرم «قیمت‌گذاری اسناد انبار» تکمیل می‌گردد.
+  // ---------------------------------------------------------------------------
+  private async getSleSalesInvoiceUsedQuantities(
+    invoiceId: number,
+    currentDocId?: number,
+  ): Promise<Record<number, number>> {
+    const usedMap: Record<number, number> = {};
+    try {
+      const params: any[] = [invoiceId];
+      let excludeSql = '';
+      if (currentDocId && Number(currentDocId) > 0) {
+        params.push(Number(currentDocId));
+        excludeSql = ` AND h."WarehouseReceiptID" != $${params.length}`;
+      }
+      const rows = await this.dataSource.query(
+        `SELECT d."ItemRef" AS "itemRef", COALESCE(SUM(d."Quantity"), 0) AS "totalQty"
+         FROM "Inv"."WarehouseVouchersDetails" d
+         INNER JOIN "Inv"."WarehouseVouchers" h ON d."WarehouseReceiptRef" = h."WarehouseReceiptID"
+         WHERE h."SalesInvoiceRef" = $1${excludeSql}
+         GROUP BY d."ItemRef"`,
+        params,
+      );
+      for (const r of rows || []) {
+        const itemRef = Number(r.itemRef);
+        if (!itemRef) continue;
+        usedMap[itemRef] = (usedMap[itemRef] || 0) + Number(r.totalQty || 0);
+      }
+    } catch {
+      // در صورت خطا، مقادیر استفاده‌شده صفر در نظر گرفته می‌شود
+    }
+    return usedMap;
+  }
+
+  private async getSleSalesInvoiceDetailsById(id: number): Promise<any> {
+    const numId = Number(id);
+    if (!numId || !Number.isFinite(numId)) return null;
+    const headers = await this.dataSource.query(
+      `SELECT * FROM "Sle"."SalesInvoices" WHERE "SalesInvoiceID" = $1 LIMIT 1`,
+      [numId],
+    );
+    const doc = headers && headers[0];
+    if (!doc) return null;
+    const details = await this.dataSource.query(
+      `SELECT * FROM "Sle"."SalesInvoiceItems" WHERE "SalesInvoiceRef" = $1 ORDER BY "RowNo" ASC`,
+      [numId],
+    );
+    return { doc, details: details || [] };
+  }
 
   private getScope() {
     let bsId = this.requestContextService.getBusinessStructureId() ?? 2;
@@ -644,6 +699,54 @@ export class BaseDocumentService {
       };
     }
 
+    if (docType === 'SleSalesInvoice') {
+      // Task 137: فاکتور فروش ماژول فروش (Sle.SalesInvoices) — BaseType=3 حواله انبار
+      const found = await this.getSleSalesInvoiceDetailsById(numId);
+      if (!found) throw new NotFoundException(`فاکتور فروش ${id} یافت نشد`);
+      const { doc, details } = found;
+
+      const usedMap = await this.getSleSalesInvoiceUsedQuantities(numId, currentDocId);
+      const mappedItems = details.map((det: any) => {
+        const origQty = Number(det.Quantity || 0);
+        const itemRef = Number(det.ItemRef || 0);
+        const usedQty = usedMap[itemRef] || 0;
+        const remainingQty = Math.max(0, origQty - usedQty);
+        const qtyToUse = remainingQty > 0 ? remainingQty : origQty;
+
+        return {
+          ItemRef: itemRef,
+          ItemCode: det.ItemCode ? String(det.ItemCode) : '',
+          ItemName: det.ItemName || '',
+          UnitName: det.UnitName || 'عدد',
+          UnitType: 1,
+          originalQuantity: origQty,
+          usedQuantity: usedQty,
+          remainingQuantity: remainingQty,
+          maxQuantity: qtyToUse,
+          Quantity: qtyToUse,
+          // Task 137-4: فی و مبلغ فاکتور کپی نمی‌شود — قیمت‌گذاری بعداً از فرم قیمت‌گذاری اسناد انبار
+          UnitPrice: 0,
+          Discount: 0,
+          Description: det.Description || '',
+          TrackingFactorValues: det.TrackingFactorValues || null,
+          trackingFactorValues: det.TrackingFactorValues || null,
+        };
+      });
+
+      return {
+        id: Number(doc.SalesInvoiceID),
+        docType,
+        InvoiceNumber: doc.InvoiceNumber,
+        InvoiceDate: doc.InvoiceDate,
+        CustomerRef: doc.CustomerRef,
+        CustomerName: doc.CustomerName,
+        CurrencyRef: doc.CurrencyRef || 1,
+        Description: doc.Description,
+        items: mappedItems,
+        factors: [],
+      };
+    }
+
     if (docType === 'TemporaryItemReceipt') {
       const tr = await this.trRepository.findOne({
         where: [{ TemporaryItemReceiptID: numId }, { ReceiptNumber: numId }],
@@ -812,6 +915,14 @@ export class BaseDocumentService {
         where: [{ PurchaseInvoiceID: numId }, { InvoiceNumber: numId }],
       });
       return iso(doc?.InvoiceDate);
+    }
+    if (docType === 'SleSalesInvoice') {
+      // Task 137: تاریخ فاکتور فروش ماژول فروش (Sle.SalesInvoices)
+      const rows = await this.dataSource.query(
+        `SELECT "InvoiceDate" FROM "Sle"."SalesInvoices" WHERE "SalesInvoiceID" = $1 LIMIT 1`,
+        [numId],
+      );
+      return iso(rows && rows[0] ? rows[0].InvoiceDate : '');
     }
     if (docType === 'TemporaryItemReceipt') {
       const doc = await this.trRepository.findOne({
