@@ -327,11 +327,12 @@ const tabsConfig: TabConfig[] = [
         defaultValue: 'true'
       },
       {
-        // Task 139: «نمایش قیمت در مجوز برگشت از فروش» — مشابه مجوز فروش
+        // Task 140: «نمایش قیمت در مجوز برگشت از فروش» — پیش‌فرض بدون تیک؛ با تیک نبودن،
+        // ستون‌های «فی» به بعد و باکس عوامل مجوز برگشت از فروش نمایش داده نمی‌شوند
         key: 'showPriceInSalesReturnPermission',
         label: 'نمایش قیمت در مجوز برگشت از فروش',
         type: 'checkbox-right-label',
-        defaultValue: 'true'
+        defaultValue: 'false'
       },
       {
         key: 'showTrackingFactorInSalesDocumentsGroup',

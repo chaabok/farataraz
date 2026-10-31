@@ -318,11 +318,12 @@ export function SalesReturnPermission({ id, tabId }: SalesReturnPermissionProps)
   const [isTrackingFactorEnabled, setIsTrackingFactorEnabled] = useState(false);
   const [allTrackingFactors, setAllTrackingFactors] = useState<any[]>([]);
   // ---------------------------------------------------------------------------
-  // Task 139: «نمایش قیمت در مجوز برگشت از فروش» — تنظیمات پایه (تب فروش)
-  // وقتی تیک نباشد ستون‌های مبلغ جدول اقلام، باکس «مبالغ» فوتر و تب «خلاصه مبالغ و
-  // محاسبات» نمایش داده نمی‌شوند؛ پیش‌فرض: تیک (نمایش قیمت)
+  // Task 139/140: «نمایش قیمت در مجوز برگشت از فروش» — تنظیمات پایه (تب فروش)
+  // وقتی تیک نباشد ستون‌های «فی» به بعد جدول اقلام، باکس «عوامل»، باکس «مبالغ» فوتر و
+  // تب‌های «عوامل مجوز برگشت از فروش» و «خلاصه مبالغ و محاسبات» نمایش داده نمی‌شوند؛
+  // Task 140: پیش‌فرض بدون تیک است و قیمت فقط با ذخیره کلید showPriceInSalesReturnPermission=true نمایش داده می‌شود
   // ---------------------------------------------------------------------------
-  const [showPriceInPermission, setShowPriceInPermission] = useState(true);
+  const [showPriceInPermission, setShowPriceInPermission] = useState(false);
   const [tfModalState, setTfModalState] = useState<{
     isOpen: boolean;
     rowIndex: number | null;
@@ -584,34 +585,15 @@ export function SalesReturnPermission({ id, tabId }: SalesReturnPermissionProps)
         checkSetting(baseData, "showTrackingFactorInSalesReturnPermission");
       setIsTrackingFactorEnabled(soActive);
 
-      // Task 133: «نمایش قیمت در مجوز برگشت از فروش» — اگر کلید اصلاً ثبت نشده باشد پیش‌فرض
-      // تیک است (نمایش قیمت)؛ در غیر این صورت مقدار ذخیره‌شده ملاک است
-      const hasSetting = (data: any, keyName: string) => {
-        if (!data) return false;
-        const target = keyName.toLowerCase();
-        const flat = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : null;
-        if (flat) {
-          return flat.some(
-            (s: any) => s.key?.toLowerCase() === target || s.SettingKey?.toLowerCase() === target
-          );
-        }
-        const obj = data.data || data;
-        if (typeof obj === "object" && obj !== null) {
-          return Object.keys(obj).some((k) => k.toLowerCase() === target);
-        }
-        return false;
-      };
-      const priceKeyRegistered =
-        hasSetting(tab4Data, "showPriceInSalesReturnPermission") ||
-        hasSetting(baseData, "showPriceInSalesReturnPermission");
-      const priceActive = priceKeyRegistered
-        ? checkSetting(tab4Data, "showPriceInSalesReturnPermission") ||
-          checkSetting(baseData, "showPriceInSalesReturnPermission")
-        : true;
+      // Task 140: «نمایش قیمت در مجوز برگشت از فروش» — پیش‌فرض بدون تیک است؛ قیمت فقط وقتی
+      // نمایش داده می‌شود که کلید showPriceInSalesReturnPermission با مقدار true ذخیره شده باشد
+      const priceActive =
+        checkSetting(tab4Data, "showPriceInSalesReturnPermission") ||
+        checkSetting(baseData, "showPriceInSalesReturnPermission");
       setShowPriceInPermission(priceActive);
     }).catch(() => {
       setIsTrackingFactorEnabled(false);
-      setShowPriceInPermission(true);
+      setShowPriceInPermission(false);
     });
 
     // Task 74: فهرست عوامل ردیابی فعال (برای تشخیص کالاهای دارای عامل ردیابی)
